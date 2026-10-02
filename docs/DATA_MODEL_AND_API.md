@@ -1,8 +1,12 @@
-# 7-Game Series — Data Model & API Contract (v0.1)
+# 7-Game Series — Data Model & API Contract (v0.2)
 
 > Companion to [GAME_DESIGN.md](./GAME_DESIGN.md). Game rules live there; this doc
 > defines how they are stored and exposed. Both frontend and backend build against it.
 > Items marked **PROPOSED** need sign-off from the team.
+>
+> **Source of truth for shapes:** `packages/contracts` (Zod schemas + endpoint registry).
+> **Source of truth for rules:** `packages/rules` (pure functions). If this doc and the
+> code disagree, the code wins and this doc gets fixed.
 
 ## 1. Proposed stack (**PROPOSED**)
 
@@ -15,7 +19,7 @@
 | `packages/contracts` | Zod schemas for API requests/responses | One source of truth for types and runtime validation on both sides. |
 | Database | Postgres + Drizzle ORM | Relational data with strong constraints; date math in SQL when needed. |
 | Auth | Email magic link (passkeys later) | No passwords to manage for an MVP. |
-| Jobs | One scheduled worker, every 15 min | Finalizes games for users whose local midnight has passed (§5). |
+| Jobs | One scheduled worker, every 15 min | Finalizes games 30 min after each user's local midnight (§5). |
 
 ## 2. Conventions
 
@@ -38,6 +42,14 @@
 | start_date | date | Sign-up date (local). Anchors the season calendar. |
 | default_lock_time | time null | Default "first pitch" lock time. Null = lock on first check-off only. |
 | created_at | timestamptz | |
+
+### `login_tokens` and `sessions`
+| Table | Columns |
+|---|---|
+| `login_tokens` | `token_hash` (PK), `email`, `expires_at` (15 min), `used_at` |
+| `sessions` | `id_hash` (PK), `user_id`, `created_at`, `expires_at` (30 days, sliding) |
+
+Only hashes of tokens and session ids are stored.
 
 ### `seasons`
 | Column | Type | Notes |
@@ -92,7 +104,7 @@ Unique: `(season_id, number)`.
 | user_id | uuid FK | |
 | weekday | int 1–7 | 1 = Monday. Unique per user (fixed rotation). |
 | name | text | e.g. "Gym Day". |
-| threshold | int ≥ 0 | Opponent's score in runs. |
+| threshold | int ≥ 1 | Opponent's score in runs. At least 1, so an empty lineup can't win. |
 | min_tasks | int null | |
 | lock_time | time null | Overrides the user default. |
 
@@ -115,7 +127,8 @@ Unique: `(season_id, number)`.
 | slot | int 1–2 | 2 = second game of a doubleheader. |
 | postponed | bool | True if this game was rained out and moved. |
 | template_id | uuid FK | Starter used. |
-| starter_name, threshold, min_tasks | snapshot | Copied from the template when the game is created. |
+| starter_name, threshold, min_tasks, lock_time | snapshot | Copied from the template (lock time falls back to the user default) when the lineup is built. |
+| lineup_built_at | timestamptz null | Lineups are built at the start of the played day, so starter edits apply to every game not yet built. |
 | locked_at | timestamptz null | First pitch. |
 | status | enum | `scheduled`, `live`, `final` |
 | runs, tasks_done, missed_required | int | Computed at final. |
@@ -181,9 +194,11 @@ Unique: `(series_id, game_number)` and `(user_id, played_date, slot)`.
    makeup game (`slot = 2` is unique per user and date).
 4. Must-hits and threshold can't change after `locked_at`. Substitutions after lock may
    only replace non-required entries.
-5. Check-offs are accepted only when `completed_client_at` is before midnight local time
-   on `played_date` **and** the game isn't final. A small clock-skew tolerance (5 min)
-   applies.
+5. Check-offs are accepted only when `completed_client_at` falls on `played_date` in local
+   time (before midnight) **and** the game isn't final. A device clock may be up to 5 min
+   ahead of the server. The finalizer waits a 30-minute settle window after midnight so
+   check-offs made before midnight on a slow connection still land
+   (`rules.validateCheckoff`, `rules.finalizeAfter`).
 6. A Rally roll requires `result = L`, `missed_required ≤ 1`, `now < rally_deadline`, an
    unused token for the current month, and no other rally roll in the series.
 7. Monthly limits: at most 2 rally tokens and 3 rainouts held at once; at most one
@@ -192,7 +207,7 @@ Unique: `(series_id, game_number)` and `(user_id, played_date, slot)`.
 
 ## 5. Scheduled finalizer
 
-Runs every 15 minutes, processing each user whose local midnight has passed since the last run:
+Runs every 15 minutes, processing each user whose local midnight plus the 30-minute settle window has passed since the last run:
 
 1. **Finalize** yesterday's live/scheduled games: compute runs, tasks done, missed
    must-hits, result, `result_detail`, and set `rally_deadline`.
@@ -242,6 +257,13 @@ seasonPace(record, winGoal, gamesRemaining) → { pace, gamesBehind }
 All endpoints require auth and are scoped to the signed-in user. Request and response
 bodies are defined as Zod schemas in `packages/contracts`.
 
+### Auth
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/v1/auth/magic-link` | Body: `{ email }`. Without an email provider (dev), the response includes `devToken`. |
+| POST | `/v1/auth/verify` | Body: `{ token, timezone }`. Creates the account on first sign-in and sets an httpOnly session cookie. |
+| POST | `/v1/auth/logout` | Ends the session. |
+
 ### Profile & calendar
 | Method | Path | Purpose |
 |---|---|---|
@@ -268,7 +290,9 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | POST | `/v1/games/:id/lock` | Lock manually (also happens automatically). |
 | POST | `/v1/games/:id/entries/:entryId/complete` | Body: `{ clientAt, partial? }`. Idempotent. |
 | DELETE | `/v1/games/:id/entries/:entryId/complete` | Undo a check-off (before midnight only). |
-| POST | `/v1/games/:id/substitutions` | Body: `{ outEntryId, benchTaskId }`. Post-lock, non-required only. |
+| PATCH | `/v1/games/:id/entries/:entryId` | Body: `{ partial }`. Mark a must-hit as partly done ("warning track"). |
+| POST | `/v1/games/:id/substitutions` | Body: `{ outEntryId, inEntryId }` (a bench entry on the same game). Post-lock, non-required only. |
+| GET | `/v1/games/:id/rainout` | Rainout eligibility and makeup date options. |
 | POST | `/v1/games/:id/rainout` | Body: `{ makeupDate }`. Uses an allowance. |
 
 ### Rally Cap

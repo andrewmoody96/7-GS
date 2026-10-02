@@ -1,0 +1,19 @@
+{
+  "name": "7-game-series",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "dev:api": "pnpm --filter @7gs/api dev",
+    "dev:web": "pnpm --filter @7gs/web dev"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

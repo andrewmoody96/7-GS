@@ -85,8 +85,9 @@ editable. After the lock (a user-set time, or the first check-off, whichever com
 - Point values are copied onto the lineup entries, so later roster edits never
   rewrite history.
 
-**Day boundary.** Check-offs close at 23:59:59 local time. The game goes final at
-midnight. Midnight starts the next game, so there is no grace period for tasks.
+**Day boundary.** Tasks must be checked off by 23:59:59 local time. Midnight starts the
+next game, so there is no grace period for tasks. The result becomes official 30 minutes
+later, so a check-off made at 11:58 p.m. on a weak connection still counts when it syncs.
 
 ## 5. Seasons and offseason
 
