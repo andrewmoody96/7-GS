@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { loginTokens, sessions } from '../src/db/schema';
 import { CHICAGO, TestApp, useTestDb } from './helpers';
 
 const env = useTestDb();
@@ -43,12 +44,15 @@ describe('magic-link auth', () => {
 
   it('only stores hashes of login tokens and sessions', async () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
+    const link = await t.ok('requestMagicLink', { body: { email: 'hash2@example.com' } });
     const { token } = await t.signIn('hash@example.com', CHICAGO);
-    const rows = await env.db.execute<{ id_hash: string }>('SELECT id_hash FROM sessions' as never);
-    const hashes = (rows as unknown as { rows: { id_hash: string }[] }).rows.map((r) => r.id_hash);
+    const hashes = (await env.db.select({ idHash: sessions.idHash }).from(sessions)).map((r) => r.idHash);
     expect(hashes).toHaveLength(1);
     expect(hashes[0]).not.toBe(token);
     expect(hashes[0]).toMatch(/^[0-9a-f]{64}$/);
+    const stored = await env.db.select({ tokenHash: loginTokens.tokenHash }).from(loginTokens);
+    expect(stored).toHaveLength(2);
+    expect(stored.map((r) => r.tokenHash)).not.toContain(link.devToken);
   });
 
   it('rejects used, expired and unknown links', async () => {

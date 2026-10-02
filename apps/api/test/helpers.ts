@@ -28,10 +28,15 @@ export function local(date: LocalDate, time: string, tz: string): Date {
   return zonedTimeToInstant(date, time, tz);
 }
 
+/**
+ * In-memory PGlite per test file, or a real Postgres (postgres.js driver) when
+ * TEST_DATABASE_URL is set — test files then run one at a time (vitest.config.ts).
+ */
 export function useTestDb(): { readonly db: Db } {
   let handle: DatabaseHandle | undefined;
   beforeAll(async () => {
-    handle = await createDatabase({ kind: 'memory' });
+    const url = process.env.TEST_DATABASE_URL;
+    handle = await createDatabase(url ? { kind: 'postgres', url } : { kind: 'memory' });
     await handle.migrate();
   });
   afterAll(async () => {
@@ -177,6 +182,14 @@ export async function createTasks(
   return ids;
 }
 
+/** Raw `db.execute` rows: PGlite returns `{ rows }`, postgres.js an array. */
+export function rowsOf<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return [...result] as T[];
+  const rows = (result as { rows?: T[] }).rows;
+  if (!rows) throw new Error('Unexpected execute() result');
+  return rows;
+}
+
 /** Every row of every table, for idempotency checks. */
 export async function snapshotDb(db: Db): Promise<Record<string, unknown[]>> {
   const tables = [
@@ -196,8 +209,8 @@ export async function snapshotDb(db: Db): Promise<Record<string, unknown[]>> {
   ];
   const out: Record<string, unknown[]> = {};
   for (const table of tables) {
-    const result = await db.execute(sql.raw(`SELECT * FROM "${table}" ORDER BY 1, 2`));
-    out[table] = (result as unknown as { rows: unknown[] }).rows;
+    out[table] = rowsOf(await db.execute(sql.raw(`SELECT * FROM "${table}" ORDER BY 1, 2`)));
+    if (table === 'games' && out[table].length === 0) throw new Error('snapshotDb: expected some games');
   }
   return out;
 }
