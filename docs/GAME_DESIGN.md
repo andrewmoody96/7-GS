@@ -1,4 +1,4 @@
-# 7-Game Series — Game Design Spec (v0.2)
+# 7-Game Series — Game Design Spec (v0.3)
 
 > Status: pre-code planning. This doc is the shared source of truth for design,
 > frontend, and backend. Decisions marked **DECIDED** are locked for MVP;
@@ -26,6 +26,9 @@ a season record.
 | 10 | Seasons | **DECIDED** — Two seasons per year, anchored to the user's start date, with offseason weeks (§5). |
 | 11 | Day / week boundaries | **DECIDED** — Days run 00:00–23:59 in the user's local time. Weeks (series) run Monday–Sunday. |
 | 12 | Point values | **DECIDED** — Free-form. Every task defaults to 1 run, and the user can set any whole number. |
+| 13 | Offseason length | **DECIDED** — Exactly 1 review week per season. The weeks can't be combined. |
+| 14 | Streaks across the offseason | **DECIDED** — Streaks pause and carry over, but never affect the new season's W/L (§5). |
+| 15 | Rally Cap window | **DECIDED** — Until 11:59 a.m. the day after the game. |
 
 ## 3. Glossary (UI term → generic data term)
 
@@ -35,7 +38,7 @@ future sport skins possible.
 | UI term | Data term | Meaning |
 |---|---|---|
 | Season | `season` | 25 series of play followed by 1 offseason week (§5). |
-| Offseason | `offseason` | Rest/prep week(s). No games, nothing recorded. |
+| Offseason (Review Week) | `offseason` | The 1 week at the end of each season. No games, nothing recorded. |
 | Spring Training | `preseason` | The partial week before a user's first Monday. Not counted. |
 | Series | `series` | One Monday–Sunday week, 7 games. |
 | Game | `game` | One scheduled day's contest. |
@@ -105,16 +108,19 @@ A year is treated as 52 weeks, split into two seasons of 26 weeks each:
 - 52 weeks is 364 days, so season start dates drift about one day earlier each
   calendar year. That's acceptable; series always stay Monday-aligned.
 
-**OPEN**: should users be allowed to combine both offseason weeks into one 2-week
-offseason (making that season 26 series and the next 24)? Suggested default: two
-separate weeks, with an optional "combine" setting chosen during the prior offseason.
+Offseason weeks can't be combined or moved. Tasks and starters can be edited at any
+time during a season, so a longer break wouldn't add much. The week exists as a
+built-in prompt to review the season and tweak the setup.
 
-### During the offseason
+### During the offseason (Review Week)
 
 - No games, no check-offs, no results.
 - Streaks (task streaks and win streaks) are **frozen**: not broken and not extended.
-  They resume when the next season starts. (**OPEN**: confirm streaks carry over rather
-  than reset.)
+  They resume when the next season starts.
+- **Carried-over streaks never touch the new season's W/L.** They show on streak
+  displays and in career stats only. Season W/L totals always start at 0–0, and the
+  Rally Cap streak bonus uses **only wins from the current season**. A user who ends
+  Season 1 on a 6-game streak starts Season 2 at the 20% base.
 - No Rally Caps or Rainouts are used or granted.
 - Offseason activities:
   - **Season review**: final record, awards (Series MVP task, longest streak, best
@@ -161,7 +167,7 @@ streak to build confidence, and miss often enough that nobody plans around it.
 
 Shown to the user **before** they roll. Transparent odds keep expectations honest.
 
-**Step 1: base chance from the current win streak** (games won before today):
+**Step 1: base chance from the current win streak** (consecutive games won before today, counting only this season):
 
 | Win streak | Base chance |
 |---|---|
@@ -202,8 +208,9 @@ Examples:
 
 ### Presentation
 
-- Show it as a dice "at-bat" (in the spirit of tabletop dice baseball), e.g. a d20 with
-  "Need 15+" for 30%.
+- Show it as a dice "at-bat" (in the spirit of tabletop dice baseball) using
+  percentile dice (two d10s, 1–100), since odds move in 1% steps. Example: at 34%
+  the screen reads "Need 34 or under."
 - A hit is a **Walk-off W**: jumbotron moment, recorded as `W (rally)` in the box score
   and counted separately in season stats.
 - A miss shows "Struck out looking." The game stays an L. No re-roll and no refund.
@@ -272,7 +279,7 @@ These are the real tools for deferring or skipping. They are planned, not rescue
 3. **Film Room**: weekly setup of the fixed rotation, roster, IL, and Rainouts.
 4. **Season**: standings, pace vs. goal, streaks, box score history.
 5. **Rally Cap sheet**: shown on a final, eligible L. Odds breakdown and roll.
-6. **Offseason hub**: season review, awards, front-office changes for the next season.
+6. **Review Week hub**: season review, awards, front-office changes for the next season.
 
 ## 10. Architecture notes
 
@@ -291,6 +298,4 @@ These are the real tools for deferring or skipping. They are planned, not rescue
 
 ## 11. Open questions
 
-1. Should users be able to combine the two offseason weeks into one 2-week block?
-2. Do streaks carry over the offseason (frozen), or reset each season?
-3. Is 11:59 a.m. the next day the right cut-off for rolling a Rally Cap?
+None for game rules. Next step: data model and API contract.
