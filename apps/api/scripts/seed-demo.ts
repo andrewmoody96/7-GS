@@ -237,7 +237,10 @@ for (let date = signup; compareDates(date, today) < 0; date = addDays(date, 1)) 
   clock.set(zonedTimeToInstant(date, '07:30', TZ));
   const { games } = await call('getToday');
   for (const game of games) await playGame(game, date, zonedTimeToInstant(date, '23:30', TZ));
-  clock.set(zonedTimeToInstant(addDays(date, 1), '00:30', TZ));
+  // Settle at 12:30 a.m. — unless that is still in the future (seeding just after
+  // midnight), in which case yesterday stays live, as it would in production.
+  const settleAt = zonedTimeToInstant(addDays(date, 1), '00:30', TZ);
+  clock.set(settleAt.getTime() < realNow.getTime() ? settleAt : realNow);
   await runFinalizer(deps, clock.now());
 }
 
