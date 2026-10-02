@@ -1,0 +1,793 @@
+/* The ballpark: scoreboard panels, numeral tiles, broadcast chyron, jumbotron, dice. */
+
+/* ── Numeral tiles ───────────────────────────────────────────────────────── */
+
+.tile {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 54px;
+  border-radius: 6px;
+  background: var(--tile);
+  color: var(--tile-text);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.06),
+    inset 0 -3px 0 rgb(0 0 0 / 0.55),
+    0 2px 0 var(--panel-edge);
+  perspective: 240px;
+  overflow: hidden;
+  flex: none;
+}
+
+/* The hinge line of a flip numeral. */
+.tile::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgb(0 0 0 / 0.6);
+}
+
+.tile__face {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 2rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transform-origin: 50% 50%;
+  animation: tile-flip 380ms var(--ease-out);
+}
+
+.tile--s {
+  width: 32px;
+  height: 40px;
+}
+
+.tile--s .tile__face {
+  font-size: 1.3rem;
+}
+
+.tile--l {
+  width: 64px;
+  height: 80px;
+  border-radius: 8px;
+}
+
+.tile--l .tile__face {
+  font-size: 3.1rem;
+}
+
+@keyframes tile-flip {
+  from {
+    transform: rotateX(-90deg);
+    opacity: 0.2;
+  }
+}
+
+/* ── Scoreboard panel ────────────────────────────────────────────────────── */
+
+.board {
+  position: relative;
+  padding: 12px 14px 12px;
+  border-radius: 14px;
+  color: var(--panel-text);
+  background-color: var(--panel);
+  /* Painted plank seams on the old board. */
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 46px, rgb(0 0 0 / 0.08) 46px 47px),
+    linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 40%);
+  border: 3px solid var(--panel-edge);
+  box-shadow:
+    inset 0 0 0 1.5px rgb(245 240 227 / 0.22),
+    var(--shadow-1);
+}
+
+.board__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1.5px solid rgb(245 240 227 / 0.18);
+}
+
+.board__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 4px;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.board__starter {
+  flex-basis: 100%;
+  color: var(--panel-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.board__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1.5px solid rgb(245 240 227 / 0.5);
+}
+
+.board__status--live {
+  background: var(--pennant-600);
+  border-color: var(--pennant-600);
+  color: var(--chalk-50);
+}
+
+.board__status--final {
+  background: var(--gold-500);
+  border-color: var(--gold-500);
+  color: var(--ink-900);
+}
+
+.board__bulb {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chalk-50);
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.board__grid {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+
+.board__grid thead th {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  color: var(--panel-muted);
+  text-align: center;
+  padding: 0 2px;
+}
+
+.board__grid td {
+  width: 52px;
+  text-align: center;
+  padding: 0 2px;
+}
+
+.board__grid tbody th {
+  text-align: left;
+  font-weight: normal;
+  padding: 0;
+}
+
+.board__row th {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 54px;
+}
+
+.board__team {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.board__row--opp .board__team {
+  color: var(--panel-muted);
+}
+
+.board__row--you .board__team {
+  color: var(--chalk-50);
+}
+
+.board__result {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 54px;
+  border-radius: 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2rem;
+}
+
+.board__result--win {
+  background: var(--gold-500);
+  color: var(--ink-900);
+  box-shadow: 0 0 18px rgb(226 178 59 / 0.55);
+}
+
+.board__result--loss {
+  background: var(--pennant-600);
+  color: var(--chalk-50);
+}
+
+.board__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding-top: 8px;
+  border-top: 1.5px solid rgb(245 240 227 / 0.18);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--panel-muted);
+}
+
+.board__lights {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board__bulbs {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.bulb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #08130d;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.8);
+}
+
+.bulb.is-lit {
+  background: var(--gold-300);
+  box-shadow:
+    0 0 8px rgb(243 210 122 / 0.9),
+    inset 0 -1px 1px rgb(0 0 0 / 0.2);
+}
+
+.board__note {
+  color: var(--gold-300);
+}
+
+.board--win {
+  border-color: var(--gold-500);
+}
+
+/* Off-day and record boards */
+.board--offday,
+.board--record,
+.board--hero {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 20px 16px 22px;
+  text-align: center;
+}
+
+.board__eyebrow {
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: var(--tile);
+  color: var(--gold-300);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.board__big {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.1rem;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.board__date {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--panel-muted);
+}
+
+.countdown {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+}
+
+.countdown__label,
+.countdown__dash {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.countdown__dash {
+  font-size: 2rem;
+}
+
+/* ── Broadcast chyron ────────────────────────────────────────────────────── */
+
+.chyron {
+  display: grid;
+  justify-items: start;
+}
+
+.chyron__bar {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 42px;
+  border-radius: 8px 8px 8px 0;
+  overflow: hidden;
+  background: var(--chyron);
+  color: var(--chyron-text);
+  border-top: 2px solid var(--gold-500);
+  box-shadow: var(--shadow-1);
+}
+
+.chyron__bug {
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0 8px;
+  background: var(--panel);
+  color: var(--gold-300);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+
+.chyron__tag {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0 18px 0 10px;
+  margin-right: -6px;
+  background: var(--outfield-600);
+  color: var(--chalk-50);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+
+.chyron__tag--clinch,
+.chyron__tag--decidedWon {
+  background: var(--gold-500);
+  color: var(--ink-900);
+}
+
+.chyron__tag--elimination {
+  background: var(--pennant-500);
+  color: var(--chalk-50);
+}
+
+.chyron__tag--game7 {
+  background: linear-gradient(90deg, var(--pennant-600), var(--clay-600));
+  color: var(--gold-300);
+}
+
+.chyron__tag--sweepWatch {
+  background: var(--outfield-500);
+  color: var(--ink-900);
+}
+
+.chyron__tag--decidedLost {
+  background: var(--ink-600);
+  color: var(--chalk-100);
+}
+
+.chyron__headline {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  padding: 7px 12px 7px 14px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.15;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chyron__live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 0 10px;
+  background: var(--pennant-600);
+  color: var(--chalk-50);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.chyron__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.chyron__sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 12px 6px;
+  border-radius: 0 0 8px 8px;
+  background: color-mix(in srgb, var(--chyron) 86%, var(--panel));
+  color: var(--chalk-200);
+  font-size: 0.8rem;
+}
+
+.chyron__subtag {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chyron--elimination .chyron__bar {
+  border-top-color: var(--pennant-500);
+}
+
+.chyron--game7 .chyron__bar {
+  border-top-color: var(--pennant-500);
+  box-shadow: 0 0 0 2px var(--gold-500);
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+
+.badge {
+  flex: none;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.35));
+}
+
+/* ── Jumbotron ───────────────────────────────────────────────────────────── */
+
+.jumbotron {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: rgb(3 5 4 / 0.84);
+  animation: fade-in 200ms ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.jumbotron__screen {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: min(100%, 420px);
+  padding: 34px 22px 22px;
+  border: 6px solid var(--ink-900);
+  border-radius: 20px;
+  background: radial-gradient(circle at 50% 30%, #1d6444, var(--outfield-900) 72%);
+  color: var(--chalk-50);
+  text-align: center;
+  box-shadow:
+    0 0 0 2px var(--gold-500),
+    0 30px 80px rgb(0 0 0 / 0.6);
+  overflow: hidden;
+  animation: jumbo-in 520ms var(--ease-spring);
+}
+
+@keyframes jumbo-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+.jumbotron__marquee {
+  position: absolute;
+  inset: 7px;
+  border: 5px dotted var(--gold-300);
+  border-radius: 13px;
+  pointer-events: none;
+  animation: marquee 0.5s steps(2, jump-none) infinite;
+}
+
+@keyframes marquee {
+  50% {
+    border-color: var(--gold-500);
+    opacity: 0.55;
+  }
+}
+
+.jumbotron__headline {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.4rem, 11vw, 3.4rem);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold-300);
+  text-shadow:
+    0 0 14px rgb(243 210 122 / 0.85),
+    0 0 40px rgb(226 178 59 / 0.5);
+}
+
+.jumbotron__headline--big {
+  font-size: clamp(7rem, 40vw, 10rem);
+  line-height: 0.95;
+}
+
+.jumbotron__detail {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-200);
+}
+
+.jumbotron__close {
+  position: relative;
+  margin-top: 10px;
+}
+
+.jumbotron__confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pennant {
+  position: absolute;
+  top: -30px;
+  width: 16px;
+  height: 26px;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  animation: fall 2.8s cubic-bezier(0.3, 0.2, 0.6, 1) forwards;
+}
+
+.pennant--0 {
+  background: var(--gold-500);
+}
+
+.pennant--1 {
+  background: var(--pennant-500);
+}
+
+.pennant--2 {
+  background: var(--chalk-100);
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(540deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jumbotron__confetti {
+    display: none;
+  }
+}
+
+/* ── Percentile dice ─────────────────────────────────────────────────────── */
+
+.dice {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  padding: 6px 0;
+}
+
+.die {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.die__face {
+  display: grid;
+  place-items: center;
+  width: 82px;
+  height: 82px;
+  padding-top: 10px;
+  clip-path: polygon(50% 0, 100% 40%, 82% 100%, 18% 100%, 0 40%);
+  background: linear-gradient(160deg, var(--pennant-500), var(--pennant-700));
+  color: var(--chalk-50);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.die + .die .die__face {
+  background: linear-gradient(160deg, var(--chalk-50), var(--chalk-300));
+  color: var(--ink-900);
+}
+
+.die__label {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.die.is-rolling .die__face {
+  animation: wobble 180ms ease-in-out infinite alternate;
+}
+
+@keyframes wobble {
+  from {
+    transform: rotate(-9deg) translateY(-2px);
+  }
+  to {
+    transform: rotate(9deg) translateY(2px);
+  }
+}
+
+/* ── Series score, record, hero ──────────────────────────────────────────── */
+
+.series-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--panel-text);
+  border: 3px solid var(--panel-edge);
+  box-shadow: inset 0 0 0 1.5px rgb(245 240 227 / 0.22);
+}
+
+.series-score__side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.series-score__name {
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.series-score__dash {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--panel-muted);
+}
+
+.record {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 14px;
+}
+
+.record__side {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.record__dash {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  color: var(--panel-muted);
+  margin-top: -20px;
+}
+
+.record__label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--panel-muted);
+}
+
+.record__pct {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding-left: 16px;
+  border-left: 1.5px solid rgb(245 240 227 / 0.2);
+}
+
+.record__pctnum {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.6rem;
+  line-height: 80px;
+  height: 80px;
+  color: var(--gold-300);
+}
+
+.hero-tiles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-tiles__word {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.2rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" rx="112" fill="#123d2a"/>
+  <rect x="22" y="22" width="468" height="468" rx="92" fill="none" stroke="#f5f0e3" stroke-opacity=".22" stroke-width="6"/>
+  <g transform="translate(256 256) scale(1) translate(-256 -264)">
+    <rect x="146" y="92" width="220" height="276" rx="26" fill="#0f1412"/>
+    <rect x="146" y="92" width="220" height="276" rx="26" fill="none" stroke="#f5f0e3" stroke-opacity=".12" stroke-width="4"/>
+    <polygon points="186,128 330,128 330,170 254,334 204,334 278,172 186,172" fill="#f5f0e3"/>
+    <rect x="146" y="228" width="220" height="5" fill="#000" opacity=".65"/>
+    <circle cx="136" cy="420" r="14" fill="#f3d27a" stroke="#f3d27a" stroke-opacity="1" stroke-width="3"/><circle cx="176" cy="420" r="14" fill="#f3d27a" stroke="#f3d27a" stroke-opacity="1" stroke-width="3"/><circle cx="216" cy="420" r="14" fill="#f3d27a" stroke="#f3d27a" stroke-opacity="1" stroke-width="3"/><circle cx="256" cy="420" r="14" fill="#f3d27a" stroke="#f3d27a" stroke-opacity="1" stroke-width="3"/><circle cx="296" cy="420" r="14" fill="#0c2a1c" stroke="#f5f0e3" stroke-opacity="0.35" stroke-width="3"/><circle cx="336" cy="420" r="14" fill="#0c2a1c" stroke="#f5f0e3" stroke-opacity="0.35" stroke-width="3"/><circle cx="376" cy="420" r="14" fill="#0c2a1c" stroke="#f5f0e3" stroke-opacity="0.35" stroke-width="3"/>
+  </g></svg>
