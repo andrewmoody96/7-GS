@@ -17,6 +17,7 @@ import {
   loadUserGame,
   lockNow,
   materializeLock,
+  recordFirstPitch,
   refreshScore,
 } from './lineups';
 
@@ -178,11 +179,10 @@ export async function completeEntry(
   });
   if (!check.ok) throw staleCheckoff(check.reason);
 
-  // First pitch is when the first check-off happened: the device time for an offline
-  // replay (never later than receipt), so a 11:58 p.m. check-off synced at 12:10 a.m.
-  // doesn't record a first pitch after the game day ended.
-  const pitchAt = clientAt.getTime() < now.getTime() ? clientAt : now;
-  game = await lockNow(tx, await materializeLock(tx, game, now), pitchAt);
+  // A check-off is first pitch unless something locked the game earlier. It counts at
+  // the device time for an offline replay (never later than receipt), so an 11:58 p.m.
+  // check-off synced at 12:10 a.m. doesn't record a first pitch after the day ended.
+  game = await recordFirstPitch(tx, game, clientAt.getTime() < now.getTime() ? clientAt : now, now);
   await tx
     .update(lineupEntries)
     .set({ completedClientAt: clientAt, completedReceivedAt: now })

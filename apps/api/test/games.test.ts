@@ -7,7 +7,11 @@ const env = useTestDb();
 // Sign-up Friday 2026-10-02 (Chicago, CDT = UTC-5); Game 1 is Monday 2026-10-05.
 async function setup(options: { lockTime?: string | null } = {}) {
   const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
-  const { token } = await t.signIn('games@example.com', CHICAGO);
+  return { t, ...(await addUser(t, 'games@example.com', options)) };
+}
+
+async function addUser(t: TestApp, email: string, options: { lockTime?: string | null } = {}) {
+  const { token } = await t.signIn(email, CHICAGO);
   const ids = await createTasks(t, token, [
     { name: 'Gym', points: 2 },
     { name: 'Read' },
@@ -30,7 +34,7 @@ async function setup(options: { lockTime?: string | null } = {}) {
       bench: [{ taskId: ids.Walk!, position: 1 }],
     },
   });
-  return { t, token, ids };
+  return { token, ids };
 }
 
 async function mondayGame(t: TestApp, token: string, time = '08:00'): Promise<GameDto> {
@@ -218,6 +222,30 @@ describe('lineup edits and locking', () => {
       lockedAt: '2026-10-05T14:00:00.000Z',
       threshold: 4,
     });
+  });
+
+  it('records first pitch at the earlier of an offline first check-off and the scheduled lock', async () => {
+    const { t, token } = await setup({ lockTime: '09:00' });
+    const other = await addUser(t, 'other@example.com', { lockTime: '09:00' });
+    const game = await mondayGame(t, token, '08:00');
+    const otherGame = await mondayGame(t, other.token, '08:00');
+
+    // Both devices were offline; they sync at 10:00, after the 9:00 lock time passed.
+    t.at('2026-10-05', '10:00', CHICAGO);
+    // Checked off at 8:30: that was first pitch.
+    const early = await t.ok('completeEntry', {
+      token,
+      params: { gameId: game.id, entryId: entry(game, 'Gym').id },
+      body: { clientAt: '2026-10-05T13:30:00Z' },
+    });
+    expect(early.lockedAt).toBe('2026-10-05T13:30:00.000Z');
+    // Checked off at 9:30: the 9:00 scheduled lock came first.
+    const late = await t.ok('completeEntry', {
+      token: other.token,
+      params: { gameId: otherGame.id, entryId: entry(otherGame, 'Read').id },
+      body: { clientAt: '2026-10-05T14:30:00Z' },
+    });
+    expect(late.lockedAt).toBe('2026-10-05T14:00:00.000Z');
   });
 
   it("falls back to the user's default lock time", async () => {

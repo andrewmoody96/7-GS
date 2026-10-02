@@ -1,3 +1,4 @@
+import { ApiError } from '@7gs/contracts';
 import { describe, expect, it } from 'vitest';
 import { loginTokens, sessions } from '../src/db/schema';
 import { CHICAGO, TestApp, useTestDb } from './helpers';
@@ -134,6 +135,18 @@ describe('magic-link auth', () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
     const res = await t.app.request('/v1/nope');
     expect(res.status).toBe(404);
-    expect(await res.json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
+    expect(ApiError.parse(await res.json()).error.code).toBe('NOT_FOUND');
+  });
+
+  it('prunes expired links and sessions when the finalizer runs', async () => {
+    const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
+    await t.ok('requestMagicLink', { body: { email: 'prune@example.com' } });
+    const { token } = await t.signIn('prune@example.com', CHICAGO);
+    t.clock.advanceMinutes(16);
+    expect((await t.finalize()).expiredCredentialsDeleted).toBe(2); // both links
+    t.clock.advanceDays(31);
+    expect((await t.finalize()).expiredCredentialsDeleted).toBe(1); // the session
+    expect(await env.db.select().from(sessions)).toEqual([]);
+    expect(await t.fails('getMe', { token }, 401)).toMatchObject({ code: 'UNAUTHORIZED' });
   });
 });

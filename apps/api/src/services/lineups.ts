@@ -13,7 +13,7 @@ import {
   weekday,
   type GameEvaluation,
 } from '@7gs/rules';
-import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { dayTemplateTasks, games, lineupEntries, taskDefinitions, type EntryRow, type GameRow, type UserRow } from '../db/schema';
 import { conflict, notFound } from '../errors';
@@ -190,6 +190,23 @@ export async function materializeLock(tx: Db, game: GameRow, now: Date): Promise
     .update(games)
     .set({ lockedAt: at, status: 'live' })
     .where(and(eq(games.id, game.id), eq(games.status, 'scheduled')))
+    .returning();
+  return row ?? reloadGame(tx, game.id);
+}
+
+/**
+ * Record a check-off as a lock event. First pitch is the earliest lock event (manual
+ * lock, check-off, or the scheduled time once passed), so an offline check-off that
+ * syncs late can move an already-recorded lock earlier.
+ */
+export async function recordFirstPitch(tx: Db, game: GameRow, at: Date, now: Date): Promise<GameRow> {
+  const current = effectiveLock(game, now);
+  const lockAt = current && current.getTime() <= at.getTime() ? current : at;
+  if (game.lockedAt?.getTime() === lockAt.getTime() && game.status === 'live') return game;
+  const [row] = await tx
+    .update(games)
+    .set({ lockedAt: lockAt, status: 'live' })
+    .where(and(eq(games.id, game.id), ne(games.status, 'final')))
     .returning();
   return row ?? reloadGame(tx, game.id);
 }

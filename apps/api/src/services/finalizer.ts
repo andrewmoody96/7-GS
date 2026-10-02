@@ -23,7 +23,7 @@ import {
 } from '@7gs/rules';
 import { and, eq, inArray, lt, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { games, lineupEntries, users, type GameRow, type UserRow } from '../db/schema';
+import { games, lineupEntries, loginTokens, sessions, users, type GameRow, type UserRow } from '../db/schema';
 import type { Logger } from '../logger';
 import { ensureMonthlyAllowances } from './allowances';
 import { ensureDay, findSeriesByStart, syncSeasons } from './calendar';
@@ -158,13 +158,23 @@ export interface FinalizerReport {
   usersChecked: number;
   datesSettled: number;
   failures: number;
+  expiredCredentialsDeleted: number;
 }
 
 /**
  * Run the finalizer for every user with a date due as of `now`. Idempotent: running it
- * again with the same `now` changes nothing.
+ * again with the same `now` changes nothing. Also prunes expired login links and sessions.
  */
 export async function runFinalizer(deps: { db: Db; log: Logger }, now: Date): Promise<FinalizerReport> {
+  const deletedTokens = await deps.db
+    .delete(loginTokens)
+    .where(lt(loginTokens.expiresAt, now))
+    .returning({ hash: loginTokens.tokenHash });
+  const deletedSessions = await deps.db
+    .delete(sessions)
+    .where(lt(sessions.expiresAt, now))
+    .returning({ hash: sessions.idHash });
+
   // No zone is more than a day ahead of UTC, so a user whose cursor has reached the
   // UTC date has nothing due.
   const utcToday = localDateOf(now, 'UTC');
@@ -173,7 +183,12 @@ export async function runFinalizer(deps: { db: Db; log: Logger }, now: Date): Pr
     .from(users)
     .where(lt(users.finalizedThrough, utcToday));
 
-  const report: FinalizerReport = { usersChecked: 0, datesSettled: 0, failures: 0 };
+  const report: FinalizerReport = {
+    usersChecked: 0,
+    datesSettled: 0,
+    failures: 0,
+    expiredCredentialsDeleted: deletedTokens.length + deletedSessions.length,
+  };
   for (const user of candidates) {
     if (!hasDueDate(user, now)) continue;
     report.usersChecked++;
