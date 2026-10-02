@@ -20,6 +20,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     app: {
       cookieSecure: env.COOKIE_SECURE ? env.COOKIE_SECURE === 'true' : production,
       validateResponses: env.VALIDATE_RESPONSES ? env.VALIDATE_RESPONSES === 'true' : !production,
+      logRequests: env.LOG_REQUESTS ? env.LOG_REQUESTS === 'true' : true,
     },
     finalizerIntervalMs: Number(env.FINALIZER_INTERVAL_MS ?? 15 * 60_000),
   };

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { logger } from 'hono/logger';
 import type { Deps } from './deps';
 import { ApiException, notFound } from './errors';
 import { registerRoutes } from './http/router';
@@ -12,6 +13,7 @@ import { seasonRoutes } from './routes/seasons';
 /** The /v1 API. Same-origin behind the web app's Vite proxy, so no CORS. */
 export function createApp(deps: Deps): Hono {
   const app = new Hono();
+  if (deps.config.logRequests) app.use(logger((line) => deps.log.info(line)));
 
   app.onError((error, c) => {
     if (error instanceof ApiException) return c.json(error.toBody(), error.status);

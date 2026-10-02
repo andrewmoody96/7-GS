@@ -9,6 +9,8 @@ export interface AppConfig {
   cookieSecure: boolean;
   /** Parse every response with its contracts schema before sending (dev and tests). */
   validateResponses: boolean;
+  /** Log one line per request (the dev server). */
+  logRequests?: boolean;
 }
 
 /** Sends magic links. None is configured yet, so links come back as `devToken`. */
