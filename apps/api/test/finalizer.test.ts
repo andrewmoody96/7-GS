@@ -3,6 +3,7 @@ import { addDays } from '@7gs/rules';
 import { and, asc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { games, rainoutAllowances, rallyTokens, seasons } from '../src/db/schema';
+import { runFinalizer } from '../src/services/finalizer';
 import { CHICAGO, createTasks, snapshotDb, TestApp, TOKYO, useTestDb } from './helpers';
 
 const env = useTestDb();
@@ -226,6 +227,52 @@ describe('finalizer', () => {
     t.clock.advanceMinutes(15);
     await t.finalize();
     expect(await snapshotDb(env.db)).toEqual(before);
+  });
+
+  it('never loses a check-off that races the finalizer: it is counted or rejected', async () => {
+    const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
+    const { token } = await t.signIn('race@example.com', CHICAGO);
+    const names = Array.from({ length: 8 }, (_, i) => `Task ${i + 1}`);
+    const ids = await createTasks(t, token, names.map((name) => ({ name })));
+    await t.ok('putStarter', {
+      token,
+      params: { weekday: 1 },
+      body: {
+        name: 'Busy Monday',
+        threshold: 8,
+        minTasks: null,
+        lockTime: null,
+        lineup: names.map((name, i) => ({ taskId: ids[name]!, position: i + 1, required: false })),
+        bench: [],
+      },
+    });
+    t.at('2026-10-05', '09:00', CHICAGO);
+    const [game] = (await t.ok('getToday', { token })).games;
+
+    // Offline check-offs from 11:59 p.m. arrive just before the 12:30 a.m. settle time,
+    // while the finalizer runs at 12:30.
+    t.at('2026-10-06', '00:29', CHICAGO);
+    const settleAt = new Date(t.clock.now().getTime() + 60_000);
+    const results = await Promise.all([
+      ...game!.entries.map((e) =>
+        t.call('completeEntry', {
+          token,
+          params: { gameId: game!.id, entryId: e.id },
+          body: { clientAt: '2026-10-06T04:59:00Z' },
+        }),
+      ),
+      runFinalizer(t.deps, settleAt),
+    ]);
+    const responses = results.slice(0, -1) as Awaited<ReturnType<typeof t.call<'completeEntry'>>>[];
+    const accepted = responses.filter((r) => r.ok).length;
+    expect(results.at(-1)).toMatchObject({ datesSettled: 1, failures: 0 });
+    for (const r of responses) {
+      if (!r.ok) expect(r.error).toMatchObject({ code: 'STALE_CHECKOFF', reason: 'GAME_FINAL' });
+    }
+    const final = await t.ok('getGame', { token, params: { gameId: game!.id } });
+    expect(final.status).toBe('final');
+    expect(final.runs).toBe(accepted);
+    expect(final.entries.filter((e) => e.completedAt !== null)).toHaveLength(accepted);
   });
 
   it('catches up every missed date after downtime, in order', async () => {

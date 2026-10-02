@@ -2,12 +2,11 @@
 
 import type { TodayDto } from '@7gs/contracts';
 import { calendarPosition, localDateOf } from '@7gs/rules';
-import { eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { users, type GameRow, type UserRow } from '../db/schema';
+import type { GameRow, UserRow } from '../db/schema';
 import { unauthorized } from '../errors';
 import { findSeriesByStart } from './calendar';
-import { catchUpUser, hasDueDate, prepareDay, syncAccount } from './finalizer';
+import { catchUpUser, hasDueDate, lockedUserTx, prepareDay, syncAccount } from './finalizer';
 import { gameViews, seriesView } from './views';
 
 /** Today's game(s), created and built lazily, with scheduled locks applied. */
@@ -24,10 +23,17 @@ export interface SyncOptions {
   scope?: 'games' | 'account';
 }
 
+/** `fn` in a transaction holding the user's row lock (see finalizer.lockedUserTx). */
+export function userTx<T>(db: Db, signedIn: UserRow, fn: (tx: Db, user: UserRow) => Promise<T>): Promise<T> {
+  return lockedUserTx(db, signedIn.id, (tx, user) => {
+    if (!user) throw unauthorized();
+    return fn(tx, user);
+  });
+}
+
 /**
- * Run `fn` in a transaction for a signed-in user after settling any date that is due
- * (the interval finalizer does the same; this keeps the API correct between runs) and
- * preparing today.
+ * Run `fn` in a user transaction after settling any date that is due (the interval
+ * finalizer does the same; this keeps the API correct between runs) and preparing today.
  */
 export async function inUserTx<T>(
   db: Db,
@@ -37,9 +43,7 @@ export async function inUserTx<T>(
   options: SyncOptions = {},
 ): Promise<T> {
   if (hasDueDate(signedIn, now)) await catchUpUser(db, signedIn.id, now);
-  return db.transaction(async (tx) => {
-    const [user] = await tx.select().from(users).where(eq(users.id, signedIn.id));
-    if (!user) throw unauthorized();
+  return userTx(db, signedIn, async (tx, user) => {
     if (options.scope === 'account') await syncAccount(tx, user, localDateOf(now, user.timezone), now);
     else await ensureToday(tx, user, now);
     return fn(tx, user);

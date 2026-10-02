@@ -1,3 +1,14 @@
+/** Message plus the `cause` chain (drizzle wraps driver errors such as deadlocks). */
+export function describeError(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; current !== undefined && current !== null && depth < 5; depth++) {
+    parts.push(current instanceof Error ? (depth === 0 ? (current.stack ?? current.message) : current.message) : String(current));
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return parts.join('\n  caused by: ');
+}
+
 export interface Logger {
   info(message: string, meta?: Record<string, unknown>): void;
   warn(message: string, meta?: Record<string, unknown>): void;

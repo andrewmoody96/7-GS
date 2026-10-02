@@ -43,11 +43,13 @@ export function seriesGames(tx: Db, seriesId: string): Promise<GameRow[]> {
 }
 
 export async function recomputeSeries(tx: Db, seriesId: string): Promise<SeriesRow> {
+  // Lock before reading the games so concurrent recomputes (finalizer, Rally Cap) apply
+  // one after the other instead of overwriting each other with stale counts.
+  const [current] = await tx.select().from(series).where(eq(series.id, seriesId)).for('update');
+  if (!current) throw new Error(`Series ${seriesId} not found`);
   const rows = await seriesGames(tx, seriesId);
   const states = seriesGameStates(rows);
   const status = seriesStatus(states);
-  const [current] = await tx.select().from(series).where(eq(series.id, seriesId));
-  if (!current) throw new Error(`Series ${seriesId} not found`);
   const ironMan = current.closedAt ? isIronMan(states) : null;
   if (
     current.wins === status.wins &&
@@ -84,6 +86,7 @@ export function seasonFinalGames(tx: Db, seasonId: string) {
 }
 
 export async function recomputeSeason(tx: Db, seasonId: string): Promise<SeasonRow> {
+  await tx.select({ id: seasons.id }).from(seasons).where(eq(seasons.id, seasonId)).for('update');
   const finals = await seasonFinalGames(tx, seasonId);
   const record = seasonRecord(
     finals.map((g) => ({ result: g.result, resultDetail: g.resultDetail, runs: g.runs, threshold: g.threshold ?? 0 })),

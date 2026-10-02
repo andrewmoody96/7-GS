@@ -24,7 +24,7 @@ import {
 import { and, eq, inArray, lt, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { games, lineupEntries, loginTokens, sessions, users, type GameRow, type UserRow } from '../db/schema';
-import type { Logger } from '../logger';
+import { describeError, type Logger } from '../logger';
 import { ensureMonthlyAllowances } from './allowances';
 import { ensureDay, findSeriesByStart, syncSeasons } from './calendar';
 import {
@@ -42,9 +42,12 @@ import { closeSeries, recomputeSeason, recomputeSeries, recomputeTaskStreaks } f
 const MAX_DAYS_PER_CALL = 400;
 
 export async function finalizeGame(tx: Db, user: UserRow, game: GameRow, now: Date): Promise<GameRow> {
-  if (game.status === 'final') return game;
+  // Lock the row first: a check-off committing concurrently either lands before we read
+  // the entries, or waits and then sees the game final (STALE_CHECKOFF).
+  const [locked] = await tx.select().from(games).where(eq(games.id, game.id)).for('update');
+  if (!locked || locked.status === 'final') return locked ?? game;
   // A game nobody opened is built now (from the current starter) and decided as played.
-  let row = await buildLineupNow(tx, user, game, now);
+  let row = await buildLineupNow(tx, user, locked, now);
   row = await materializeLock(tx, row, now);
   const ev = evaluateRows(row, await loadEntries(tx, [row.id]));
   const [final] = await tx
@@ -129,13 +132,24 @@ export async function settleDate(tx: Db, user: UserRow, date: LocalDate, now: Da
   return true;
 }
 
+/**
+ * A transaction holding the user's row lock. Every transaction that writes a user's
+ * games, roster or allowances takes it first, so the finalizer and requests for the
+ * same user run one at a time (no lost updates, no lock-order deadlocks). NO KEY UPDATE
+ * doesn't block inserts that only reference the user through a foreign key.
+ */
+export function lockedUserTx<T>(db: Db, userId: string, fn: (tx: Db, user: UserRow | undefined) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('no key update');
+    return fn(tx, user);
+  });
+}
+
 /** Settle every date that is due for one user. Returns how many dates were settled. */
 export async function catchUpUser(db: Db, userId: string, now: Date): Promise<number> {
   let settled = 0;
   for (let i = 0; i < MAX_DAYS_PER_CALL; i++) {
-    const progressed = await db.transaction(async (tx) => {
-      // Lock the user so the interval job and a request never settle the same day twice.
-      const [user] = await tx.select().from(users).where(eq(users.id, userId)).for('update');
+    const progressed = await lockedUserTx(db, userId, async (tx, user) => {
       if (!user) return false;
       const next = addDays(user.finalizedThrough, 1);
       if (finalizeAfter(next, user.timezone).getTime() > now.getTime()) return false;
@@ -196,7 +210,7 @@ export async function runFinalizer(deps: { db: Db; log: Logger }, now: Date): Pr
       report.datesSettled += await catchUpUser(deps.db, user.id, now);
     } catch (error) {
       report.failures++;
-      deps.log.error('finalizer: user failed', { userId: user.id, error: String(error) });
+      deps.log.error('finalizer: user failed', { userId: user.id, error: describeError(error) });
     }
   }
   return report;
