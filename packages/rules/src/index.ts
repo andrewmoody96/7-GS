@@ -4,6 +4,7 @@ export * from './dates';
 export * from './time';
 export * from './calendar';
 export * from './game';
+export * from './score';
 export * from './rally';
 export * from './series';
 export * from './streaks';

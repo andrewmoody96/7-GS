@@ -1,5 +1,5 @@
 import type { GameDto, OpponentDto } from '@7gs/contracts';
-import type { GameEvaluation } from '@7gs/rules';
+import { scoreline, type GameEvaluation } from '@7gs/rules';
 import { formatDate, weekdayShort } from '../lib/format';
 import { vocab } from '../vocab';
 import { OpponentBadge, TeamBadge } from './Badges';
@@ -17,10 +17,11 @@ interface ScoreboardProps {
   note?: string;
 }
 
-/** Ballpark scoreboard: the opponent's score is the threshold, yours is your runs. */
+/** Ballpark scoreboard. The opponent sits one run below your runs to win; finals never tie. */
 export function Scoreboard({ game, opponent, teamName, status, ev, note }: ScoreboardProps) {
   const final = game.status === 'final';
-  const runs = final ? game.runs : ev.runs;
+  const line = scoreline({ result: final ? game.result : null, resultDetail: game.resultDetail, runs: final ? game.runs : ev.runs, threshold: game.threshold });
+  const runs = line.us;
   const hits = final ? game.tasksDone : ev.tasksDone;
   const oppName = opponent?.name ?? vocab.term.opponent;
   const result = final ? game.result : null;
@@ -47,7 +48,7 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
 
       <table className="board__grid">
         <caption className="sr-only">
-          {oppName} {game.threshold}, {teamName} {runs}
+          {oppName} {line.them}, {teamName} {runs}
         </caption>
         <thead>
           <tr>
@@ -74,7 +75,7 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
               <span className="board__team">{oppName}</span>
             </th>
             <td>
-              <Tile value={game.threshold} />
+              <Tile value={line.them} />
             </td>
             <td>
               <Tile value={game.minTasks ?? '–'} label={game.minTasks === null ? 'No minimum' : undefined} />

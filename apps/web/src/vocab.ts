@@ -219,7 +219,7 @@ export const baseball: Vocab = {
     loss: 'L',
     partial: 'Warning track',
     substitution: 'Sub',
-    threshold: 'Opponent score',
+    threshold: 'Runs to win',
     minTasks: 'Minimum hits',
     lockTime: 'First pitch time',
     winGoal: 'Win goal',

@@ -1,7 +1,7 @@
 import type { GameSummaryDto } from '@7gs/contracts';
 import { compareDates, type LocalDate } from '@7gs/rules';
 import { useGameQuery } from '../app/queries';
-import { formatDate, formatTime, score } from '../lib/format';
+import { formatDate, formatTime, gameScore } from '../lib/format';
 import { benchOf, isLocked, lineupOf } from '../lib/game';
 import { vocab } from '../vocab';
 import { SubsLog } from './Bench';
@@ -56,7 +56,7 @@ export function BoxScoreSheet({ game, today, timeZone, now, onClose, onRally, on
             {final ? (
               <>
                 <span className={`result-tag result-tag--${game.result === 'W' ? 'win' : 'loss'}`}>{game.result}</span>
-                <strong>{score(game.runs, game.threshold)}</strong>
+                <strong>{gameScore(game)}</strong>
                 {game.resultDetail ? <span className="muted"> · {vocab.resultDetail[game.resultDetail]}</span> : null}
               </>
             ) : (

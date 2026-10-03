@@ -93,7 +93,8 @@ describe('season standings', () => {
       { result: 'L', resultDetail: 'short', runs: 2, threshold: 5 },
       { result: null, runs: 0, threshold: 3 },
     ]);
-    expect(record).toEqual({ played: 3, wins: 2, losses: 1, rallyWins: 1, winPct: 0.667, runDifferential: -2 });
+    // 6–3 W (+3), 4–3 rally W with a walk-off run (+1), 2–4 L (−2)
+    expect(record).toEqual({ played: 3, wins: 2, losses: 1, rallyWins: 1, winPct: 0.667, runDifferential: 2 });
   });
 
   it('measures pace against the win goal', () => {

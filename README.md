@@ -17,12 +17,48 @@ completing the tasks in that day's lineup. Wins and losses roll up into a season
 
 The two shared packages are consumed as TypeScript source (no build step).
 
-## Getting started
+## Running it on your computer
 
-Requires Node 22+ and pnpm 10.
+Every command below is typed into a **terminal** (Terminal on macOS, PowerShell on
+Windows) **from the repository's root folder**, the folder that contains this README
+and `package.json`.
+
+### One-time setup
+
+1. Install [Node.js 22 or newer](https://nodejs.org).
+2. Turn on pnpm (it ships with Node): `corepack enable`
+3. Get the code and move into its root folder:
+   ```sh
+   git clone https://github.com/andrewmoody96/7-GS.git
+   cd 7-GS
+   git checkout claude/7-game-series-brainstorm-8ydzpv
+   ```
+4. Install dependencies: `pnpm install`
+
+### Demo mode (just the app, with built-in sample data)
 
 ```sh
-pnpm install
+pnpm dev:web
+```
+
+Open http://localhost:5173 in your browser. Nothing is saved to a server.
+
+### Full mode (the app talking to the real server)
+
+Use **two terminal windows, both in the repository root**:
+
+| Terminal 1: the server | Terminal 2: the app |
+|---|---|
+| `pnpm --filter @7gs/api seed:demo` (once, loads sample data) | `pnpm --filter @7gs/web dev:http` |
+| `pnpm dev:api` (leave it running) | |
+
+Open http://localhost:5173 and sign in as `demo@7gs.local`. There is no email service
+yet, so the sign-in screen shows a **Sign in now** button instead of sending a link.
+Data is stored in `apps/api/.data/`. Stop either one with `Ctrl+C`.
+
+### Checks
+
+```sh
 pnpm test        # every package's tests
 pnpm typecheck   # every package's type check
 ```

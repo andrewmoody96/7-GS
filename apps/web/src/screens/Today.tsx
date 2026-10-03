@@ -25,7 +25,7 @@ import { RallySheet } from '../components/RallySheet';
 import { Scoreboard, type BoardStatus } from '../components/Scoreboard';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { Tile } from '../components/Tile';
-import { formatDateLong, formatDeadline, formatTime, formatTimeOfDay, score, weekdayLong } from '../lib/format';
+import { formatDateLong, formatDeadline, formatTime, formatTimeOfDay, gameScore, weekdayLong } from '../lib/format';
 import { evaluate, gamesOn, isLocked, lineScore, projectionText, situationKeys, statusOfSeries } from '../lib/game';
 import { buzz } from '../lib/motion';
 import { vocab } from '../vocab';
@@ -74,7 +74,7 @@ export function TodayScreen() {
                   {g.postponed ? ` · ${vocab.terms.makeup}` : ''}
                 </span>
                 <span className="dh-tab__name">{g.starterName}</span>
-                <span className="dh-tab__score">{score(line.runs, g.threshold)}</span>
+                <span className="dh-tab__score">{gameScore(g.status === 'final' ? g : { runs: line.runs, threshold: g.threshold, result: null })}</span>
               </button>
             );
           })}
@@ -161,7 +161,7 @@ function LastNightGame({ game, opponent, timeZone }: { game: GameSummaryDto; opp
         </p>
         <p className="recap__line">
           <span className="sr-only">{win ? 'Win' : 'Loss'}, </span>
-          {score(game.runs, game.threshold)} vs {opponent}
+          {gameScore(game)} vs {opponent}
         </p>
         <p className="recap__detail">{game.resultDetail ? vocab.resultDetail[game.resultDetail] : ''}</p>
       </div>
@@ -179,7 +179,7 @@ function LastNightGame({ game, opponent, timeZone }: { game: GameSummaryDto; opp
       <Jumbotron
         open={celebrate}
         headline={rally ? vocab.jumbotron.walkOff : vocab.jumbotron.win}
-        detail={`${vocab.term.final} · ${vocab.gameLabel(game.gameNumber)} · ${score(game.runs, game.threshold)}${rally ? ` · ${vocab.resultDetail.rally}` : ''}`}
+        detail={`${vocab.term.final} · ${vocab.gameLabel(game.gameNumber)} · ${gameScore(game)}${rally ? ` · ${vocab.resultDetail.rally}` : ''}`}
         onClose={() => setCelebrate(false)}
       />
     </div>
@@ -325,7 +325,7 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
       <Jumbotron
         open={celebrate}
         headline={vocab.jumbotron.inHand}
-        detail={`${score(ev.runs, game.threshold)} · ${vocab.jumbotron.finalAtMidnight}`}
+        detail={`${gameScore({ runs: ev.runs, threshold: game.threshold, result: null })} · ${vocab.jumbotron.finalAtMidnight}`}
         onClose={() => setCelebrate(false)}
       />
     </article>
@@ -337,7 +337,7 @@ function Projection({ ev, game }: { ev: GameEvaluation; game: GameDto }) {
     const detail = game.resultDetail ? vocab.resultDetail[game.resultDetail] : '';
     return (
       <p className={`projection projection--${game.result === 'W' ? 'win' : 'loss'}`}>
-        {vocab.term.final}: {game.result} {score(game.runs, game.threshold)}
+        {vocab.term.final}: {game.result} {gameScore(game)}
         {detail ? ` · ${detail}` : ''}
       </p>
     );
@@ -377,7 +377,7 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
         <Link to="/film-room" className="todo__item">
           <span>
             <strong>Build the rotation</strong>
-            <small>One {vocab.term.dayTemplate.toLowerCase()} per weekday: lineup, {vocab.term.required.toLowerCase()}s, opponent score.</small>
+            <small>One {vocab.term.dayTemplate.toLowerCase()} per weekday: lineup, {vocab.term.required.toLowerCase()}s, runs to win.</small>
           </span>
           <IconChevronRight />
         </Link>

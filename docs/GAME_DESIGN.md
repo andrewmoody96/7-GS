@@ -43,7 +43,8 @@ future sport skins possible.
 | Series | `series` | One Monday–Sunday week, 7 games. |
 | Game | `game` | One scheduled day's contest. |
 | Doubleheader | `game.slot = 2` | A made-up game played on the same day as another game. |
-| Opponent | `opponent` | Generated team name; their "score" is the day's threshold. |
+| Opponent | `opponent` | Generated team name. Their scoreboard score is one less than your runs to win. |
+| Runs to win | `threshold` | The runs you need for a W, set per starter. |
 | Roster | `task_definition` | All of a user's tasks/habits. |
 | Starter | `day_template` | Fixed weekday theme: default lineup, must-hits, threshold. |
 | Lineup | `lineup_entry` | Tasks scheduled for a game, in priority (batting) order. |
@@ -61,7 +62,7 @@ future sport skins possible.
 A game is a **W** when all of the following are true at 23:59:59 local time:
 
 1. Every must-hit in the lineup is complete.
-2. Runs ≥ the threshold (the opponent's score).
+2. Runs ≥ the runs to win (the threshold).
 3. Completed task count ≥ the minimum (if the starter sets one).
 
 Results:
@@ -71,6 +72,19 @@ Results:
 - **L (forfeit)**: exactly one must-hit missed. Rally Cap eligible.
 - **L (no appeal)**: two or more must-hits missed. Not Rally Cap eligible.
 - **W (rally)**: a loss overturned by a successful Rally Cap.
+
+**The scoreboard never shows a tied final.** Just like baseball, a game can't end 4–4.
+
+- The opponent's score is always one less than your runs to win. Reach your number and
+  you're ahead (runs to win 4 → you win 4–3).
+- A **W** always shows more runs than the opponent. A Rally Cap win that was short on
+  runs is credited with walk-off runs, enough to win by one (2 runs vs. runs to win 5 →
+  W 5–4).
+- An **L** always shows fewer runs than the opponent. If you finished one run short, or
+  piled up runs but missed a must-hit, the opponent is credited the go-ahead run
+  (3 vs. runs to win 4 → L 3–4; 8 runs with a missed must-hit → L 8–9).
+- A live game can be tied; only finals can't. Run differential uses these scoreboard
+  numbers, so every W adds to it and every L subtracts.
 
 **Points.** Each task is worth 1 run unless the user sets a different whole number.
 Thresholds are set in runs, so a user who never touches point values can think of the

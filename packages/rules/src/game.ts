@@ -13,7 +13,7 @@ export interface EntryState {
 }
 
 export interface GameRules {
-  /** The opponent's score. Contracts enforce >= 1, so an empty lineup can't win. */
+  /** Runs to win. Contracts enforce >= 1, so an empty lineup can't win. */
   threshold: number;
   minTasks: number | null;
 }

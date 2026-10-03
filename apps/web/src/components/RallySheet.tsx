@@ -3,7 +3,7 @@ import { percentileDice, RALLY } from '@7gs/rules';
 import { useEffect, useRef, useState } from 'react';
 import { errorMessage } from '../app/errors';
 import { useGameQuery, useRallyQuoteQuery, useRollRally } from '../app/queries';
-import { formatDeadline, score, signed, weekdayShort } from '../lib/format';
+import { formatDeadline, gameScore, signed, weekdayShort } from '../lib/format';
 import { prefersReducedMotion } from '../lib/motion';
 import { vocab } from '../vocab';
 import { IconDice } from './icons';
@@ -135,7 +135,7 @@ export function RallySheet({ game, open, onClose, timeZone }: RallySheetProps) {
   };
 
   const q = quote.data;
-  const kicker = `${vocab.gameLabel(game.gameNumber)} · ${weekdayShort(game.playedDate)} · ${vocab.terms.loss} ${score(game.runs, game.threshold)}`;
+  const kicker = `${vocab.gameLabel(game.gameNumber)} · ${weekdayShort(game.playedDate)} · ${vocab.terms.loss} ${gameScore(game)}`;
 
   return (
     <>

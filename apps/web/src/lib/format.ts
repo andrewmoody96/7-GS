@@ -1,7 +1,7 @@
 // Display formatting. Game dates are local calendar dates, so they're formatted as UTC
 // midnights to avoid any time-zone shift; instants use the user's IANA zone.
 
-import type { LocalDate } from '@7gs/rules';
+import { scoreline, type LocalDate, type ScoreInput } from '@7gs/rules';
 
 const MINUS = '−';
 
@@ -96,6 +96,12 @@ export function signed(n: number): string {
 /** "2–1" with an en dash, the way series scores are written. */
 export function score(a: number, b: number): string {
   return `${a}–${b}`;
+}
+
+/** Scoreboard score, yours first. Finals are never tied (see rules `scoreline`). */
+export function gameScore(game: ScoreInput): string {
+  const line = scoreline(game);
+  return score(line.us, line.them);
 }
 
 /** "a", "a and b", "a, b and c" */

@@ -91,7 +91,7 @@ describe('finalizer', () => {
       status: 'active',
       wins: 1,
       losses: 0,
-      runDifferential: 0,
+      runDifferential: 1, // won 4–3: a W reached exactly on the number is never a tie
       currentWinStreak: 1,
       longestWinStreak: 1,
     });
@@ -168,7 +168,8 @@ describe('finalizer', () => {
       wins: 2,
       losses: 3,
       rallyWins: 0,
-      runDifferential: -5,
+      // Scoreboards (opponent sits at 3): W 4–3, L 3–4, L 3–4, L 1–3, W 4–3.
+      runDifferential: -2,
       currentWinStreak: 1,
       longestWinStreak: 1,
     });

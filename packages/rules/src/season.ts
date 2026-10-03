@@ -2,6 +2,7 @@
 
 import { GAMES_PER_SEASON } from './constants';
 import type { GameResult, ResultDetail } from './enums';
+import { scoreline } from './score';
 
 export interface SeasonGame {
   result: GameResult | null;
@@ -17,7 +18,7 @@ export interface SeasonRecord {
   rallyWins: number;
   /** null before the first final game. */
   winPct: number | null;
-  /** Runs scored minus thresholds, over final games. */
+  /** Scoreboard runs for minus runs against, over final games (never a tie per game). */
   runDifferential: number;
 }
 
@@ -31,7 +32,8 @@ export function seasonRecord(games: readonly SeasonGame[]): SeasonRecord {
     if (g.result === 'W') wins++;
     else losses++;
     if (g.resultDetail === 'rally') rallyWins++;
-    runDifferential += g.runs - g.threshold;
+    const line = scoreline(g);
+    runDifferential += line.us - line.them;
   }
   const played = wins + losses;
   return {

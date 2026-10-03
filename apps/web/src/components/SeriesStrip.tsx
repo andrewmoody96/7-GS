@@ -1,6 +1,6 @@
 import type { GameSummaryDto, SeriesDto } from '@7gs/contracts';
 import { addDays, compareDates, type LocalDate } from '@7gs/rules';
-import { formatDate, score, weekdayShort } from '../lib/format';
+import { formatDate, gameScore, weekdayShort } from '../lib/format';
 import { gamesOn } from '../lib/game';
 import { vocab } from '../vocab';
 import { IconArrowRight } from './icons';
@@ -24,7 +24,7 @@ export function stripText(game: GameSummaryDto, state: StripState, form: 'short'
   switch (state) {
     case 'win':
     case 'loss': {
-      const result = `${state === 'win' ? vocab.terms.win : vocab.terms.loss} ${score(game.runs, game.threshold)}`;
+      const result = `${state === 'win' ? vocab.terms.win : vocab.terms.loss} ${gameScore(game)}`;
       if (!game.resultDetail || game.resultDetail === 'clean') return result;
       return form === 'short'
         ? `${result} · ${vocab.resultDetailShort[game.resultDetail]}`
@@ -56,7 +56,7 @@ function Cell({ game, state, onSelect }: CellProps) {
       {state === 'win' || state === 'loss' ? (
         <>
           <span className="cell__big">{state === 'win' ? vocab.terms.win : vocab.terms.loss}</span>
-          <span className="cell__small">{score(game.runs, game.threshold)}</span>
+          <span className="cell__small">{gameScore(game)}</span>
           {game.resultDetail === 'rally' ? <span className="cell__flag" title={vocab.resultDetail.rally} /> : null}
         </>
       ) : state === 'live' || state === 'today' ? (

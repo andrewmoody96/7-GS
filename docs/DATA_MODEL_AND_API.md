@@ -104,7 +104,7 @@ Unique: `(season_id, number)`.
 | user_id | uuid FK | |
 | weekday | int 1–7 | 1 = Monday. Unique per user (fixed rotation). |
 | name | text | e.g. "Gym Day". |
-| threshold | int ≥ 1 | Opponent's score in runs. At least 1, so an empty lineup can't win. |
+| threshold | int ≥ 1 | "Runs to win." The opponent's scoreboard score is one less (see `rules.scoreline`). At least 1, so an empty lineup can't win. |
 | min_tasks | int null | |
 | lock_time | time null | Overrides the user default. |
 
