@@ -79,6 +79,8 @@ export function SlotList({ title, slots, role, onChange, onMoveRole, moveRoleLab
                   </span>
                 ) : null}
               </p>
+            </div>
+            <div className="slot__controls">
               {allowRequired ? (
                 <Switch
                   className="slot__must"
@@ -86,9 +88,10 @@ export function SlotList({ title, slots, role, onChange, onMoveRole, moveRoleLab
                   checked={slot.required}
                   onChange={(required) => onChange(slots.map((s, j) => (j === i ? { ...s, required } : s)))}
                 />
-              ) : null}
-            </div>
-            <div className="slot__actions">
+              ) : (
+                <span />
+              )}
+              <div className="slot__actions">
               <button
                 type="button"
                 className="icon-btn"
@@ -120,6 +123,7 @@ export function SlotList({ title, slots, role, onChange, onMoveRole, moveRoleLab
               >
                 <IconX />
               </button>
+              </div>
             </div>
           </li>
         ))}

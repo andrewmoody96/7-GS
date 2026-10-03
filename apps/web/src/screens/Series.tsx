@@ -116,7 +116,10 @@ export function SeriesScreen() {
                     ) : null}
                   </span>
                   <span className="gamelog__starter">{g.starterName}</span>
-                  <span className={`gamelog__result gamelog__result--${state}`}>{stripText(g, state)}</span>
+                  <span className={`gamelog__result gamelog__result--${state}`}>
+                    <span aria-hidden="true">{stripText(g, state, 'short')}</span>
+                    <span className="sr-only">{stripText(g, state)}</span>
+                  </span>
                   <IconChevronRight width={18} height={18} aria-hidden="true" />
                 </button>
               </li>

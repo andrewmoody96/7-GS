@@ -16,13 +16,19 @@ export function stripState(game: GameSummaryDto, today: LocalDate): StripState {
   return 'upcoming';
 }
 
-/** Spoken/visible description of a game's state, e.g. "W 6–5 (rally)". */
-export function stripText(game: GameSummaryDto, state: StripState): string {
+/**
+ * Description of a game's state: "W 3–4 · Rally" (short, for display) or
+ * "W 3–4 (Rally W)" (long, for screen readers).
+ */
+export function stripText(game: GameSummaryDto, state: StripState, form: 'short' | 'long' = 'long'): string {
   switch (state) {
     case 'win':
     case 'loss': {
-      const detail = game.resultDetail && game.resultDetail !== 'clean' ? ` (${vocab.resultDetail[game.resultDetail]})` : '';
-      return `${state === 'win' ? vocab.terms.win : vocab.terms.loss} ${score(game.runs, game.threshold)}${detail}`;
+      const result = `${state === 'win' ? vocab.terms.win : vocab.terms.loss} ${score(game.runs, game.threshold)}`;
+      if (!game.resultDetail || game.resultDetail === 'clean') return result;
+      return form === 'short'
+        ? `${result} · ${vocab.resultDetailShort[game.resultDetail]}`
+        : `${result} (${vocab.resultDetail[game.resultDetail]})`;
     }
     case 'live':
       return vocab.gameStatus.live;

@@ -106,6 +106,8 @@ export interface Vocab {
   gameLabel: (gameNumber: number) => string;
   seriesLabel: (status: SeriesStatus) => string;
   resultDetail: Record<ResultDetail, string>;
+  /** Compact form for tight spots like the game log ('' when nothing to add). */
+  resultDetailShort: Record<ResultDetail, string>;
   gameStatus: Record<GameStatus, string>;
   phase: Record<Phase, string>;
   taskStatus: Record<TaskStatus, string>;
@@ -156,7 +158,7 @@ export interface Vocab {
     cap: string;
     tokenNote: (available: number) => string;
   };
-  jumbotron: { win: string; walkOff: string; inHand: string };
+  jumbotron: { win: string; walkOff: string; inHand: string; finalAtMidnight: string };
   il: {
     explainer: string;
     minimum: (days: number) => string;
@@ -245,6 +247,13 @@ export const baseball: Vocab = {
     no_appeal: 'No appeal · 2+ must-hits missed',
     rally: 'Rally W',
   },
+  resultDetailShort: {
+    clean: '',
+    short: 'Short',
+    forfeit: 'Forfeit',
+    no_appeal: 'No appeal',
+    rally: 'Rally',
+  },
   gameStatus: { scheduled: 'Pregame', live: 'Live', final: 'Final' },
   phase: { preseason: 'Spring Training', season: 'Season', offseason: 'Review Week' },
   taskStatus: { active: 'Active', injured: 'Injured List', retired: 'Retired' },
@@ -296,7 +305,7 @@ export const baseball: Vocab = {
     decidedLost: { tag: 'Series lost', blurb: 'Every game still counts toward the season.' },
   },
   projection: {
-    win: 'W in hand. It goes final at midnight.',
+    win: 'You’ve done enough to win. It goes final at midnight.',
     needPrefix: 'Need',
     moreRuns: (n) => `${n} more ${n === 1 ? 'run' : 'runs'}`,
     mustHits: (n) => plural(n, 'must-hit', 'must-hits'),
@@ -337,7 +346,7 @@ export const baseball: Vocab = {
     cap: 'Cap',
     tokenNote: (n) => `${plural(n, 'Rally Cap', 'Rally Caps')} left this month · one per series`,
   },
-  jumbotron: { win: 'W', walkOff: 'Walk-off W', inHand: 'W in hand' },
+  jumbotron: { win: 'W', walkOff: 'Walk-off W', inHand: 'W in hand', finalAtMidnight: 'Final at midnight' },
   il: {
     explainer:
       'The Injured List sits a task out of future lineups and freezes its streak. It can’t be used on today’s game after first pitch.',

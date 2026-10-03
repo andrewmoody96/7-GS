@@ -3,7 +3,7 @@ import { percentileDice, RALLY } from '@7gs/rules';
 import { useEffect, useRef, useState } from 'react';
 import { errorMessage } from '../app/errors';
 import { useGameQuery, useRallyQuoteQuery, useRollRally } from '../app/queries';
-import { formatDayTime, score, signed, weekdayShort } from '../lib/format';
+import { formatDeadline, score, signed, weekdayShort } from '../lib/format';
 import { prefersReducedMotion } from '../lib/motion';
 import { vocab } from '../vocab';
 import { IconDice } from './icons';
@@ -163,7 +163,7 @@ export function RallySheet({ game, open, onClose, timeZone }: RallySheetProps) {
             <OddsTable odds={q.odds} streak={q.seasonWinStreak} />
             <ul className="rally-notes">
               <li>{vocab.rally.tokenNote(q.tokensAvailable)}</li>
-              {q.deadline ? <li>Window closes {formatDayTime(q.deadline, timeZone)}.</li> : null}
+              {q.deadline ? <li>Window open until {formatDeadline(q.deadline, timeZone, true)}.</li> : null}
               <li>The roll happens on the server. A hit is a {vocab.rally.hit}; a miss keeps the L.</li>
             </ul>
             {error ? <p className="notice notice--error">{error}</p> : null}

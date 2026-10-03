@@ -8,17 +8,20 @@ interface ChyronProps {
   live?: boolean;
 }
 
-/** A TV-style lower third: "SERIES TIED 2–2 · GAME 5 TONIGHT". */
+/**
+ * A TV-style lower third: "SERIES TIED 2–2 · GAME 5 TONIGHT". The top situation sits
+ * on the bar as a flag; any secondary one (e.g. sweep watch) rides in the sub line.
+ */
 export function Chyron({ tags, headline, sub, live }: ChyronProps) {
   const [primary, ...rest] = tags;
   const blurb = sub ?? (primary ? vocab.situation[primary].blurb : undefined);
   return (
     <div className={`chyron${primary ? ` chyron--${primary}` : ''}`}>
+      {primary ? <p className={`chyron__flag chyron__tag--${primary}`}>{vocab.situation[primary].tag}</p> : null}
       <div className="chyron__bar">
         <span className="chyron__bug" aria-hidden="true">
           7GS
         </span>
-        {primary ? <span className={`chyron__tag chyron__tag--${primary}`}>{vocab.situation[primary].tag}</span> : null}
         <p className="chyron__headline">{headline}</p>
         {live ? (
           <span className="chyron__live">

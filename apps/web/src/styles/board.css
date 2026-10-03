@@ -6,8 +6,9 @@
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 44px;
+  min-width: 44px;
   height: 54px;
+  padding: 0 6px;
   border-radius: 6px;
   background: var(--tile);
   color: var(--tile-text);
@@ -43,8 +44,9 @@
 }
 
 .tile--s {
-  width: 32px;
+  min-width: 32px;
   height: 40px;
+  padding: 0 4px;
 }
 
 .tile--s .tile__face {
@@ -52,8 +54,9 @@
 }
 
 .tile--l {
-  width: 64px;
+  min-width: 64px;
   height: 80px;
+  padding: 0 8px;
   border-radius: 8px;
 }
 
@@ -381,21 +384,22 @@
   letter-spacing: 0.06em;
 }
 
-.chyron__tag {
-  display: flex;
-  align-items: center;
-  flex: none;
-  padding: 0 18px 0 10px;
-  margin-right: -6px;
+/* The situation flag rides on top of the bar, like a broadcast lower third. */
+.chyron__flag {
+  position: relative;
+  z-index: 1;
+  margin-bottom: -2px;
+  padding: 4px 22px 3px 10px;
+  border-radius: 6px 0 0 0;
   background: var(--outfield-600);
   color: var(--chalk-50);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 0.78rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
-  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 100%, 0 100%);
 }
 
 .chyron__tag--clinch,
@@ -491,6 +495,11 @@
 .chyron--game7 .chyron__bar {
   border-top-color: var(--pennant-500);
   box-shadow: 0 0 0 2px var(--gold-500);
+}
+
+/* A flag squares off the bar's top-left corner it sits on. */
+.chyron__flag + .chyron__bar {
+  border-top-left-radius: 0;
 }
 
 /* ── Badges ──────────────────────────────────────────────────────────────── */

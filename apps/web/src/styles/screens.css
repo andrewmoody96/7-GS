@@ -126,8 +126,24 @@
   margin-top: 2px;
 }
 
+.callout__actions .btn {
+  flex: 1 1 40%;
+}
+
+/* "Play ball" gets its own full-width row on phones. */
 .callout__actions .btn--primary {
-  margin-left: auto;
+  flex-basis: 100%;
+}
+
+@media (min-width: 560px) {
+  .callout__actions .btn,
+  .callout__actions .btn--primary {
+    flex: 0 1 auto;
+  }
+
+  .callout__actions .btn--primary {
+    margin-left: auto;
+  }
 }
 
 .lockbar {
@@ -286,7 +302,7 @@
 
 .recap {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 4px 12px;
   padding: 10px 12px;
@@ -339,7 +355,16 @@
   color: var(--text-muted);
 }
 
+.recap__body {
+  min-width: 0;
+}
+
 .recap__cta {
+  justify-self: end;
+}
+
+/* The Rally Cap call to action takes a full row on phones. */
+.recap__cta--wide {
   grid-column: 1 / -1;
   justify-self: stretch;
 }
@@ -353,12 +378,8 @@
   opacity: 0.85;
 }
 
-@media (min-width: 420px) {
-  .recap {
-    grid-template-columns: auto 1fr auto;
-  }
-
-  .recap__cta {
+@media (min-width: 480px) {
+  .recap__cta--wide {
     grid-column: auto;
     justify-self: end;
   }
@@ -445,16 +466,20 @@
   margin-top: 2px;
 }
 
-.slot__must {
-  margin-top: 2px;
-}
-
-.slot__actions {
+.slot__controls {
   grid-column: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
+  justify-content: space-between;
+  gap: 2px 8px;
+}
+
+.slot__actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
 }
 
 .slot__actions .btn--small {
@@ -1675,7 +1700,7 @@ button.cell:hover {
   }
 
   .tile {
-    width: 50px;
+    min-width: 50px;
     height: 60px;
   }
 
@@ -1684,7 +1709,7 @@ button.cell:hover {
   }
 
   .tile--l {
-    width: 72px;
+    min-width: 72px;
     height: 90px;
   }
 

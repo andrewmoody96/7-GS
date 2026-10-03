@@ -62,6 +62,16 @@ export function formatDayTime(instant: string | Date, timeZone?: string): string
   return fmt(`daytime:${timeZone ?? ''}`, { timeZone, weekday: 'short', hour: 'numeric', minute: '2-digit' }).format(d);
 }
 
+/**
+ * An exclusive deadline as people say it: the rules close the Rally Cap window at
+ * 12:00 (exclusive), which the design calls "11:59 a.m.", so show the last minute.
+ */
+export function formatDeadline(instant: string | Date, timeZone?: string, withDay = false): string {
+  const d = typeof instant === 'string' ? new Date(instant) : instant;
+  const last = new Date(d.getTime() - 60_000);
+  return withDay ? formatDayTime(last, timeZone) : formatTime(last, timeZone);
+}
+
 /** "09:00" → "9:00 AM" */
 export function formatTimeOfDay(time: string): string {
   const [h, m] = time.split(':').map(Number) as [number, number];

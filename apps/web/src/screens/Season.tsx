@@ -211,6 +211,7 @@ function Clubhouse({ me }: { me: MeDto }) {
   const [name, setName] = useState(me.displayName);
   const [theme, setTheme] = useState<ThemePref>(getThemePref);
   const nameId = useId();
+  const themeId = useId();
   const logout = useMutation({
     mutationFn: () => api.call('logout'),
     onSettled: async () => {
@@ -263,24 +264,28 @@ function Clubhouse({ me }: { me: MeDto }) {
           <dd>{me.defaultLockTime ? formatTimeOfDay(me.defaultLockTime) : 'First check-off'}</dd>
         </div>
       </dl>
-      <fieldset className="segmented segmented--small">
-        <legend className="field__label">Theme</legend>
-        {(['system', 'light', 'dark'] as const).map((pref) => (
-          <label key={pref} className={`segmented__item${theme === pref ? ' is-selected' : ''}`}>
-            <input
-              type="radio"
-              name="theme"
-              className="sr-only"
-              checked={theme === pref}
-              onChange={() => {
-                setTheme(pref);
-                setThemePref(pref);
-              }}
-            />
-            {pref === 'system' ? 'Auto' : pref === 'light' ? 'Day game' : 'Night game'}
-          </label>
-        ))}
-      </fieldset>
+      <div className="field">
+        <span className="field__label" id={themeId}>
+          Theme
+        </span>
+        <div className="segmented" role="radiogroup" aria-labelledby={themeId}>
+          {(['system', 'light', 'dark'] as const).map((pref) => (
+            <label key={pref} className={`segmented__item${theme === pref ? ' is-selected' : ''}`}>
+              <input
+                type="radio"
+                name="theme"
+                className="sr-only"
+                checked={theme === pref}
+                onChange={() => {
+                  setTheme(pref);
+                  setThemePref(pref);
+                }}
+              />
+              {pref === 'system' ? 'Auto' : pref === 'light' ? 'Day game' : 'Night game'}
+            </label>
+          ))}
+        </div>
+      </div>
       <button type="button" className="btn btn--quiet btn--danger-text" onClick={() => logout.mutate()} disabled={logout.isPending}>
         Sign out
       </button>

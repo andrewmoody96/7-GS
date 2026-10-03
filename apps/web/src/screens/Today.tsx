@@ -25,7 +25,7 @@ import { RallySheet } from '../components/RallySheet';
 import { Scoreboard, type BoardStatus } from '../components/Scoreboard';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { Tile } from '../components/Tile';
-import { formatDateLong, formatTime, formatTimeOfDay, score, weekdayLong } from '../lib/format';
+import { formatDateLong, formatDeadline, formatTime, formatTimeOfDay, score, weekdayLong } from '../lib/format';
 import { evaluate, gamesOn, isLocked, lineScore, projectionText, situationKeys, statusOfSeries } from '../lib/game';
 import { buzz } from '../lib/motion';
 import { vocab } from '../vocab';
@@ -166,12 +166,12 @@ function LastNightGame({ game, opponent, timeZone }: { game: GameSummaryDto; opp
         <p className="recap__detail">{game.resultDetail ? vocab.resultDetail[game.resultDetail] : ''}</p>
       </div>
       {eligible ? (
-        <button type="button" className="btn btn--gold recap__cta" onClick={() => setRallyOpen(true)}>
+        <button type="button" className="btn btn--gold recap__cta recap__cta--wide" onClick={() => setRallyOpen(true)}>
           <IconCap /> {vocab.term.comebackToken}
-          {quote.data?.deadline ? <span className="recap__until">until {formatTime(quote.data.deadline, timeZone)}</span> : null}
+          {quote.data?.deadline ? <span className="recap__until">until {formatDeadline(quote.data.deadline, timeZone)}</span> : null}
         </button>
       ) : win ? (
-        <button type="button" className="btn btn--quiet recap__cta" onClick={() => setCelebrate(true)}>
+        <button type="button" className="btn btn--quiet btn--small recap__cta" onClick={() => setCelebrate(true)}>
           Replay
         </button>
       ) : null}
@@ -325,7 +325,7 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
       <Jumbotron
         open={celebrate}
         headline={vocab.jumbotron.inHand}
-        detail={`${score(ev.runs, game.threshold)} · ${vocab.projection.win}`}
+        detail={`${score(ev.runs, game.threshold)} · ${vocab.jumbotron.finalAtMidnight}`}
         onClose={() => setCelebrate(false)}
       />
     </article>
