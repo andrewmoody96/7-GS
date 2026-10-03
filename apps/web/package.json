@@ -1,0 +1,45 @@
+{
+  "name": "@7gs/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "7-Game Series installable PWA (React + Vite).",
+  "scripts": {
+    "dev": "vite",
+    "dev:http": "vite --mode http",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json",
+    "icons": "node scripts/generate-icons.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "dependencies": {
+    "@7gs/contracts": "workspace:*",
+    "@7gs/rules": "workspace:*",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/oswald": "5.3.0",
+    "@tanstack/react-query": "5.104.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "^22.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "happy-dom": "20.14.5",
+    "playwright": "1.56.1",
+    "typescript": "^7.0.2",
+    "vite": "8.3.2",
+    "vite-plugin-pwa": "1.3.0",
+    "vitest": "^5.0.3",
+    "workbox-window": "7.4.1"
+  }
+}

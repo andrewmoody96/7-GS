@@ -1,0 +1,168 @@
+/* Design tokens: an old hand-turned ballpark scoreboard meets a TV broadcast chyron.
+   Palette: outfield green, infield clay, chalk white, scoreboard black, pennant red, gold. */
+
+:root {
+  --font-display: 'Oswald Variable', 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Palette */
+  --outfield-950: #07170f;
+  --outfield-900: #0c2a1c;
+  --outfield-800: #123d2a;
+  --outfield-700: #18513a;
+  --outfield-600: #1f6a4a;
+  --outfield-500: #2f8a60;
+  --outfield-300: #8cc5a3;
+  --outfield-100: #dcefe3;
+  --clay-700: #7d3f20;
+  --clay-600: #9a4f2a;
+  --clay-500: #b8653a;
+  --clay-300: #e3a37c;
+  --clay-100: #f6e2d4;
+  --chalk-50: #fdfaf3;
+  --chalk-100: #f5f0e3;
+  --chalk-200: #ebe3cf;
+  --chalk-300: #d9cfb6;
+  --chalk-400: #b9ad90;
+  --ink-950: #060807;
+  --ink-900: #0f1412;
+  --ink-800: #171d1a;
+  --ink-700: #222a26;
+  --ink-600: #2e3833;
+  --ink-500: #4b5650;
+  --pennant-700: #8c1d1a;
+  --pennant-600: #a5231f;
+  --pennant-500: #c8302c;
+  --pennant-300: #f0625c;
+  --pennant-100: #fbe1df;
+  --gold-700: #7a5a0e;
+  --gold-500: #e2b23b;
+  --gold-300: #f3d27a;
+  --gold-100: #fbf0d3;
+
+  /* Shape and rhythm */
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 16px;
+  --gutter: 16px;
+  --tap: 44px;
+  --col: 640px;
+  --nav-h: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Light theme (day game) */
+  --bg: #ece5d3;
+  --bg-stripe: #e6dec9;
+  --surface: var(--chalk-50);
+  --surface-2: var(--chalk-100);
+  --surface-sunken: var(--chalk-200);
+  --border: #d6cbb1;
+  --border-strong: #b3a684;
+  --text: #17201b;
+  --text-muted: #55605a;
+  --text-faint: #6e7872;
+  --accent: var(--outfield-700);
+  --accent-hover: var(--outfield-800);
+  --accent-text: var(--chalk-50);
+  --accent-soft: var(--outfield-100);
+  --win: var(--outfield-700);
+  --win-soft: var(--outfield-100);
+  --loss: var(--pennant-600);
+  --loss-soft: var(--pennant-100);
+  --gold-text: var(--gold-700);
+  --gold-soft: var(--gold-100);
+  --clay-text: var(--clay-700);
+  --clay-soft: var(--clay-100);
+  --focus: var(--clay-600);
+  --shadow-1: 0 1px 0 rgb(23 32 27 / 0.04), 0 1px 3px rgb(23 32 27 / 0.1);
+  --shadow-2: 0 10px 30px rgb(23 32 27 / 0.22);
+
+  /* The physical scoreboard looks the same day or night. */
+  --panel: var(--outfield-800);
+  --panel-2: var(--outfield-900);
+  --panel-edge: #0a2418;
+  --panel-text: var(--chalk-100);
+  --panel-muted: #a9c6b5;
+  --tile: var(--ink-900);
+  --tile-text: var(--chalk-100);
+  --chyron: var(--ink-900);
+  --chyron-text: var(--chalk-100);
+  --nav: var(--ink-900);
+  --nav-text: #b9c3bd;
+  --nav-active: var(--chalk-50);
+  --overlay: rgb(8 11 10 / 0.55);
+  color-scheme: light;
+}
+
+/* Dark theme (night game): system preference unless overridden, or forced. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #08110c;
+    --bg-stripe: #0a1610;
+    --surface: #101b15;
+    --surface-2: #15231b;
+    --surface-sunken: #0b140f;
+    --border: #22332a;
+    --border-strong: #35503f;
+    --text: #efe9db;
+    --text-muted: #a6b0a9;
+    --text-faint: #8b958f;
+    --accent: var(--outfield-600);
+    --accent-hover: var(--outfield-500);
+    --accent-text: var(--chalk-50);
+    --accent-soft: #143524;
+    --win: #6cc795;
+    --win-soft: #123323;
+    --loss: var(--pennant-300);
+    --loss-soft: #3a1513;
+    --gold-text: var(--gold-300);
+    --gold-soft: #33280c;
+    --clay-text: var(--clay-300);
+    --clay-soft: #3a2316;
+    --focus: var(--gold-300);
+    --shadow-1: 0 1px 0 rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.4);
+    --shadow-2: 0 12px 36px rgb(0 0 0 / 0.55);
+    --panel-edge: #23553f;
+    --tile: var(--ink-950);
+    --chyron: #030504;
+    --nav: #050807;
+    --overlay: rgb(0 0 0 / 0.66);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #08110c;
+  --bg-stripe: #0a1610;
+  --surface: #101b15;
+  --surface-2: #15231b;
+  --surface-sunken: #0b140f;
+  --border: #22332a;
+  --border-strong: #35503f;
+  --text: #efe9db;
+  --text-muted: #a6b0a9;
+  --text-faint: #8b958f;
+  --accent: var(--outfield-600);
+  --accent-hover: var(--outfield-500);
+  --accent-text: var(--chalk-50);
+  --accent-soft: #143524;
+  --win: #6cc795;
+  --win-soft: #123323;
+  --loss: var(--pennant-300);
+  --loss-soft: #3a1513;
+  --gold-text: var(--gold-300);
+  --gold-soft: #33280c;
+  --clay-text: var(--clay-300);
+  --clay-soft: #3a2316;
+  --focus: var(--gold-300);
+  --shadow-1: 0 1px 0 rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 12px 36px rgb(0 0 0 / 0.55);
+  --panel-edge: #23553f;
+  --tile: var(--ink-950);
+  --chyron: #030504;
+  --nav: #050807;
+  --overlay: rgb(0 0 0 / 0.66);
+  color-scheme: dark;
+}
