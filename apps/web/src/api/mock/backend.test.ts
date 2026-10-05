@@ -184,27 +184,40 @@ describe('mock backend game day', () => {
     );
   });
 
-  it('allows lineup edits before first pitch and locks on the first check-off', async () => {
-    const { api, backend } = setup('doubleheader');
-    const game1 = (await api.call('getToday')).games[0]!;
-    expect(game1.lockedAt).toBeNull();
-    const lineup = game1.entries.filter((e) => e.role === 'lineup');
+  it('plans next week freely, then rejects edits once the week’s first pitch passes', async () => {
+    const { api, tick } = setup('midseason');
+    const weeks = (await api.call('listWeeks')).weeks;
+    expect(weeks).toEqual([
+      { startDate: '2026-09-28', label: 'current', locked: true },
+      { startDate: '2026-10-05', label: 'next', locked: false },
+    ]);
+    const week = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
+    expect(week).toMatchObject({ locked: false, lockedAt: null, startDate: '2026-10-05', endDate: '2026-10-11' });
+    expect(week.games).toHaveLength(7);
+    expect(week.games.every((g) => g.entries.length > 0 && g.editPolicy === 'free')).toBe(true);
+
+    const wednesday = week.games[2]!;
+    const lineup = wednesday.entries.filter((e) => e.role === 'lineup');
     const reordered = [...lineup].reverse().map((e, i) => ({ taskId: e.taskId, position: i + 1, required: e.required, role: 'lineup' as const }));
     const patched = await api.call('patchLineup', {
-      params: { gameId: game1.id },
+      params: { gameId: wednesday.id },
       body: { threshold: 3, entries: reordered },
     });
     expect(patched.threshold).toBe(3);
     expect(patched.entries.filter((e) => e.role === 'lineup').map((e) => e.taskId)).toEqual(reordered.map((e) => e.taskId));
     expect(patched.entries.filter((e) => e.role === 'bench')).toHaveLength(0);
 
-    const first = patched.entries[0]!;
-    const locked = await api.call('completeEntry', {
-      params: { gameId: game1.id, entryId: first.id },
-      body: { clientAt: backend.now().toISOString() },
-    });
-    expect(locked.lockedAt).not.toBeNull();
-    await expectApiError(api.call('patchLineup', { params: { gameId: game1.id }, body: { threshold: 1 } }), 'GAME_LOCKED');
+    // Monday's first pitch is 9:00 AM: from then on the whole week only grows.
+    tick(2 * DAY + 14 * 60 * 60 * 1000 + 25 * 60 * 1000); // Monday 09:05
+    const locked = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
+    expect(locked.locked).toBe(true);
+    expect(locked.lockedAt).toBe('2026-10-05T14:00:00.000Z');
+    expect(locked.games.find((g) => g.id === wednesday.id)?.editPolicy).toBe('additions_only');
+    await expectApiError(
+      api.call('patchLineup', { params: { gameId: wednesday.id }, body: { threshold: 1 } }),
+      'GAME_LOCKED',
+      'WEEK_LOCKED',
+    );
   });
 
   it('subs a bench task in for a non-required lineup task after first pitch', async () => {

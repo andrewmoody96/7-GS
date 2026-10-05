@@ -9,6 +9,7 @@ import {
   type MePatchDto,
   type ResponseBody,
   type StarterPutDto,
+  type TaskUpdateDto,
 } from '@7gs/contracts';
 import { localDateOf, type Weekday } from '@7gs/rules';
 import { ApiError, type RawCallOptions } from '../client';
@@ -223,10 +224,8 @@ export class MockBackend {
       const w = world();
       return { tasks: w.tasks.map((t) => engine.toTaskDto(w, t)) };
     },
-    createTask: ({ world, body, now }) =>
-      engine.createTask(world(), this.env, body as { name: string; notes?: string | null; points: number }, now),
-    updateTask: ({ world, params, body, now }) =>
-      engine.updateTask(world(), params.taskId ?? '', body as { name?: string; notes?: string | null; points?: number }, now),
+    createTask: ({ world, body, now }) => engine.createTask(world(), this.env, body as Parameters<typeof engine.createTask>[2], now),
+    updateTask: ({ world, params, body, now }) => engine.updateTask(world(), params.taskId ?? '', body as TaskUpdateDto, now),
     retireTask: ({ world, params, now }) => engine.retireTask(world(), params.taskId ?? '', now),
     placeOnInjuredList: ({ world, params, now }) => ({ task: engine.placeOnInjuredList(world(), params.taskId ?? '', now) }),
     activateFromInjuredList: ({ world, params, now }) => ({
@@ -248,9 +247,9 @@ export class MockBackend {
 
     // ── Games ──
     getToday: ({ world, now }) => engine.toTodayDto(world(), now),
-    getGame: ({ world, params }) => {
+    getGame: ({ world, params, now }) => {
       const w = world();
-      return engine.toGameDto(w, engine.findGame(w, params.gameId ?? ''));
+      return engine.toGameDto(w, engine.findGame(w, params.gameId ?? ''), now);
     },
     patchLineup: ({ world, params, body, now }) =>
       engine.patchLineup(world(), this.env, params.gameId ?? '', body as LineupPatchDto, now),
@@ -260,6 +259,8 @@ export class MockBackend {
     uncompleteEntry: ({ world, params, now }) => engine.uncompleteEntry(world(), params.gameId ?? '', params.entryId ?? '', now),
     patchEntry: ({ world, params, body, now }) =>
       engine.setPartial(world(), params.gameId ?? '', params.entryId ?? '', (body as { partial: boolean }).partial, now),
+    addPinchHitter: ({ world, params, body, now }) =>
+      engine.pinchHitter(world(), this.env, params.gameId ?? '', (body as { taskId: string }).taskId, now),
     addToBench: ({ world, params, body, now }) =>
       engine.addToBench(world(), this.env, params.gameId ?? '', (body as { taskId: string }).taskId, now),
     substitute: ({ world, params, body, now }) => {
@@ -272,6 +273,15 @@ export class MockBackend {
     callRainout: ({ world, params, body, now }) =>
       engine.callRainout(world(), params.gameId ?? '', (body as { makeupDate: string }).makeupDate, now),
 
+    // ── Suspended games ──
+    getSuspensionQuote: ({ world, params, now }) => engine.suspensionQuote(world(), params.gameId ?? '', now),
+    suspendGame: ({ world, params, body, now }) =>
+      engine.suspendGame(world(), this.env, params.gameId ?? '', (body as { resumeDate: string | null }).resumeDate, now),
+
+    // ── Weekly lineup card ──
+    listWeeks: ({ world, now }) => engine.listWeeks(world(), now),
+    getWeek: ({ world, params, now }) => engine.getWeek(world(), this.env, params.startDate ?? '', now),
+
     // ── Rally Cap ──
     getRallyQuote: ({ world, params, now }) => engine.rallyQuote(world(), params.gameId ?? '', now),
     rollRally: ({ world, params, headers, now }) => {
@@ -279,7 +289,7 @@ export class MockBackend {
       if (!key) throw new ApiError(400, 'VALIDATION_FAILED', 'Rolling requires an Idempotency-Key header.');
       const w = world();
       const roll = engine.rollRally(w, this.env, params.gameId ?? '', key, now);
-      return { roll: engine.toRallyRollDto(roll), game: engine.toGameDto(w, engine.findGame(w, roll.gameId)) };
+      return { roll: engine.toRallyRollDto(roll), game: engine.toGameDto(w, engine.findGame(w, roll.gameId), now) };
     },
 
     // ── Series & seasons ──

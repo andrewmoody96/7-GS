@@ -246,6 +246,7 @@ export const baseball: Vocab = {
     forfeit: 'Forfeit · 1 must-hit missed',
     no_appeal: 'No appeal · 2+ must-hits missed',
     rally: 'Rally W',
+    suspended: 'Suspended · no decision',
   },
   resultDetailShort: {
     clean: '',
@@ -253,6 +254,7 @@ export const baseball: Vocab = {
     forfeit: 'Forfeit',
     no_appeal: 'No appeal',
     rally: 'Rally',
+    suspended: 'ND',
   },
   gameStatus: { scheduled: 'Pregame', live: 'Live', final: 'Final' },
   phase: { preseason: 'Spring Training', season: 'Season', offseason: 'Review Week' },
