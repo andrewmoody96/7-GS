@@ -145,6 +145,7 @@ describe('rally eligibility', () => {
     [{ inSeason: false }, 'OUT_OF_SEASON'],
     [{ alreadyRolled: true }, 'ALREADY_ROLLED'],
     [{ gameStatus: 'live' as const }, 'GAME_NOT_FINAL'],
+    [{ result: null }, 'NO_DECISION'],
     [{ result: 'W' as const }, 'GAME_WON'],
     [{ missedRequired: 2 }, 'TOO_MANY_MISSED'],
     [{ rallyDeadline: new Date('2026-10-06T15:00:00Z') }, 'WINDOW_CLOSED'],

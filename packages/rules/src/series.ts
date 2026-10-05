@@ -14,6 +14,8 @@ export interface SeriesGameState {
   result: GameResult | null;
   /** Final with no decision (a suspended game that couldn't be resumed). */
   noDecision?: boolean;
+  /** Suspended and resumed on another day (still decided, but not "as scheduled"). */
+  suspended?: boolean;
   /** Scoreboard runs for minus against (rules.scoreline); breaks a tied series. */
   runDiff?: number;
 }
@@ -131,6 +133,6 @@ export function isIronMan(games: readonly SeriesGameState[]): boolean {
   return (
     status.complete &&
     status.wins >= RAINOUT.ironManMinWins &&
-    games.every((g) => !g.postponed && !g.noDecision)
+    games.every((g) => !g.postponed && !g.suspended && !g.noDecision)
   );
 }

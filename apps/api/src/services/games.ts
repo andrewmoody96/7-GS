@@ -335,7 +335,8 @@ export async function pinchHit(tx: Db, user: UserRow, gameId: string, taskId: st
   if (existing?.role === 'subbed_out') {
     throw conflict('CONFLICT', 'A task that was subbed out cannot come back in this game.', 'SUBBED_OUT');
   }
-  if (pinchHitThreshold(game.threshold ?? 1, existing?.points ?? task.points) > LIMITS.thresholdMax) {
+  const raises = existing?.role !== 'lineup';
+  if (raises && pinchHitThreshold(game.threshold ?? 1, existing?.points ?? task.points) > LIMITS.thresholdMax) {
     throw conflict('CONFLICT', `Runs to win can't go above ${LIMITS.thresholdMax}.`, 'THRESHOLD_MAX');
   }
   return (await addPinchHit(tx, game, task, now)).game;

@@ -132,7 +132,11 @@ Like a fantasy lineup, each series is planned as a week.
     with the same number of runs.
   - **Bench:** add any task to a day's bench. Bench work is optional; it only counts once
     subbed in for a non-must-hit.
-  - **Promote:** turning a bench task into a must-hit makes it a pinch hitter (same rule).
+  - **Promote:** turning a bench task into a must-hit makes it a pinch hitter (same rule:
+    its runs are new to the lineup, so runs to win rises by them).
+  - **Require a batting task:** making a task already in the lineup a must-hit doesn't
+    raise runs to win. Its runs were already available, so the cushion stays the same.
+    (A carried-over one-off that was already planned that day works the same way.)
   - Not allowed: removing tasks, turning off must-hits, lowering runs to win.
 
 ### Recurring and one-off tasks

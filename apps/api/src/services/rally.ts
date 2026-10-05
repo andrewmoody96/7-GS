@@ -32,6 +32,7 @@ export type RollDice = () => number;
 const REJECTIONS: Record<RallyIneligibleReason, () => ApiException> = {
   OUT_OF_SEASON: () => conflict('OUT_OF_SEASON', 'Rally Caps can only be used during the season.', 'OUT_OF_SEASON'),
   GAME_NOT_FINAL: () => conflict('NOT_ELIGIBLE', 'Rally Caps open once the game is final.', 'GAME_NOT_FINAL'),
+  NO_DECISION: () => conflict('NOT_ELIGIBLE', 'A no-decision game cannot be appealed.', 'NO_DECISION'),
   GAME_WON: () => conflict('NOT_ELIGIBLE', 'This game was a win.', 'GAME_WON'),
   TOO_MANY_MISSED: () => conflict('NOT_ELIGIBLE', 'Two or more missed must-hits cannot be appealed.', 'TOO_MANY_MISSED'),
   WINDOW_CLOSED: () => conflict('NOT_ELIGIBLE', 'The Rally Cap window closed at noon the day after the game.', 'WINDOW_CLOSED'),

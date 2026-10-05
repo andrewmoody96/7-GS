@@ -142,6 +142,13 @@ describe('series with no-decisions', () => {
     expect(seriesStatus(games)).toMatchObject({ complete: true, result: null, label: 'Series split 1–1' });
   });
 
+  it('denies Iron Man when a game was suspended and resumed', () => {
+    const games = [1, 2, 3, 4, 5, 6, 7].map((n) => g(n, 'W'));
+    expect(isIronMan(games)).toBe(true);
+    games[3] = { ...games[3]!, suspended: true } as (typeof games)[number];
+    expect(isIronMan(games)).toBe(false);
+  });
+
   it('denies Iron Man with a suspended game', () => {
     const games = [1, 2, 3, 4, 5, 6].map((n) => g(n, 'W')).concat([g(7, null, { noDecision: true })]);
     expect(isIronMan(games)).toBe(false);

@@ -180,8 +180,10 @@ export type PinchHitOutcome = 'added' | 'promoted' | 'required' | 'already_requi
 
 /**
  * Make `task` a must-hit in `game` as a pinch hitter (GAME_DESIGN §4a): a new lineup
- * entry at the end of the batting order, or an existing bench / non-required entry
- * promoted. Runs to win rises by exactly its points (rules.pinchHitThreshold). An entry
+ * entry at the end of the batting order, or a bench entry promoted. Runs to win rises by
+ * exactly its points (rules.pinchHitThreshold), because those runs are new to the lineup.
+ * A non-required lineup entry just becomes required: its runs were already available, so
+ * runs to win stays put and the cushion is unchanged. An entry
  * that is already a must-hit is left as it is (only marked `carriedOver` when asked), so
  * a task is never in a game twice. Callers check the game is still open.
  */
@@ -220,11 +222,11 @@ export async function addPinchHit(
       carriedOver,
     });
   } else if (existing.role === 'lineup') {
-    outcome = 'required';
     await tx
       .update(lineupEntries)
-      .set({ required: true, pinchHitAt: now, carriedOver: existing.carriedOver || carriedOver })
+      .set({ required: true, carriedOver: existing.carriedOver || carriedOver })
       .where(eq(lineupEntries.id, existing.id));
+    return { game: await refreshScore(tx, game), outcome: 'required' };
   } else {
     outcome = 'promoted';
     await tx

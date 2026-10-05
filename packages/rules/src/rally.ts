@@ -73,6 +73,7 @@ export function rallyOdds(input: RallyOddsInput): RallyOdds {
 export const RALLY_INELIGIBLE_REASONS = [
   'OUT_OF_SEASON',
   'GAME_NOT_FINAL',
+  'NO_DECISION',
   'GAME_WON',
   'TOO_MANY_MISSED',
   'WINDOW_CLOSED',
@@ -102,7 +103,8 @@ export function rallyEligibility(input: RallyEligibilityInput): RallyEligibility
   const no = (reason: RallyIneligibleReason): RallyEligibility => ({ eligible: false, reason });
   if (!input.inSeason) return no('OUT_OF_SEASON');
   if (input.alreadyRolled) return no('ALREADY_ROLLED');
-  if (input.gameStatus !== 'final' || input.result === null) return no('GAME_NOT_FINAL');
+  if (input.gameStatus !== 'final') return no('GAME_NOT_FINAL');
+  if (input.result === null) return no('NO_DECISION');
   if (input.result === 'W') return no('GAME_WON');
   if (input.missedRequired >= 2) return no('TOO_MANY_MISSED');
   if (input.rallyDeadline === null || input.now.getTime() >= input.rallyDeadline.getTime()) {

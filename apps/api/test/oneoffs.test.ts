@@ -180,7 +180,7 @@ describe('one-off tasks', () => {
     expect(moved).toMatchObject({ playedDate: '2026-10-08', slot: 2, threshold: 2 });
     expect(moved.entries.map((e) => e.taskName)).toEqual(['Gym', 'Read']);
     const wed = after.games.find((g) => g.id === wednesday!.id)!;
-    expect(wed.threshold).toBe(4); // 2 + Errand's 2
+    expect(wed.threshold).toBe(2); // Errand was already batting: it becomes a must-hit, no raise
     expect(wed.entries.filter((e) => e.taskName === 'Errand')).toEqual([
       expect.objectContaining({ role: 'lineup', required: true, position: 2, carriedOver: true }),
     ]);

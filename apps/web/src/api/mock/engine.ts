@@ -158,7 +158,8 @@ function toSeriesGameState(world: UserWorld, g: GameRow): SeriesGameState {
     playedDate: g.playedDate,
     slot: g.slot,
     // A suspended game was moved too, so it also costs Iron Man (rules only see `postponed`).
-    postponed: g.postponed || g.suspended,
+    postponed: g.postponed,
+      suspended: g.suspended,
     result,
     noDecision: final && g.resultDetail === 'suspended',
     runDiff,
@@ -411,11 +412,17 @@ function addPinchHit(world: UserWorld, env: Env, game: GameRow, task: TaskRow, a
     if (carriedOver) existing.carriedOver = true;
     return;
   }
+  if (existing?.role === 'lineup') {
+    // Already batting: its runs were available, so it just becomes required (no raise).
+    existing.required = true;
+    existing.carriedOver = existing.carriedOver || carriedOver;
+    return;
+  }
   const lastPosition = Math.max(0, ...game.entries.filter((e) => e.role === 'lineup').map((e) => e.position));
   snapshot.threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(snapshot.threshold, task.points));
   if (existing) {
-    // Promote from the bench (or, for a carryover, a lineup spot that wasn't a must-hit).
-    if (existing.role === 'bench') existing.position = lastPosition + 1;
+    // Promote from the bench.
+    existing.position = lastPosition + 1;
     existing.role = 'lineup';
     existing.required = true;
     existing.points = task.points;
@@ -1172,11 +1179,14 @@ export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: 
   const task = findTask(world, taskId);
   if (task.status !== 'active') fail(409, 'CONFLICT', 'Only active tasks can pinch hit.', 'TASK_NOT_ACTIVE');
   const existing = game.entries.find((e) => e.taskId === taskId);
-  if (existing && existing.role !== 'bench') {
-    fail(409, 'CONFLICT', 'That task is already in this game’s lineup.', 'ALREADY_IN_GAME');
+  if (existing?.role === 'lineup' && existing.required) {
+    fail(409, 'CONFLICT', 'That task is already a must-hit in this game.', 'ALREADY_REQUIRED');
   }
-  if (pinchHitThreshold(game.snapshot.threshold, task.points) > LIMITS.thresholdMax) {
-    fail(400, 'VALIDATION_FAILED', 'Runs to win would go past the limit.');
+  if (existing?.role === 'subbed_out') {
+    fail(409, 'CONFLICT', 'A task that was subbed out cannot come back in this game.', 'SUBBED_OUT');
+  }
+  if (existing?.role !== 'lineup' && pinchHitThreshold(game.snapshot.threshold, task.points) > LIMITS.thresholdMax) {
+    fail(409, 'CONFLICT', 'Runs to win would go past the limit.', 'THRESHOLD_MAX');
   }
   addPinchHit(world, env, game, task, now, false);
   return toGameDto(world, game, now);

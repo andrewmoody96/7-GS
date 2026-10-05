@@ -43,7 +43,8 @@ export function seriesGameStates(rows: readonly GameRow[]): SeriesGameState[] {
       slot: g.slot,
       // rules.isIronMan only knows `postponed`; a suspended-and-resumed game also moved,
       // which denies Iron Man (see the contract change requests).
-      postponed: g.postponed || g.suspended,
+      postponed: g.postponed,
+      suspended: g.suspended,
       result,
       noDecision: isNoDecision(g),
       runDiff: (() => {

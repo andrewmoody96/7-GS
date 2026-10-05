@@ -367,11 +367,17 @@ describe('mock backend pinch hitters and one-offs', () => {
     expect(promoted.entries.find((e) => e.id === spanish.id)).toMatchObject({ role: 'lineup', required: true });
     expect(promoted.entries.filter((e) => e.role === 'bench').map((e) => e.position)).toEqual([1]);
 
+    // A lineup task that isn't a must-hit just becomes one: its runs were already
+    // available, so runs to win (and the cushion) stay put.
     const inbox = game.entries.find((e) => e.taskName === 'Inbox zero')!;
+    expect(inbox).toMatchObject({ role: 'lineup', required: false });
+    const required = await api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: inbox.taskId } });
+    expect(required.threshold).toBe(9);
+    expect(required.entries.find((e) => e.id === inbox.id)).toMatchObject({ required: true, pinchHitAt: null });
     await expectApiError(
       api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: inbox.taskId } }),
       'CONFLICT',
-      'ALREADY_IN_GAME',
+      'ALREADY_REQUIRED',
     );
     const thursday = (await api.call('getToday')).series!.games.find((g) => g.gameNumber === 4)!;
     await expectApiError(api.call('addPinchHitter', { params: { gameId: thursday.id }, body: { taskId: yoga.id } }), 'GAME_FINAL');

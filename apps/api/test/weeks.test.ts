@@ -185,7 +185,7 @@ describe('injured list under the weekly lock', () => {
 });
 
 describe('pinch hitters', () => {
-  it('adds a new must-hit, promotes bench and non-required entries, and raises runs to win by their runs', async () => {
+  it('adds a new must-hit or promotes a bench task (raising runs to win), and requires a batting task without raising it', async () => {
     const { t, token, ids } = await setup();
     t.at('2026-10-05', '08:00', CHICAGO);
     const [monday] = (await t.ok('getToday', { token })).games;
@@ -209,8 +209,10 @@ describe('pinch hitters', () => {
     expect(promoted.entries.filter((e) => e.role === 'bench')).toEqual([]);
 
     const required = await t.ok('addPinchHitter', { token, params: { gameId: monday!.id }, body: { taskId: ids.Read! } });
-    expect(required.threshold).toBe(8);
-    expect(entry(required, 'Read')).toMatchObject({ role: 'lineup', required: true, position: 2 });
+    // Read was already batting: it becomes a must-hit, but its runs were already
+    // available, so runs to win (and the cushion) don't change.
+    expect(required.threshold).toBe(7);
+    expect(entry(required, 'Read')).toMatchObject({ role: 'lineup', required: true, position: 2, pinchHitAt: null });
     expect(required).toMatchObject({ missedRequired: 4, runs: 0 });
 
     expect(
@@ -239,8 +241,8 @@ describe('pinch hitters', () => {
     t.at('2026-10-06', '00:30', CHICAGO);
     await t.finalize();
     const final = await t.ok('getGame', { token, params: { gameId: monday!.id } });
-    // Read was already in the lineup, so making it a must-hit raised the bar without adding
-    // runs: 2 + 1 + 3 + 1 = 7 against 8.
-    expect(final).toMatchObject({ status: 'final', result: 'L', resultDetail: 'short', runs: 7, threshold: 8, editPolicy: 'closed' });
+    // The cushion never shrinks: Read was already batting, so requiring it didn't raise the
+    // bar. 2 + 1 + 3 + 1 = 7 against 7 wins (7–6 on the scoreboard).
+    expect(final).toMatchObject({ status: 'final', result: 'W', resultDetail: 'clean', runs: 7, threshold: 7, editPolicy: 'closed' });
   });
 });

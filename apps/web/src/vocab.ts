@@ -398,6 +398,7 @@ export const baseball: Vocab = {
   rallyReason: {
     OUT_OF_SEASON: 'Rally Caps aren’t used in Spring Training or Review Week.',
     GAME_NOT_FINAL: 'The game isn’t final yet.',
+    NO_DECISION: 'A no-decision can’t be appealed.',
     GAME_WON: 'You won this one. No rally needed.',
     TOO_MANY_MISSED: 'Two or more must-hits missed: no appeal.',
     WINDOW_CLOSED: 'The Rally Cap window closed at 11:59 a.m. the next day.',
