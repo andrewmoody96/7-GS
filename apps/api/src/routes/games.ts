@@ -8,6 +8,7 @@ import {
   patchLineup,
   setPartial,
   substitute,
+  addToBench,
   uncompleteEntry,
 } from '../services/games';
 import { loadUserGame } from '../services/lineups';
@@ -52,6 +53,12 @@ export function gameRoutes(deps: Deps): AnyRoute[] {
     route('patchEntry', ({ auth, params, body, now }) =>
       inUserTx(db, auth.user, now, async (tx, user) =>
         gameView(tx, user, await setPartial(tx, user, params.gameId, params.entryId, body.partial, now), now),
+      ),
+    ),
+
+    route('addToBench', ({ auth, params, body, now }) =>
+      inUserTx(db, auth.user, now, async (tx, user) =>
+        gameView(tx, user, await addToBench(tx, user, params.gameId, body.taskId, now), now),
       ),
     ),
 

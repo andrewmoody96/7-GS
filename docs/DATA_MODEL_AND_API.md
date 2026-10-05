@@ -291,6 +291,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | POST | `/v1/games/:id/entries/:entryId/complete` | Body: `{ clientAt, partial? }`. Idempotent. |
 | DELETE | `/v1/games/:id/entries/:entryId/complete` | Undo a check-off (before midnight only). |
 | PATCH | `/v1/games/:id/entries/:entryId` | Body: `{ partial }`. Mark a must-hit as partly done ("warning track"). |
+| POST | `/v1/games/:id/bench` | Body: `{ taskId }`. Add any active roster task to the bench until the game is final. |
 | POST | `/v1/games/:id/substitutions` | Body: `{ outEntryId, inEntryId }` (a bench entry on the same game). Post-lock, non-required only. |
 | GET | `/v1/games/:id/rainout` | Rainout eligibility and makeup date options. |
 | POST | `/v1/games/:id/rainout` | Body: `{ makeupDate }`. Uses an allowance. |

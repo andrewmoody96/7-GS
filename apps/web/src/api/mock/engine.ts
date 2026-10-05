@@ -739,6 +739,31 @@ export function patchLineup(world: UserWorld, env: Env, gameId: string, patch: L
   return toGameDto(world, game);
 }
 
+export function addToBench(world: UserWorld, env: Env, gameId: string, taskId: string, now: Date): GameDto {
+  const game = findGame(world, gameId);
+  assertNotFinal(game);
+  assertBeforeMidnight(world, game, now);
+  if (!game.lineupBuiltAt) fail(409, 'NOT_ELIGIBLE', 'Lineups are built on game day.', 'NOT_GAME_DAY');
+  const task = findTask(world, taskId);
+  if (task.status !== 'active') fail(409, 'CONFLICT', 'Only active tasks can join the bench.', 'TASK_NOT_ACTIVE');
+  if (game.entries.some((e) => e.taskId === taskId)) fail(409, 'CONFLICT', 'That task is already in this game.', 'ALREADY_IN_GAME');
+  const benchPositions = game.entries.filter((e) => e.role === 'bench').map((e) => e.position);
+  game.entries.push({
+    id: env.ids(),
+    taskId: task.id,
+    taskName: task.name,
+    points: task.points,
+    required: false,
+    position: Math.max(0, ...benchPositions) + 1,
+    role: 'bench',
+    subbedInAt: null,
+    completedClientAt: null,
+    completedReceivedAt: null,
+    partial: false,
+  });
+  return toGameDto(world, game);
+}
+
 export function substitute(world: UserWorld, gameId: string, outEntryId: string, inEntryId: string, now: Date): GameDto {
   const game = findGame(world, gameId);
   assertNotFinal(game);

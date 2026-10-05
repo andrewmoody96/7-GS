@@ -84,6 +84,12 @@ export const endpoints = {
     body: S.EntryPatch,
     response: S.Game,
   }),
+  addToBench: endpoint({
+    method: 'POST',
+    path: '/v1/games/:gameId/bench',
+    body: S.AddToBench,
+    response: S.Game,
+  }),
   substitute: endpoint({
     method: 'POST',
     path: '/v1/games/:gameId/substitutions',

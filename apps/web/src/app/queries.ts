@@ -285,6 +285,13 @@ export function useSubstitute() {
   );
 }
 
+export function useAddToBench() {
+  const api = useApi();
+  return useGameMutation((v: { gameId: string; taskId: string }) =>
+    api.call('addToBench', { params: { gameId: v.gameId }, body: { taskId: v.taskId } }),
+  );
+}
+
 export function useCallRainout() {
   const api = useApi();
   const qc = useQueryClient();

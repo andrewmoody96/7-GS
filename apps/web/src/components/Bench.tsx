@@ -1,6 +1,6 @@
 import type { GameDto, LineupEntryDto } from '@7gs/contracts';
-import { useState } from 'react';
-import { useSubstitute } from '../app/queries';
+import { useId, useState } from 'react';
+import { useAddToBench, useSubstitute, useTasksQuery } from '../app/queries';
 import { formatTime } from '../lib/format';
 import { benchOf, lineupOf, subbedOutOf } from '../lib/game';
 import { vocab } from '../vocab';
@@ -21,8 +21,14 @@ export function Bench({ game, locked, final }: BenchProps) {
   const substitute = useSubstitute();
   const outs = lineupOf(game).filter((e) => !e.required && e.completedAt === null);
   const canSub = locked && !final;
+  const addToBench = useAddToBench();
+  const tasks = useTasksQuery();
+  const [addId, setAddId] = useState('');
+  const pickerId = useId();
+  const inGame = new Set(game.entries.map((e) => e.taskId));
+  const addable = (tasks.data ?? []).filter((t) => t.status === 'active' && !inGame.has(t.id));
 
-  if (bench.length === 0) return null;
+  if (bench.length === 0 && final) return null;
 
   const close = () => {
     setSubIn(null);
@@ -43,6 +49,7 @@ export function Bench({ game, locked, final }: BenchProps) {
               : 'Subs open at first pitch.'}
         </p>
       </header>
+      {bench.length === 0 ? <p className="empty-line">No one on the bench yet.</p> : null}
       <ul className="benchlist">
         {bench.map((entry) => (
           <li key={entry.id} className="benchlist__item">
@@ -65,6 +72,32 @@ export function Bench({ game, locked, final }: BenchProps) {
           </li>
         ))}
       </ul>
+      {!final && addable.length > 0 ? (
+        <form
+          className="field"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (addId) addToBench.mutate({ gameId: game.id, taskId: addId }, { onSuccess: () => setAddId('') });
+          }}
+        >
+          <label className="field__label" htmlFor={pickerId}>
+            Add to {vocab.term.bench.toLowerCase()} from your {vocab.terms.roster.toLowerCase()}
+          </label>
+          <div className="addtask__row">
+            <select id={pickerId} className="input" value={addId} onChange={(e) => setAddId(e.target.value)}>
+              <option value="">Choose a task…</option>
+              {addable.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({vocab.runs(t.points)})
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="btn" disabled={!addId || addToBench.isPending}>
+              Add
+            </button>
+          </div>
+        </form>
+      ) : null}
 
       <Sheet
         open={subIn !== null}

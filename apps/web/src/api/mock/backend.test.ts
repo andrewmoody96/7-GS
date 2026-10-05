@@ -227,6 +227,16 @@ describe('mock backend game day', () => {
     expect(after.entries.find((e) => e.id === bench.id)?.subbedInAt).not.toBeNull();
   });
 
+  it('adds any roster task to today’s bench, even after first pitch', async () => {
+    const { api } = setup('midseason');
+    const game = (await api.call('getToday')).games[0]!;
+    const task = await api.call('createTask', { body: { name: 'Yoga', points: 2 } });
+    const after = await api.call('addToBench', { params: { gameId: game.id }, body: { taskId: task.id } });
+    expect(after.entries.find((e) => e.taskId === task.id)).toMatchObject({ role: 'bench', required: false, points: 2 });
+    expect(after.runs).toBe(game.runs);
+    await expectApiError(api.call('addToBench', { params: { gameId: game.id }, body: { taskId: task.id } }), 'CONFLICT', 'ALREADY_IN_GAME');
+  });
+
   it('marks a must-hit as warning track', async () => {
     const { api } = setup('midseason');
     const game = (await api.call('getToday')).games[0]!;

@@ -358,7 +358,7 @@ export const baseball: Vocab = {
   emptyStates: {
     preseasonTitle: 'Spring Training',
     preseasonBody: (openingDay, days) =>
-      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Set up your roster and rotation in the Film Room. Nothing counts yet.`,
+      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Set up your roster and rotation in the Film Room. Nothing counts yet, and you can add or change tasks any time after Opening Day too.`,
     offseasonTitle: 'Review Week',
     offseasonBody: (nextSeason) =>
       `No games this week. Review the season, make front-office moves, and get ready for Opening Day ${nextSeason}.`,

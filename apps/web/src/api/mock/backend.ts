@@ -260,6 +260,8 @@ export class MockBackend {
     uncompleteEntry: ({ world, params, now }) => engine.uncompleteEntry(world(), params.gameId ?? '', params.entryId ?? '', now),
     patchEntry: ({ world, params, body, now }) =>
       engine.setPartial(world(), params.gameId ?? '', params.entryId ?? '', (body as { partial: boolean }).partial, now),
+    addToBench: ({ world, params, body, now }) =>
+      engine.addToBench(world(), this.env, params.gameId ?? '', (body as { taskId: string }).taskId, now),
     substitute: ({ world, params, body, now }) => {
       const { outEntryId, inEntryId } = body as { outEntryId: string; inEntryId: string };
       return engine.substitute(world(), params.gameId ?? '', outEntryId, inEntryId, now);

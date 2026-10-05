@@ -6,7 +6,7 @@ import { validateCheckoff, type CheckoffRejection } from '@7gs/rules';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { games, lineupEntries, taskDefinitions, type GameRow, type UserRow } from '../db/schema';
-import { ApiException, conflict, validationFailed, type Issue } from '../errors';
+import { ApiException, conflict, notFound, validationFailed, type Issue } from '../errors';
 import { uuidv7 } from '../ids';
 import {
   assertBuilt,
@@ -224,6 +224,40 @@ export async function setPartial(
   if (entry.partial !== partial) {
     await tx.update(lineupEntries).set({ partial }).where(eq(lineupEntries.id, entry.id));
   }
+  return game;
+}
+
+/**
+ * Add any active roster task to the game's bench, before or after first pitch, until the
+ * game is final. Bench tasks only count once subbed in for a non-must-hit, so this never
+ * changes what a W requires.
+ */
+export async function addToBench(tx: Db, user: UserRow, gameId: string, taskId: string, now: Date): Promise<GameRow> {
+  const game = await loadUserGame(tx, user.id, gameId, { forUpdate: true });
+  if (game.status === 'final') throw conflict('GAME_FINAL', 'This game is already final.');
+  assertBuilt(game);
+  assertNotFinal(game, user, now);
+  const [task] = await tx
+    .select()
+    .from(taskDefinitions)
+    .where(and(eq(taskDefinitions.id, taskId), eq(taskDefinitions.userId, user.id)));
+  if (!task) throw notFound('Task');
+  if (task.status !== 'active') throw conflict('CONFLICT', 'Only active tasks can join the bench.', 'TASK_NOT_ACTIVE');
+  const entries = await loadEntries(tx, [game.id]);
+  if (entries.some((e) => e.taskId === taskId)) {
+    throw conflict('CONFLICT', 'That task is already in this game.', 'ALREADY_IN_GAME');
+  }
+  const benchPositions = entries.filter((e) => e.role === 'bench').map((e) => e.position);
+  await tx.insert(lineupEntries).values({
+    id: uuidv7(),
+    gameId: game.id,
+    taskId: task.id,
+    taskName: task.name,
+    points: task.points,
+    required: false,
+    position: Math.max(0, ...benchPositions) + 1,
+    role: 'bench',
+  });
   return game;
 }
 

@@ -96,6 +96,9 @@ editable. After the lock (a user-set time, or the first check-off, whichever com
 - The threshold and must-hits are frozen.
 - Bench substitutions are allowed only for non-required tasks and are logged in the
   box score.
+- Any active roster task, including one created today, can be added to the bench at any
+  time until the game is final. It only counts once it's subbed in, so it never changes
+  what a W requires.
 - Point values are copied onto the lineup entries, so later roster edits never
   rewrite history.
 
@@ -141,7 +144,8 @@ built-in prompt to review the season and tweak the setup.
   - **Season review**: final record, awards (Series MVP task, longest streak, best
     comeback), season-over-season comparison.
   - **Front office**: retire tasks, add tasks ("free agency"), rebuild starters, set the
-    next season's goal.
+    next season's goal. All of this can also be done any time during the season; Review
+    Week is just a dedicated moment for it.
 
 ### Season standings
 

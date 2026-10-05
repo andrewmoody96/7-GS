@@ -378,6 +378,38 @@ describe('check-offs', () => {
   });
 });
 
+describe('adding to the bench', () => {
+  it('adds a brand-new roster task to the bench after first pitch, then subs it in', async () => {
+    const { t, token } = await setup();
+    const game = await mondayGame(t, token, '09:00');
+    await t.ok('lockGame', { token, params: { gameId: game.id } });
+    t.at('2026-10-05', '12:00', CHICAGO);
+
+    const yoga = await t.ok('createTask', { token, body: { name: 'Yoga', points: 2 } });
+    const added = await t.ok('addToBench', { token, params: { gameId: game.id }, body: { taskId: yoga.id } });
+    expect(entry(added, 'Yoga')).toMatchObject({ role: 'bench', required: false, points: 2, completedAt: null });
+    // Joining the bench changes nothing about the game itself.
+    expect(added).toMatchObject({ runs: game.runs, threshold: game.threshold, missedRequired: game.missedRequired });
+
+    expect(
+      await t.fails('addToBench', { token, params: { gameId: game.id }, body: { taskId: yoga.id } }, 409),
+    ).toMatchObject({ code: 'CONFLICT', reason: 'ALREADY_IN_GAME' });
+
+    const subbed = await t.ok('substitute', {
+      token,
+      params: { gameId: game.id },
+      body: { outEntryId: entry(game, 'Read').id, inEntryId: entry(added, 'Yoga').id },
+    });
+    expect(entry(subbed, 'Yoga')).toMatchObject({ role: 'lineup', required: false });
+
+    t.at('2026-10-06', '00:01', CHICAGO);
+    const walk = await t.ok('createTask', { token, body: { name: 'Stretch more' } });
+    expect(await t.fails('addToBench', { token, params: { gameId: game.id }, body: { taskId: walk.id } }, 409)).toMatchObject({
+      code: 'GAME_FINAL',
+    });
+  });
+});
+
 describe('substitutions', () => {
   it('swaps a bench task in for a non-required one after first pitch', async () => {
     const { t, token } = await setup();

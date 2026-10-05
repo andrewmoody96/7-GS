@@ -290,6 +290,8 @@ export const LineupPatch = z
 export const CompleteEntry = z.object({ clientAt: Instant });
 export const EntryPatch = z.object({ partial: z.boolean() });
 export const Substitution = z.object({ outEntryId: Id, inEntryId: Id });
+/** Any active roster task can join today's bench until the game is final. */
+export const AddToBench = z.object({ taskId: Id });
 
 // ── Rainouts ─────────────────────────────────────────────────────────────────
 
