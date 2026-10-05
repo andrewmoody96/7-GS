@@ -6,13 +6,14 @@ import {
   currentWinStreak,
   isIronMan,
   longestWinStreak,
+  scoreline,
   seasonRecord,
   seriesStatus,
   taskStreaks,
   type GameResult,
   type SeriesGameState,
 } from '@7gs/rules';
-import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import {
   games,
@@ -28,14 +29,30 @@ import {
 } from '../db/schema';
 import { grantIronManRainout, grantSeriesBonusToken } from './allowances';
 
+/** A final with no decision: a suspended game that couldn't be resumed (GAME_DESIGN §7). */
+export function isNoDecision(g: Pick<GameRow, 'status' | 'resultDetail'>): boolean {
+  return g.status === 'final' && g.resultDetail === 'suspended';
+}
+
 export function seriesGameStates(rows: readonly GameRow[]): SeriesGameState[] {
-  return rows.map((g) => ({
-    gameNumber: g.gameNumber,
-    playedDate: g.playedDate,
-    slot: g.slot,
-    postponed: g.postponed,
-    result: g.status === 'final' ? g.result : null,
-  }));
+  return rows.map((g) => {
+    const result = g.status === 'final' ? g.result : null;
+    return {
+      gameNumber: g.gameNumber,
+      playedDate: g.playedDate,
+      slot: g.slot,
+      // rules.isIronMan only knows `postponed`; a suspended-and-resumed game also moved,
+      // which denies Iron Man (see the contract change requests).
+      postponed: g.postponed || g.suspended,
+      result,
+      noDecision: isNoDecision(g),
+      runDiff: (() => {
+        if (result === null) return 0;
+        const line = scoreline({ result, resultDetail: g.resultDetail, runs: g.runs, threshold: g.threshold ?? 1 });
+        return line.us - line.them;
+      })(),
+    };
+  });
 }
 
 export function seriesGames(tx: Db, seriesId: string): Promise<GameRow[]> {
@@ -104,6 +121,7 @@ export async function recomputeSeason(tx: Db, seasonId: string): Promise<SeasonR
       wins: record.wins,
       losses: record.losses,
       rallyWins: record.rallyWins,
+      noDecisions: record.noDecisions,
       runDifferential: record.runDifferential,
       seriesWon,
       seriesLost,
@@ -115,7 +133,8 @@ export async function recomputeSeason(tx: Db, seasonId: string): Promise<SeasonR
 }
 
 export async function seasonWinStreaks(tx: Db, seasonId: string): Promise<{ current: number; longest: number }> {
-  const results = (await seasonFinalGames(tx, seasonId)).map((g) => g.result as GameResult);
+  // No-decision finals freeze the streak: they are skipped, not counted as a break.
+  const results = (await seasonFinalGames(tx, seasonId)).flatMap((g) => (g.result ? [g.result as GameResult] : []));
   return { current: currentWinStreak(results), longest: longestWinStreak(results) };
 }
 
@@ -130,7 +149,15 @@ export async function recomputeTaskStreaks(tx: Db, taskIds: readonly string[]): 
     .select({ taskId: lineupEntries.taskId, completedAt: lineupEntries.completedClientAt })
     .from(lineupEntries)
     .innerJoin(games, eq(games.id, lineupEntries.gameId))
-    .where(and(inArray(lineupEntries.taskId, ids), eq(lineupEntries.role, 'lineup'), eq(games.status, 'final')))
+    .where(
+      and(
+        inArray(lineupEntries.taskId, ids),
+        eq(lineupEntries.role, 'lineup'),
+        eq(games.status, 'final'),
+        // No-decision games freeze task streaks.
+        isNotNull(games.result),
+      ),
+    )
     .orderBy(asc(games.playedDate), asc(games.slot));
   const appearances = new Map<string, boolean[]>(ids.map((id) => [id, []]));
   for (const row of rows) appearances.get(row.taskId)?.push(row.completedAt !== null);

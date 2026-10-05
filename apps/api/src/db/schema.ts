@@ -5,6 +5,7 @@
 // - users.finalized_through: the finalizer's per-user cursor (last settled local date).
 // - games.time_zone: the zone a game started in (GAME_DESIGN §10, travelling users).
 // - series.closed_at: set once the series' Sunday is settled (idempotent close).
+// - seasons.no_decisions: cached like the other aggregates.
 // - rally_rolls.user_id / idempotency_key, rally_tokens.series_id,
 //   rainout_allowances.seq / earned_month / series_id / used_at: grant and use bookkeeping.
 
@@ -17,6 +18,7 @@ import {
   RESULT_DETAILS,
   SEASON_STATUSES,
   SERIES_RESULTS,
+  TASK_KINDS,
   TASK_STATUSES,
 } from '@7gs/rules';
 import { sql } from 'drizzle-orm';
@@ -59,6 +61,7 @@ const count = (name: string) => integer(name).notNull().default(0);
 // ── Enums ────────────────────────────────────────────────────────────────────
 
 export const taskStatus = pgEnum('task_status', TASK_STATUSES);
+export const taskKind = pgEnum('task_kind', TASK_KINDS);
 export const lineupRole = pgEnum('lineup_role', LINEUP_ROLES);
 export const templateRole = pgEnum('template_role', ['lineup', 'bench']);
 export const gameStatus = pgEnum('game_status', GAME_STATUSES);
@@ -122,6 +125,7 @@ export const seasons = pgTable(
     wins: count('wins'),
     losses: count('losses'),
     rallyWins: count('rally_wins'),
+    noDecisions: count('no_decisions'),
     seriesWon: count('series_won'),
     seriesLost: count('series_lost'),
     runDifferential: integer('run_differential').notNull().default(0),
@@ -185,6 +189,9 @@ export const taskDefinitions = pgTable(
     notes: text('notes'),
     points: integer('points').notNull().default(1),
     status: taskStatus('status').notNull().default('active'),
+    kind: taskKind('kind').notNull().default('recurring'),
+    /** A missed one-off must-hit waiting to be added to the next game as a pinch hitter. */
+    carryover: boolean('carryover').notNull().default(false),
     ilStartedOn: localDate('il_started_on'),
     ilMinUntil: localDate('il_min_until'),
     currentStreak: count('current_streak'),
@@ -264,6 +271,8 @@ export const games = pgTable(
     playedDate: localDate('played_date').notNull(),
     slot: integer('slot').notNull().default(1),
     postponed: boolean('postponed').notNull().default(false),
+    /** Suspended and moved to resume (slot 2) on played_date, keeping its progress. */
+    suspended: boolean('suspended').notNull().default(false),
     // Snapshot taken when the lineup is built (start of the played day).
     templateId: uuid('template_id').references(() => dayTemplates.id, { onDelete: 'set null' }),
     starterName: text('starter_name'),
@@ -288,7 +297,7 @@ export const games = pgTable(
     unique('games_user_played_slot_uq').on(t.userId, t.playedDate, t.slot),
     check('games_number_ck', sql`${t.gameNumber} BETWEEN 1 AND 7`),
     check('games_slot_ck', sql`${t.slot} IN (1, 2)`),
-    check('games_makeup_ck', sql`${t.postponed} = (${t.slot} = 2)`),
+    check('games_makeup_ck', sql`(${t.postponed} OR ${t.suspended}) = (${t.slot} = 2)`),
     check('games_threshold_ck', sql`${t.threshold} IS NULL OR ${t.threshold} >= 1`),
     check('games_min_tasks_ck', sql`${t.minTasks} IS NULL OR ${t.minTasks} >= 1`),
     check(
@@ -296,9 +305,14 @@ export const games = pgTable(
       sql`${t.lineupBuiltAt} IS NULL OR (${t.starterName} IS NOT NULL AND ${t.threshold} IS NOT NULL AND ${t.timeZone} IS NOT NULL)`,
     ),
     check('games_counts_ck', sql`${t.runs} >= 0 AND ${t.tasksDone} >= 0 AND ${t.missedRequired} >= 0`),
-    check('games_final_ck', sql`(${t.status} = 'final') = (${t.result} IS NOT NULL)`),
+    // A no-decision (suspended, couldn't resume) is final with no result. The detail is
+    // compared as text so the migration that adds the enum value can also add this check.
+    check('games_final_ck', sql`(${t.status} = 'final') = (${t.resultDetail} IS NOT NULL)`),
     check('games_final_built_ck', sql`${t.status} <> 'final' OR ${t.lineupBuiltAt} IS NOT NULL`),
-    check('games_detail_ck', sql`(${t.result} IS NULL) = (${t.resultDetail} IS NULL)`),
+    check(
+      'games_detail_ck',
+      sql`(${t.result} IS NULL) = (${t.resultDetail} IS NULL OR ${t.resultDetail}::text = 'suspended')`,
+    ),
     check('games_live_ck', sql`${t.status} <> 'live' OR ${t.lockedAt} IS NOT NULL`),
   ],
 );
@@ -319,6 +333,10 @@ export const lineupEntries = pgTable(
     position: integer('position').notNull(),
     role: lineupRole('role').notNull(),
     subbedInAt: instant('subbed_in_at'),
+    /** Added (or promoted) as a must-hit that raised runs to win by its points. */
+    pinchHitAt: instant('pinch_hit_at'),
+    /** A one-off must-hit carried over from a game it was missed in. */
+    carriedOver: boolean('carried_over').notNull().default(false),
     completedClientAt: instant('completed_client_at'),
     completedReceivedAt: instant('completed_received_at'),
     partial: boolean('partial').notNull().default(false),
@@ -416,7 +434,9 @@ export const rainoutAllowances = pgTable(
   (t) => [
     unique('rainout_allowances_monthly_uq').on(t.userId, t.source, t.month, t.seq),
     unique('rainout_allowances_series_uq').on(t.seriesId),
-    unique('rainout_allowances_used_game_uq').on(t.usedGameId),
+    // A game can use two: a Rainout and then a suspension of its makeup, or a suspension
+    // and then a no-decision suspension of the resumed game.
+    index('rainout_allowances_used_game_idx').on(t.usedGameId),
     uniqueIndex('rainout_allowances_iron_man_month_uq')
       .on(t.userId, t.earnedMonth)
       .where(sql`${t.source} = 'iron_man'`),

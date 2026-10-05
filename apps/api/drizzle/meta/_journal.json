@@ -8,6 +8,13 @@
       "when": 1790927433764,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791232385899,
+      "tag": "0001_weekly_lineups_suspensions",
+      "breakpoints": true
     }
   ]
 }

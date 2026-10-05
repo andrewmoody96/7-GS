@@ -1,7 +1,7 @@
 // Roster (task_definitions) and the Injured List (GAME_DESIGN §7).
 
 import type { TaskDto, TaskUpdateDto } from '@7gs/contracts';
-import { addDays, compareDates, IL_MIN_DAYS, isGameDay, localDateOf, type LocalDate } from '@7gs/rules';
+import { addDays, compareDates, IL_MIN_DAYS, isGameDay, localDateOf, type LocalDate, type TaskKind } from '@7gs/rules';
 import { and, asc, eq, inArray, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { dayTemplateTasks, lineupEntries, taskDefinitions, type GameRow, type TaskRow, type UserRow } from '../db/schema';
@@ -23,7 +23,7 @@ export async function listTasks(tx: Db, user: UserRow): Promise<TaskDto[]> {
 export async function createTask(
   tx: Db,
   user: UserRow,
-  body: { name: string; notes?: string | null; points: number },
+  body: { name: string; notes?: string | null; points: number; kind?: TaskKind },
   now: Date,
 ): Promise<TaskDto> {
   const [row] = await tx
@@ -34,6 +34,7 @@ export async function createTask(
       name: body.name,
       notes: body.notes ?? null,
       points: body.points,
+      kind: body.kind ?? 'recurring',
       createdAt: now,
       updatedAt: now,
     })
@@ -62,6 +63,11 @@ export async function updateTask(tx: Db, user: UserRow, taskId: string, patch: T
   if (patch.name !== undefined) set.name = patch.name;
   if (patch.notes !== undefined) set.notes = patch.notes;
   if (patch.points !== undefined) set.points = patch.points;
+  if (patch.kind !== undefined) {
+    set.kind = patch.kind;
+    // Only a one-off carries over.
+    if (patch.kind === 'recurring') set.carryover = false;
+  }
   const [row] = await tx.update(taskDefinitions).set(set).where(eq(taskDefinitions.id, task.id)).returning();
   if (!row) throw notFound('Task');
 
@@ -103,7 +109,7 @@ export async function retireTask(tx: Db, user: UserRow, taskId: string, now: Dat
   if (task.status === 'retired') return toTaskDto(task);
   const [row] = await tx
     .update(taskDefinitions)
-    .set({ status: 'retired', ilStartedOn: null, ilMinUntil: null, updatedAt: now })
+    .set({ status: 'retired', carryover: false, ilStartedOn: null, ilMinUntil: null, updatedAt: now })
     .where(eq(taskDefinitions.id, task.id))
     .returning();
   if (!row) throw notFound('Task');

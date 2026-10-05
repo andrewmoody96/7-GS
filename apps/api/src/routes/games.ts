@@ -1,5 +1,5 @@
 import type { Deps } from '../deps';
-import { validationFailed } from '../errors';
+import { conflict, validationFailed } from '../errors';
 import { route, type AnyRoute } from '../http/router';
 import { toRallyRollDto } from '../services/dto';
 import {
@@ -94,5 +94,12 @@ export function gameRoutes(deps: Deps): AnyRoute[] {
         return { roll: toRallyRollDto(roll), game: await gameView(tx, user, game, now) };
       });
     }),
+
+    // Built in the following steps.
+    ...(['addPinchHitter', 'getSuspensionQuote', 'suspendGame', 'listWeeks', 'getWeek'] as const).map((name) =>
+      route(name, () => {
+        throw conflict('CONFLICT', 'Not available yet.', 'NOT_IMPLEMENTED');
+      }) as AnyRoute,
+    ),
   ];
 }

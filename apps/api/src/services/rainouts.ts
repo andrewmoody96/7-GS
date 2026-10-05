@@ -18,6 +18,7 @@ function toRainoutGame(game: GameRow): RainoutGame {
     scheduledDate: game.scheduledDate,
     playedDate: game.playedDate,
     postponed: game.postponed,
+    suspended: game.suspended,
     status: game.status,
     lockedAt: game.lockedAt,
   };

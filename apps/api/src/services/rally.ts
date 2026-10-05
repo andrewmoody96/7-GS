@@ -48,7 +48,7 @@ export async function seasonWinStreakBefore(tx: Db, game: GameRow): Promise<numb
   const before = finals.filter(
     (g) => g.playedDate < game.playedDate || (g.playedDate === game.playedDate && g.slot < game.slot),
   );
-  return currentWinStreak(before.map((g) => g.result as GameResult));
+  return currentWinStreak(before.flatMap((g) => (g.result ? [g.result as GameResult] : [])));
 }
 
 interface RallyState {
