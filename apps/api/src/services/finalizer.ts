@@ -36,6 +36,7 @@ import {
   materializeLock,
   reloadGame,
 } from './lineups';
+import { settleOneOffs } from './oneoffs';
 import { closeSeries, recomputeSeason, recomputeSeries, recomputeTaskStreaks } from './standings';
 
 /** Safety valve: never settle more than this many days for one user in one call. */
@@ -119,6 +120,8 @@ export async function settleDate(tx: Db, user: UserRow, date: LocalDate, now: Da
       const row = await recomputeSeries(tx, seriesId);
       await recomputeSeason(tx, row.seasonId);
     }
+    // Completed one-offs retire; missed one-off must-hits carry over to the next game.
+    await settleOneOffs(tx, user, date, finalized, now);
   }
 
   const pos = calendarPosition(user.startDate, date);

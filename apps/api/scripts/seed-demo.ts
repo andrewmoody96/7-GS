@@ -1,7 +1,9 @@
-// Demo data for the frontend: user demo@7gs.local with 8 tasks, 7 starters, last week's
-// complete series and this week's games so far, all produced by replaying each day
-// through the real API (in-process) with a simulated clock, then running the finalizer
-// after each midnight. Prints a session token to use as a Bearer token.
+// Demo data for the frontend: user demo@7gs.local with 8 recurring tasks and 2 one-offs,
+// 7 starters, last week's complete series and this week's games so far, all produced by
+// replaying each day through the real API (in-process) with a simulated clock, then
+// running the finalizer after each midnight. This week's card is opened (every lineup
+// built) with a one-off pinch hitter today and another later in the week; from Friday,
+// next week's card is opened too. Prints a session token to use as a Bearer token.
 //
 //   pnpm --filter @7gs/api seed:demo            # PGlite in apps/api/.data (stop `dev` first)
 //   DATABASE_URL=postgres://… pnpm --filter @7gs/api seed:demo
@@ -25,6 +27,7 @@ import {
   localDateOf,
   startOfLocalDay,
   startOfWeek,
+  weekday,
   zonedTimeToInstant,
   type LocalDate,
 } from '@7gs/rules';
@@ -52,6 +55,8 @@ const TASKS = [
   { name: 'Cook dinner', points: 2 },
   { name: 'Practice guitar', points: 1 },
   { name: 'Stretch', points: 1 },
+  { name: 'Buy birthday gift', points: 1, kind: 'one_off' },
+  { name: 'Renew passport', points: 2, kind: 'one_off' },
 ] as const;
 type TaskName = (typeof TASKS)[number]['name'];
 
@@ -150,7 +155,9 @@ const database = await createDatabase(config.database);
 await database.migrate();
 const { db } = database;
 
-const realNow = systemClock.now();
+// SEED_NOW (an ISO instant) replays as if it were then, e.g. a Friday to see next week's card.
+const realNow = process.env.SEED_NOW ? new Date(process.env.SEED_NOW) : systemClock.now();
+if (Number.isNaN(realNow.getTime())) throw new Error(`Invalid SEED_NOW: ${process.env.SEED_NOW}`);
 const today = localDateOf(realNow, TZ);
 // Sign up on the Monday a week before this one: last week's series is complete and
 // this week's games run up to today (no Spring Training).
@@ -258,6 +265,26 @@ for (const game of todayView.games) {
   }
 }
 
+// This week's card: building it lets the frontend plan every day. A one-off pinch hitter
+// today raises today's runs to win; another one-off is planned later in the week.
+const currentMonday = startOfWeek(today);
+const card = await call('getWeek', { startDate: currentMonday });
+const pinchHitters: string[] = [];
+const todayGame = card.games.find((g) => g.playedDate === today && g.status !== 'final');
+if (todayGame) {
+  await call('addPinchHitter', { gameId: todayGame.id }, { taskId: ids['Buy birthday gift'] });
+  pinchHitters.push(`Buy birthday gift (${today})`);
+}
+const laterGame = card.games.find((g) => g.playedDate > today && g.status !== 'final');
+if (laterGame) {
+  await call('addPinchHitter', { gameId: laterGame.id }, { taskId: ids['Renew passport'] });
+  pinchHitters.push(`Renew passport (${laterGame.playedDate})`);
+}
+// Next week's card opens on Friday.
+const nextMonday = addDays(currentMonday, 7);
+const openedNext = weekday(today) >= 5;
+if (openedNext) await call('getWeek', { startDate: nextMonday });
+
 const [user] = await db.select().from(users).where(eq(users.email, EMAIL));
 if (!user) throw new Error('Demo user missing');
 const token = await createSession(db, user.id, realNow);
@@ -269,6 +296,8 @@ console.log(`
 Seeded ${EMAIL} (${TZ}), signed up ${signup}.
   Season ${season?.number}: ${season?.wins}–${season?.losses}; this series ${series?.wins}–${series?.losses} vs ${series?.opponent.name}
   Today (${today}): ${todayView.games.length} game(s), ${checkedToday} task(s) checked off so far.
+  Week card ${currentMonday} built; pinch hitters: ${pinchHitters.join(', ') || 'none'}.
+  Next week's card (${nextMonday}): ${openedNext ? 'opened' : 'opens on Friday'}.
 
 Session token (Bearer):
   ${token}

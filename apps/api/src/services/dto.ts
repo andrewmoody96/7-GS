@@ -17,6 +17,8 @@ export function toTaskDto(task: TaskRow): TaskDto {
     notes: task.notes,
     points: task.points,
     status: task.status,
+    kind: task.kind,
+    carryover: task.carryover,
     ilStartedOn: task.ilStartedOn,
     ilMinUntil: task.ilMinUntil,
     currentStreak: task.currentStreak,
@@ -43,6 +45,8 @@ export function toEntryDto(entry: EntryRow): LineupEntryDto {
     position: entry.position,
     role: entry.role,
     subbedInAt: iso(entry.subbedInAt),
+    pinchHitAt: iso(entry.pinchHitAt),
+    carriedOver: entry.carriedOver,
     completedAt: iso(entry.completedClientAt),
     partial: entry.partial,
   };

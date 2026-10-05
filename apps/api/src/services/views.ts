@@ -10,6 +10,7 @@ import { iso, slotOf, sortEntries, toEntryDto, toRallyRollDto } from './dto';
 import { loadEntries } from './lineups';
 import { seasonWinStreaks, seriesGames } from './standings';
 import { ensureStarters, projectStarter, type StarterProjection } from './starters';
+import { editPolicyOf, weekLocks } from './weeks';
 
 async function projections(
   tx: Db,
@@ -51,6 +52,7 @@ function toSummary(row: GameRow, snap: StarterProjection): GameSummaryDto {
     playedDate: row.playedDate,
     slot: slotOf(row),
     postponed: row.postponed,
+    suspended: row.suspended,
     starterName: snap.starterName,
     threshold: snap.threshold,
     minTasks: snap.minTasks,
@@ -69,6 +71,12 @@ export async function gameViews(tx: Db, user: UserRow, rows: readonly GameRow[],
   const proj = await projections(tx, user, rows, now);
   const entries = await loadEntries(tx, ids);
   const rolls = await tx.select().from(rallyRolls).where(inArray(rallyRolls.gameId, ids));
+  const locks = await weekLocks(
+    tx,
+    user,
+    rows.map((r) => r.seriesId),
+    now,
+  );
   const entriesByGame = new Map<string, EntryRow[]>();
   for (const e of entries) entriesByGame.set(e.gameId, [...(entriesByGame.get(e.gameId) ?? []), e]);
 
@@ -81,6 +89,7 @@ export async function gameViews(tx: Db, user: UserRow, rows: readonly GameRow[],
       lockedAt: iso(row.lockedAt),
       rallyDeadline: iso(row.rallyDeadline),
       finalizedAt: iso(row.finalizedAt),
+      editPolicy: editPolicyOf(row, user, locks.get(row.seriesId) ?? null, now),
       entries: sortEntries(entriesByGame.get(row.id) ?? []).map(toEntryDto),
       rally: roll ? toRallyRollDto(roll) : null,
     };
@@ -126,6 +135,7 @@ export async function seasonView(tx: Db, row: SeasonRow): Promise<SeasonDto> {
     wins: row.wins,
     losses: row.losses,
     rallyWins: row.rallyWins,
+    noDecisions: row.noDecisions,
     seriesWon: row.seriesWon,
     seriesLost: row.seriesLost,
     runDifferential: row.runDifferential,

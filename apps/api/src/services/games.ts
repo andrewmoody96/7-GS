@@ -2,13 +2,14 @@
 // partial flag and post-lock substitutions (GAME_DESIGN §4, DATA_MODEL §4).
 
 import type { LineupPatchDto } from '@7gs/contracts';
-import { validateCheckoff, type CheckoffRejection } from '@7gs/rules';
+import { LIMITS, localDateOf, pinchHitThreshold, validateCheckoff, type CheckoffRejection } from '@7gs/rules';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { games, lineupEntries, taskDefinitions, type GameRow, type UserRow } from '../db/schema';
 import { ApiException, conflict, notFound, validationFailed, type Issue } from '../errors';
 import { uuidv7 } from '../ids';
 import {
+  addPinchHit,
   assertBuilt,
   assertNotFinal,
   gameTimeZone,
@@ -20,6 +21,10 @@ import {
   recordFirstPitch,
   refreshScore,
 } from './lineups';
+import { loadUserSeries } from './seasons';
+import { seriesGames } from './standings';
+import { assertPlannable } from './weekCard';
+import { weekLockOf } from './weeks';
 
 const STALE_MESSAGES: Record<CheckoffRejection, string> = {
   GAME_FINAL: 'This game is already final.',
@@ -59,8 +64,17 @@ export async function patchLineup(
   assertBuilt(game);
   assertNotFinal(game, user, now);
   game = await materializeLock(tx, game, now);
-  if (game.lockedAt) {
-    throw conflict('GAME_LOCKED', 'First pitch has passed; the lineup, must-hits and threshold are locked.');
+  // Free edits end at the week's first pitch (GAME_DESIGN §4a); after it, lineups only
+  // grow (pinch hitters, bench adds). A game's own first pitch locks its week too.
+  const seriesRow = await loadUserSeries(tx, user.id, game.seriesId);
+  assertPlannable(user, seriesRow.startDate, localDateOf(now, user.timezone));
+  const siblings = (await seriesGames(tx, game.seriesId)).map((g) => (g.id === game.id ? game : g));
+  if (weekLockOf(siblings, user, now) !== null || game.lockedAt) {
+    throw conflict(
+      'GAME_LOCKED',
+      "The week's first pitch has passed; lineups can only grow now (pinch hitters and bench adds).",
+      'WEEK_LOCKED',
+    );
   }
 
   const set: Partial<typeof games.$inferInsert> = {};
@@ -293,4 +307,36 @@ export async function substitute(
     .set({ role: 'lineup', position: out.position, required: false, partial: false, subbedInAt: now })
     .where(eq(lineupEntries.id, into.id));
   return refreshScore(tx, game);
+}
+
+/**
+ * Pinch hitter (GAME_DESIGN §4a): make a roster task a must-hit in this game, today or
+ * any later built day, until the game is final. A new task joins at the end of the
+ * batting order; a bench or non-required lineup entry is promoted. Runs to win rises by
+ * exactly its points, before or after the week's first pitch.
+ */
+export async function pinchHit(tx: Db, user: UserRow, gameId: string, taskId: string, now: Date): Promise<GameRow> {
+  let game = await loadUserGame(tx, user.id, gameId, { forUpdate: true });
+  if (game.status === 'final') throw conflict('GAME_FINAL', 'This game is already final.');
+  assertBuilt(game);
+  assertNotFinal(game, user, now);
+  game = await materializeLock(tx, game, now);
+  const [task] = await tx
+    .select()
+    .from(taskDefinitions)
+    .where(and(eq(taskDefinitions.id, taskId), eq(taskDefinitions.userId, user.id)));
+  if (!task) throw notFound('Task');
+  if (task.status !== 'active') throw conflict('CONFLICT', 'Only active tasks can pinch hit.', 'TASK_NOT_ACTIVE');
+
+  const existing = (await loadEntries(tx, [game.id])).find((e) => e.taskId === taskId);
+  if (existing?.role === 'lineup' && existing.required) {
+    throw conflict('CONFLICT', 'That task is already a must-hit in this game.', 'ALREADY_REQUIRED');
+  }
+  if (existing?.role === 'subbed_out') {
+    throw conflict('CONFLICT', 'A task that was subbed out cannot come back in this game.', 'SUBBED_OUT');
+  }
+  if (pinchHitThreshold(game.threshold ?? 1, existing?.points ?? task.points) > LIMITS.thresholdMax) {
+    throw conflict('CONFLICT', `Runs to win can't go above ${LIMITS.thresholdMax}.`, 'THRESHOLD_MAX');
+  }
+  return (await addPinchHit(tx, game, task, now)).game;
 }

@@ -1,10 +1,10 @@
 // Roster (task_definitions) and the Injured List (GAME_DESIGN §7).
 
 import type { TaskDto, TaskUpdateDto } from '@7gs/contracts';
-import { addDays, compareDates, IL_MIN_DAYS, isGameDay, localDateOf, type LocalDate } from '@7gs/rules';
-import { and, asc, eq, inArray, ne } from 'drizzle-orm';
+import { addDays, compareDates, IL_MIN_DAYS, isGameDay, localDateOf, type LocalDate, type TaskKind } from '@7gs/rules';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { dayTemplateTasks, lineupEntries, taskDefinitions, type GameRow, type TaskRow, type UserRow } from '../db/schema';
+import { dayTemplateTasks, games, lineupEntries, taskDefinitions, type GameRow, type TaskRow, type UserRow } from '../db/schema';
 import { conflict, notFound } from '../errors';
 import { uuidv7 } from '../ids';
 import { toTaskDto } from './dto';
@@ -23,7 +23,7 @@ export async function listTasks(tx: Db, user: UserRow): Promise<TaskDto[]> {
 export async function createTask(
   tx: Db,
   user: UserRow,
-  body: { name: string; notes?: string | null; points: number },
+  body: { name: string; notes?: string | null; points: number; kind?: TaskKind },
   now: Date,
 ): Promise<TaskDto> {
   const [row] = await tx
@@ -34,6 +34,7 @@ export async function createTask(
       name: body.name,
       notes: body.notes ?? null,
       points: body.points,
+      kind: body.kind ?? 'recurring',
       createdAt: now,
       updatedAt: now,
     })
@@ -62,6 +63,11 @@ export async function updateTask(tx: Db, user: UserRow, taskId: string, patch: T
   if (patch.name !== undefined) set.name = patch.name;
   if (patch.notes !== undefined) set.notes = patch.notes;
   if (patch.points !== undefined) set.points = patch.points;
+  if (patch.kind !== undefined) {
+    set.kind = patch.kind;
+    // Only a one-off carries over.
+    if (patch.kind === 'recurring') set.carryover = false;
+  }
   const [row] = await tx.update(taskDefinitions).set(set).where(eq(taskDefinitions.id, task.id)).returning();
   if (!row) throw notFound('Task');
 
@@ -97,13 +103,37 @@ async function removeFromOpenLineups(tx: Db, games: readonly GameRow[], taskId: 
   }
 }
 
+/** Drop a task's unfinished entries from built, non-final games played on `from` or later. */
+async function removeFromBuiltLineupsFrom(tx: Db, user: UserRow, taskId: string, from: LocalDate): Promise<void> {
+  const targets = await tx
+    .select()
+    .from(games)
+    .where(
+      and(eq(games.userId, user.id), gte(games.playedDate, from), isNotNull(games.lineupBuiltAt), ne(games.status, 'final')),
+    );
+  for (const game of targets) {
+    const removed = await tx
+      .delete(lineupEntries)
+      .where(
+        and(
+          eq(lineupEntries.gameId, game.id),
+          eq(lineupEntries.taskId, taskId),
+          isNull(lineupEntries.completedClientAt),
+          ne(lineupEntries.role, 'subbed_out'),
+        ),
+      )
+      .returning({ id: lineupEntries.id });
+    if (removed.length > 0) await refreshScore(tx, game);
+  }
+}
+
 /** Retire (soft delete): off every starter and every still-editable lineup. */
 export async function retireTask(tx: Db, user: UserRow, taskId: string, now: Date): Promise<TaskDto> {
   const task = await loadTask(tx, user, taskId);
   if (task.status === 'retired') return toTaskDto(task);
   const [row] = await tx
     .update(taskDefinitions)
-    .set({ status: 'retired', ilStartedOn: null, ilMinUntil: null, updatedAt: now })
+    .set({ status: 'retired', carryover: false, ilStartedOn: null, ilMinUntil: null, updatedAt: now })
     .where(eq(taskDefinitions.id, task.id))
     .returning();
   if (!row) throw notFound('Task');
@@ -128,9 +158,11 @@ export function ilMinUntil(signupDate: LocalDate, start: LocalDate): LocalDate {
 }
 
 /**
- * Place a task on the IL. If it is in one of today's games that already had first
- * pitch, it must still be played today, so the stint starts tomorrow. Otherwise it
- * starts today and the task leaves today's (still editable) lineups.
+ * Place a task on the IL (GAME_DESIGN §7). If it is in one of today's games that already
+ * had first pitch, it must still be played today, so the stint starts tomorrow;
+ * otherwise it starts today. From that date on it leaves every built lineup (the week's
+ * card may already be built) except entries already completed, and those games keep
+ * their runs to win: the bar never drops, the IL only changes who clears it.
  */
 export async function placeOnInjuredList(tx: Db, user: UserRow, taskId: string, now: Date): Promise<TaskDto> {
   const task = await loadTask(tx, user, taskId);
@@ -165,7 +197,7 @@ export async function placeOnInjuredList(tx: Db, user: UserRow, taskId: string, 
     .where(eq(taskDefinitions.id, task.id))
     .returning();
   if (!row) throw notFound('Task');
-  if (!inLockedGame) await removeFromOpenLineups(tx, await openGames(tx, user, now), task.id);
+  await removeFromBuiltLineupsFrom(tx, user, task.id, start);
   return toTaskDto(row);
 }
 

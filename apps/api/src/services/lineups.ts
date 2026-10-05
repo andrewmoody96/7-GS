@@ -9,13 +9,25 @@ import {
   effectiveLockedAt,
   endOfLocalDay,
   evaluateGame,
+  LIMITS,
+  pinchHitThreshold,
   startOfLocalDay,
   weekday,
   type GameEvaluation,
+  type LocalDate,
 } from '@7gs/rules';
-import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { dayTemplateTasks, games, lineupEntries, taskDefinitions, type EntryRow, type GameRow, type UserRow } from '../db/schema';
+import {
+  dayTemplateTasks,
+  games,
+  lineupEntries,
+  taskDefinitions,
+  type EntryRow,
+  type GameRow,
+  type TaskRow,
+  type UserRow,
+} from '../db/schema';
 import { conflict, notFound } from '../errors';
 import { uuidv7 } from '../ids';
 import { starterFor } from './starters';
@@ -160,7 +172,117 @@ export async function buildLineupNow(tx: Db, user: UserRow, game: GameRow, now: 
       })),
     );
   }
-  return refreshScore(tx, claimed);
+  // Missed one-off must-hits waiting for the next game join as pinch hitters (§4a).
+  return applyCarryovers(tx, user, await refreshScore(tx, claimed), now);
+}
+
+export type PinchHitOutcome = 'added' | 'promoted' | 'required' | 'already_required';
+
+/**
+ * Make `task` a must-hit in `game` as a pinch hitter (GAME_DESIGN §4a): a new lineup
+ * entry at the end of the batting order, or an existing bench / non-required entry
+ * promoted. Runs to win rises by exactly its points (rules.pinchHitThreshold). An entry
+ * that is already a must-hit is left as it is (only marked `carriedOver` when asked), so
+ * a task is never in a game twice. Callers check the game is still open.
+ */
+export async function addPinchHit(
+  tx: Db,
+  game: GameRow,
+  task: Pick<TaskRow, 'id' | 'name' | 'points'>,
+  now: Date,
+  options: { carriedOver?: boolean } = {},
+): Promise<{ game: GameRow; outcome: PinchHitOutcome }> {
+  const carriedOver = options.carriedOver ?? false;
+  const entries = await loadEntries(tx, [game.id]);
+  const existing = entries.find((e) => e.taskId === task.id);
+  if (existing && existing.role === 'lineup' && existing.required) {
+    if (carriedOver && !existing.carriedOver) {
+      await tx.update(lineupEntries).set({ carriedOver: true }).where(eq(lineupEntries.id, existing.id));
+    }
+    return { game, outcome: 'already_required' };
+  }
+
+  const nextPosition = Math.max(0, ...entries.filter((e) => e.role === 'lineup').map((e) => e.position)) + 1;
+  const points = existing?.points ?? task.points;
+  let outcome: PinchHitOutcome;
+  if (!existing) {
+    outcome = 'added';
+    await tx.insert(lineupEntries).values({
+      id: uuidv7(),
+      gameId: game.id,
+      taskId: task.id,
+      taskName: task.name,
+      points,
+      required: true,
+      position: nextPosition,
+      role: 'lineup',
+      pinchHitAt: now,
+      carriedOver,
+    });
+  } else if (existing.role === 'lineup') {
+    outcome = 'required';
+    await tx
+      .update(lineupEntries)
+      .set({ required: true, pinchHitAt: now, carriedOver: existing.carriedOver || carriedOver })
+      .where(eq(lineupEntries.id, existing.id));
+  } else {
+    outcome = 'promoted';
+    await tx
+      .update(lineupEntries)
+      .set({
+        role: 'lineup',
+        required: true,
+        position: nextPosition,
+        partial: false,
+        pinchHitAt: now,
+        carriedOver: existing.carriedOver || carriedOver,
+      })
+      .where(eq(lineupEntries.id, existing.id));
+  }
+  const threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(game.threshold ?? 1, points));
+  const [row] = await tx.update(games).set({ threshold }).where(eq(games.id, game.id)).returning();
+  return { game: await refreshScore(tx, row ?? (await reloadGame(tx, game.id))), outcome };
+}
+
+/**
+ * Add every one-off flagged `carryover` (a missed must-hit) to `game` as a carried-over
+ * pinch hitter and clear the flag. Injured tasks keep the flag until they're back.
+ */
+export async function applyCarryovers(tx: Db, user: UserRow, game: GameRow, now: Date): Promise<GameRow> {
+  if (game.status === 'final' || !game.lineupBuiltAt) return game;
+  const pending = await tx
+    .select()
+    .from(taskDefinitions)
+    .where(and(eq(taskDefinitions.userId, user.id), eq(taskDefinitions.carryover, true)))
+    .orderBy(asc(taskDefinitions.createdAt), asc(taskDefinitions.id));
+  let current = game;
+  for (const task of pending) {
+    if (task.status === 'injured') continue;
+    if (task.status === 'active') current = (await addPinchHit(tx, current, task, now, { carriedOver: true })).game;
+    await tx.update(taskDefinitions).set({ carryover: false, updatedAt: now }).where(eq(taskDefinitions.id, task.id));
+  }
+  return current;
+}
+
+/**
+ * Apply pending carryovers to the next built, non-final game on `from` or later. With
+ * none built yet, the flags stay and the next lineup built picks them up.
+ */
+export async function applyCarryoversFrom(tx: Db, user: UserRow, from: LocalDate, now: Date): Promise<void> {
+  const [target] = await tx
+    .select()
+    .from(games)
+    .where(
+      and(
+        eq(games.userId, user.id),
+        gte(games.playedDate, from),
+        isNotNull(games.lineupBuiltAt),
+        ne(games.status, 'final'),
+      ),
+    )
+    .orderBy(asc(games.playedDate), asc(games.slot))
+    .limit(1);
+  if (target) await applyCarryovers(tx, user, target, now);
 }
 
 /** Build the lineup once its played day has started (in the user's zone). */

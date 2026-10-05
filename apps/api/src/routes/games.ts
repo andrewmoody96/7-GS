@@ -9,11 +9,13 @@ import {
   setPartial,
   substitute,
   addToBench,
+  pinchHit,
   uncompleteEntry,
 } from '../services/games';
 import { loadUserGame } from '../services/lineups';
 import { callRainout, rainoutQuote } from '../services/rainouts';
 import { rallyQuote, rollRally } from '../services/rally';
+import { suspendGame, suspensionQuote } from '../services/suspensions';
 import { inUserTx, todayView } from '../services/today';
 import { gameView, seriesView } from '../services/views';
 
@@ -94,5 +96,21 @@ export function gameRoutes(deps: Deps): AnyRoute[] {
         return { roll: toRallyRollDto(roll), game: await gameView(tx, user, game, now) };
       });
     }),
+
+    route('addPinchHitter', ({ auth, params, body, now }) =>
+      inUserTx(db, auth.user, now, async (tx, user) =>
+        gameView(tx, user, await pinchHit(tx, user, params.gameId, body.taskId, now), now),
+      ),
+    ),
+
+    route('getSuspensionQuote', ({ auth, params, now }) =>
+      inUserTx(db, auth.user, now, (tx, user) => suspensionQuote(tx, user, params.gameId, now)),
+    ),
+
+    route('suspendGame', ({ auth, params, body, now }) =>
+      inUserTx(db, auth.user, now, async (tx, user) =>
+        seriesView(tx, user, await suspendGame(tx, user, params.gameId, body.resumeDate, now), now),
+      ),
+    ),
   ];
 }

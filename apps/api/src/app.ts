@@ -9,6 +9,7 @@ import { gameRoutes } from './routes/games';
 import { profileRoutes } from './routes/profile';
 import { rosterRoutes } from './routes/roster';
 import { seasonRoutes } from './routes/seasons';
+import { weekRoutes } from './routes/weeks';
 
 /** The /v1 API. Same-origin behind the web app's Vite proxy, so no CORS. */
 export function createApp(deps: Deps): Hono {
@@ -32,6 +33,7 @@ export function createApp(deps: Deps): Hono {
     ...rosterRoutes(deps),
     ...gameRoutes(deps),
     ...seasonRoutes(deps),
+    ...weekRoutes(deps),
   ]);
   return app;
 }
