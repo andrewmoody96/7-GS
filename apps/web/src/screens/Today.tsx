@@ -11,22 +11,35 @@ import {
   useMeQuery,
   usePatchLineup,
   useRallyQuoteQuery,
+  useSuspensionQuoteQuery,
   useTasksQuery,
   useTodayQuery,
 } from '../app/queries';
 import { Bench, SubsLog } from '../components/Bench';
 import { Chyron } from '../components/Chyron';
-import { IconCap, IconChevronRight, IconEdit, IconLock, IconRain } from '../components/icons';
+import { IconCap, IconChevronRight, IconEdit, IconLock, IconPause, IconRain, IconStar } from '../components/icons';
 import { Jumbotron } from '../components/Jumbotron';
 import { Lineup } from '../components/Lineup';
 import { LineupEditor, type EditorState } from '../components/LineupEditor';
+import { PinchHitSheet } from '../components/PinchHitSheet';
 import { RainoutSheet } from '../components/RainoutSheet';
 import { RallySheet } from '../components/RallySheet';
 import { Scoreboard, type BoardStatus } from '../components/Scoreboard';
+import { SuspendSheet } from '../components/SuspendSheet';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { Tile } from '../components/Tile';
-import { formatDateLong, formatDeadline, formatTime, formatTimeOfDay, gameScore, weekdayLong } from '../lib/format';
-import { evaluate, gamesOn, isLocked, lineScore, projectionText, situationKeys, statusOfSeries } from '../lib/game';
+import { formatDateLong, formatDeadline, formatTime, formatTimeOfDay, gameScore, weekdayLong, weekdayShort } from '../lib/format';
+import {
+  evaluate,
+  gamesOn,
+  isLocked,
+  isNoDecision,
+  lineScore,
+  pinchHitRaise,
+  projectionText,
+  situationKeys,
+  statusOfSeries,
+} from '../lib/game';
 import { buzz } from '../lib/motion';
 import { vocab } from '../vocab';
 
@@ -71,7 +84,7 @@ export function TodayScreen() {
               >
                 <span className="dh-tab__kicker">
                   {vocab.term.game} {i + 1}
-                  {g.postponed ? ` · ${vocab.terms.makeup}` : ''}
+                  {g.postponed ? ` · ${vocab.terms.makeup}` : g.suspended ? ` · ${vocab.terms.suspended}` : ''}
                 </span>
                 <span className="dh-tab__name">{g.starterName}</span>
                 <span className="dh-tab__score">{gameScore(g.status === 'final' ? g : { runs: line.runs, threshold: g.threshold, result: null })}</span>
@@ -133,9 +146,13 @@ function LastNight({ series, date, timeZone }: { series: SeriesDto | null; date:
 
 function LastNightGame({ game, opponent, timeZone }: { game: GameSummaryDto; opponent: string; timeZone: string }) {
   const win = game.result === 'W';
-  const maybeRally = !win && game.missedRequired <= 1;
+  const nd = isNoDecision(game);
+  const maybeRally = game.result === 'L' && game.missedRequired <= 1;
   const quote = useRallyQuoteQuery(game.id, maybeRally);
+  // An emergency the night before can still be called a Suspended game until noon.
+  const suspension = useSuspensionQuoteQuery(game.id, game.result === 'L');
   const [rallyOpen, setRallyOpen] = useState(false);
+  const [suspendOpen, setSuspendOpen] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
 
   // A W gets its jumbotron moment the first time you see it go final.
@@ -150,21 +167,27 @@ function LastNightGame({ game, opponent, timeZone }: { game: GameSummaryDto; opp
 
   const rally = game.resultDetail === 'rally';
   const eligible = quote.data?.eligible === true;
+  const canSuspend = suspension.data?.ok === true;
   return (
-    <div className={`recap recap--${win ? 'win' : 'loss'}`}>
+    <div className={`recap recap--${win ? 'win' : nd ? 'nd' : 'loss'}`}>
       <div className="recap__stamp" aria-hidden="true">
-        {game.result}
+        {nd ? vocab.terms.noDecisionShort : game.result}
       </div>
       <div className="recap__body">
         <p className="recap__kicker">
           Last night · {vocab.term.final} · {vocab.gameLabel(game.gameNumber)}
         </p>
         <p className="recap__line">
-          <span className="sr-only">{win ? 'Win' : 'Loss'}, </span>
-          {gameScore(game)} vs {opponent}
+          <span className="sr-only">{win ? 'Win' : nd ? vocab.terms.noDecision : 'Loss'}, </span>
+          {nd ? vocab.terms.noDecision : gameScore(game)} vs {opponent}
         </p>
         <p className="recap__detail">{game.resultDetail ? vocab.resultDetail[game.resultDetail] : ''}</p>
       </div>
+      {canSuspend ? (
+        <button type="button" className="btn btn--quiet btn--small recap__cta" onClick={() => setSuspendOpen(true)}>
+          <IconPause width={16} height={16} /> {vocab.suspension.action}
+        </button>
+      ) : null}
       {eligible ? (
         <button type="button" className="btn btn--gold recap__cta recap__cta--wide" onClick={() => setRallyOpen(true)}>
           <IconCap /> {vocab.term.comebackToken}
@@ -176,6 +199,7 @@ function LastNightGame({ game, opponent, timeZone }: { game: GameSummaryDto; opp
         </button>
       ) : null}
       <RallySheet game={game} open={rallyOpen} onClose={() => setRallyOpen(false)} timeZone={timeZone} />
+      {canSuspend ? <SuspendSheet game={game} open={suspendOpen} onClose={() => setSuspendOpen(false)} timeZone={timeZone} /> : null}
       <Jumbotron
         open={celebrate}
         headline={rally ? vocab.jumbotron.walkOff : vocab.jumbotron.win}
@@ -208,7 +232,12 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
   const [editing, setEditing] = useState(false);
   const tasks = useTasksQuery();
   const [rainoutOpen, setRainoutOpen] = useState(false);
+  const [pinchOpen, setPinchOpen] = useState(false);
+  const [suspendOpen, setSuspendOpen] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  const raise = pinchHitRaise(game);
+  const oneOffIds = new Set((tasks.data ?? []).filter((t) => t.kind === 'one_off').map((t) => t.id));
+  const additionsOnly = game.editPolicy === 'additions_only';
 
   // Celebrate the moment the projection flips to W from your own check-off.
   const previous = useRef(ev.result);
@@ -224,7 +253,9 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
   const status: BoardStatus = final ? 'final' : locked ? 'live' : 'pregame';
   const note = game.postponed
     ? `${vocab.term.doubleheader} · ${vocab.terms.makeup} of ${weekdayLong(game.scheduledDate)}`
-    : doubleheader
+    : game.suspended
+      ? `${vocab.term.doubleheader} · ${vocab.suspension.resumedFrom(weekdayShort(game.scheduledDate))}`
+      : doubleheader
       ? `${vocab.term.doubleheader} · ${vocab.term.game} 1`
       : undefined;
 
@@ -256,12 +287,17 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
             <span className="tag tag--pregame">{vocab.lock.pregame}</span>
             {game.lockTime ? vocab.lock.firstPitchAt(formatTimeOfDay(game.lockTime)) : vocab.lock.firstPitchOnCheckoff}
           </p>
-          <p className="callout__hint">{vocab.lock.firstCheckoffLocks}</p>
+          <p className="callout__hint">
+            {additionsOnly ? `${vocab.week.lockedTitle}: pinch hit or add to the bench. ` : ''}
+            {vocab.lock.firstCheckoffLocks}
+          </p>
           <div className="callout__actions">
-            <button type="button" className="btn" onClick={() => setEditing(true)}>
-              <IconEdit /> Edit lineup
-            </button>
-            {!game.postponed ? (
+            {game.editPolicy === 'free' ? (
+              <button type="button" className="btn" onClick={() => setEditing(true)}>
+                <IconEdit /> Edit lineup
+              </button>
+            ) : null}
+            {!game.postponed && !game.suspended ? (
               <button type="button" className="btn" onClick={() => setRainoutOpen(true)}>
                 <IconRain /> {vocab.term.postponed}
               </button>
@@ -283,6 +319,19 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
         </p>
       ) : null}
 
+      {!final && !editing ? (
+        <div className="gameactions">
+          {additionsOnly ? (
+            <button type="button" className="btn" onClick={() => setPinchOpen(true)}>
+              <IconStar width={18} height={18} /> {vocab.pinchHit.action}
+            </button>
+          ) : null}
+          <button type="button" className="btn btn--quiet" onClick={() => setSuspendOpen(true)}>
+            <IconPause width={18} height={18} /> {vocab.suspension.action}
+          </button>
+        </div>
+      ) : null}
+
       {editing ? (
         <LineupEditor
           game={game}
@@ -298,10 +347,17 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
               {vocab.terms.lineup}
             </h2>
             <p className="card__sub">{final ? vocab.term.final : 'Batting order'}</p>
+            {raise > 0 ? (
+              <p className="raiseline">
+                <IconStar width={14} height={14} />
+                {vocab.pinchHit.thresholdLine(game.threshold, raise)}
+              </p>
+            ) : null}
           </header>
           <Lineup
             game={game}
             final={final}
+            oneOffIds={oneOffIds}
             onToggle={(entry, done) => {
               buzz();
               entryAction.mutate({
@@ -322,6 +378,8 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
       <SubsLog game={game} timeZone={timeZone} />
 
       <RainoutSheet game={game} open={rainoutOpen} onClose={() => setRainoutOpen(false)} />
+      {additionsOnly ? <PinchHitSheet game={game} open={pinchOpen} onClose={() => setPinchOpen(false)} /> : null}
+      {!final ? <SuspendSheet game={game} open={suspendOpen} onClose={() => setSuspendOpen(false)} timeZone={timeZone} /> : null}
       <Jumbotron
         open={celebrate}
         headline={vocab.jumbotron.inHand}
@@ -333,6 +391,9 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
 }
 
 function Projection({ ev, game }: { ev: GameEvaluation; game: GameDto }) {
+  if (isNoDecision(game)) {
+    return <p className="projection projection--nd">{vocab.suspension.noDecisionBlurb}</p>;
+  }
   if (game.status === 'final') {
     const detail = game.resultDetail ? vocab.resultDetail[game.resultDetail] : '';
     return (
@@ -374,7 +435,7 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
           </span>
           <IconChevronRight />
         </Link>
-        <Link to="/film-room" className="todo__item">
+        <Link to="/film-room?tab=rotation" className="todo__item">
           <span>
             <strong>Build the rotation</strong>
             <small>One {vocab.term.dayTemplate.toLowerCase()} per weekday: lineup, {vocab.term.required.toLowerCase()}s, runs to win.</small>

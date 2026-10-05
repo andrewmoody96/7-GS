@@ -4,7 +4,8 @@ import { useAddToBench, useSubstitute, useTasksQuery } from '../app/queries';
 import { formatTime } from '../lib/format';
 import { benchOf, lineupOf, subbedOutOf } from '../lib/game';
 import { vocab } from '../vocab';
-import { IconSwap } from './icons';
+import { IconStar, IconSwap } from './icons';
+import { PinchHitSheet } from './PinchHitSheet';
 import { Sheet } from './Sheet';
 
 interface BenchProps {
@@ -27,6 +28,10 @@ export function Bench({ game, locked, final }: BenchProps) {
   const pickerId = useId();
   const inGame = new Set(game.entries.map((e) => e.taskId));
   const addable = (tasks.data ?? []).filter((t) => t.status === 'active' && !inGame.has(t.id));
+  const oneOffs = new Set((tasks.data ?? []).filter((t) => t.kind === 'one_off').map((t) => t.id));
+  // After the week's first pitch a bench task can be promoted to a must-hit (a pinch hitter).
+  const canPromote = game.editPolicy === 'additions_only' && !final;
+  const [promote, setPromote] = useState<string | null>(null);
 
   if (bench.length === 0 && final) return null;
 
@@ -46,7 +51,9 @@ export function Bench({ game, locked, final }: BenchProps) {
             ? 'Sub in for a task that isn’t a must-hit and hasn’t scored.'
             : final
               ? 'Didn’t play.'
-              : 'Subs open at first pitch.'}
+              : canPromote
+                ? `Optional. Subs open at first pitch; ${vocab.pinchHit.makeMustHit.toLowerCase()} raises runs to win.`
+                : 'Subs open at first pitch.'}
         </p>
       </header>
       {bench.length === 0 ? <p className="empty-line">No one on the bench yet.</p> : null}
@@ -56,7 +63,14 @@ export function Bench({ game, locked, final }: BenchProps) {
             <span className="benchlist__name">
               {entry.taskName}
               <span className="pill pill--runs">{vocab.runs(entry.points)}</span>
+              {oneOffs.has(entry.taskId) ? <span className="pill pill--oneoff">{vocab.taskKind.one_off}</span> : null}
             </span>
+            <span className="benchlist__actions">
+            {canPromote ? (
+              <button type="button" className="btn btn--small btn--quiet" onClick={() => setPromote(entry.taskId)}>
+                <IconStar width={16} height={16} /> {vocab.pinchHit.makeMustHit}
+              </button>
+            ) : null}
             {canSub ? (
               <button
                 type="button"
@@ -69,6 +83,7 @@ export function Bench({ game, locked, final }: BenchProps) {
                 <IconSwap width={16} height={16} /> {vocab.terms.substitution} in
               </button>
             ) : null}
+            </span>
           </li>
         ))}
       </ul>
@@ -99,6 +114,9 @@ export function Bench({ game, locked, final }: BenchProps) {
         </form>
       ) : null}
 
+      {canPromote ? (
+        <PinchHitSheet game={game} open={promote !== null} initialTaskId={promote} onClose={() => setPromote(null)} />
+      ) : null}
       <Sheet
         open={subIn !== null}
         onClose={close}

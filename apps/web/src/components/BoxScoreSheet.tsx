@@ -2,9 +2,10 @@ import type { GameSummaryDto } from '@7gs/contracts';
 import { compareDates, type LocalDate } from '@7gs/rules';
 import { useGameQuery } from '../app/queries';
 import { formatDate, formatTime, gameScore } from '../lib/format';
-import { benchOf, isLocked, lineupOf } from '../lib/game';
+import { benchOf, isLocked, isNoDecision, lineupOf, pinchHitRaise } from '../lib/game';
 import { vocab } from '../vocab';
 import { SubsLog } from './Bench';
+import { EntryPills } from './EntryPills';
 import { IconCap, IconCheck, IconRain, IconX } from './icons';
 import { Sheet } from './Sheet';
 
@@ -25,7 +26,9 @@ export function BoxScoreSheet({ game, today, timeZone, now, onClose, onRally, on
   const final = game?.status === 'final';
   const canRally = final && game?.result === 'L' && (game?.missedRequired ?? 2) <= 1;
   const upcoming = game ? compareDates(game.playedDate, today) >= 0 && !final : false;
-  const canRainout = upcoming && g ? !isLocked(g, now, timeZone) && !g.postponed : false;
+  const canRainout = upcoming && g ? !isLocked(g, now, timeZone) && !g.postponed && !g.suspended : false;
+  const nd = game ? isNoDecision(game) : false;
+  const raise = g ? pinchHitRaise(g) : 0;
 
   return (
     <Sheet
@@ -53,7 +56,12 @@ export function BoxScoreSheet({ game, today, timeZone, now, onClose, onRally, on
       {game ? (
         <div className="boxscore">
           <p className="boxscore__line">
-            {final ? (
+            {final && nd ? (
+              <>
+                <span className="result-tag result-tag--nd">{vocab.terms.noDecisionShort}</span>
+                <span className="muted">{vocab.terms.noDecision}</span>
+              </>
+            ) : final ? (
               <>
                 <span className={`result-tag result-tag--${game.result === 'W' ? 'win' : 'loss'}`}>{game.result}</span>
                 <strong>{gameScore(game)}</strong>
@@ -61,11 +69,18 @@ export function BoxScoreSheet({ game, today, timeZone, now, onClose, onRally, on
               </>
             ) : (
               <span className="muted">
-                {vocab.terms.threshold}: {vocab.runs(game.threshold)}
+                {vocab.pinchHit.thresholdLine(game.threshold, raise)}
                 {game.minTasks !== null ? ` · ${vocab.terms.minTasks}: ${game.minTasks}` : ''}
               </span>
             )}
           </p>
+          {nd ? <p className="notice">{vocab.suspension.noDecisionBlurb}</p> : null}
+          {game.suspended ? (
+            <p className="notice">
+              {vocab.terms.suspended} on {formatDate(game.scheduledDate)}; resumed {formatDate(game.playedDate)} as game 2 of a{' '}
+              {vocab.term.doubleheader.toLowerCase()}, keeping its progress.
+            </p>
+          ) : null}
           {game.postponed ? (
             <p className="notice">
               {vocab.term.postponed} on {formatDate(game.scheduledDate)}; made up {formatDate(game.playedDate)} as game {game.slot} of a{' '}
@@ -86,7 +101,7 @@ export function BoxScoreSheet({ game, today, timeZone, now, onClose, onRally, on
                     </span>
                     <span className="boxlist__name">
                       {e.taskName}
-                      {e.required ? <span className="pill pill--must">{vocab.term.required}</span> : null}
+                      <EntryPills entry={e} />
                       {e.partial && !e.completedAt ? <span className="pill pill--partial">{vocab.terms.partial}</span> : null}
                     </span>
                     <span className="boxlist__pts">{e.completedAt ? `+${e.points}` : vocab.runs(e.points)}</span>

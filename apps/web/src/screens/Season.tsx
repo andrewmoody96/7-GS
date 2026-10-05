@@ -60,10 +60,11 @@ function Standings({ season: s }: { season: SeasonDto }) {
   const stats: [string, string][] = [
     [vocab.terms.runDifferential, signed(s.runDifferential)],
     [vocab.terms.rallyWins, String(s.rallyWins)],
+    [vocab.terms.noDecisions, String(s.noDecisions)],
     [vocab.terms.seriesRecord, `${s.seriesWon}–${s.seriesLost}`],
     [vocab.terms.winStreak, String(s.currentWinStreak)],
     [vocab.terms.longestWinStreak, String(s.longestWinStreak)],
-    ['Games left', String(Math.max(0, GAMES_PER_SEASON - played))],
+    ['Games left', String(Math.max(0, GAMES_PER_SEASON - played - s.noDecisions))],
   ];
   return (
     <>

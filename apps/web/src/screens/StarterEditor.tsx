@@ -26,7 +26,7 @@ export function StarterEditorScreen() {
     return (
       <div className="screen">
         <EmptyState title="No such starter">
-          <Link to="/film-room">Back to the rotation</Link>
+          <Link to="/film-room?tab=rotation">Back to the rotation</Link>
         </EmptyState>
       </div>
     );
@@ -77,7 +77,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           bench: bench.map((s, i) => ({ taskId: s.taskId, position: i + 1 })),
         },
       },
-      { onSuccess: () => navigate('/film-room') },
+      { onSuccess: () => navigate('/film-room?tab=rotation') },
     );
 
   return (
@@ -85,7 +85,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       <header className="screen__head">
         <div>
           <p className="screen__kicker">
-            <Link to="/film-room">Rotation</Link> / {dayName}
+            <Link to="/film-room?tab=rotation">Rotation</Link> / {dayName}
           </p>
           <h1 className="screen__title">
             {dayName} {vocab.term.dayTemplate}
@@ -177,7 +177,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       </section>
 
       <div className="actions actions--sticky">
-        <Link to="/film-room" className="btn btn--quiet">
+        <Link to="/film-room?tab=rotation" className="btn btn--quiet">
           Cancel
         </Link>
         <button type="button" className="btn btn--primary" onClick={save} disabled={!name.trim() || put.isPending}>

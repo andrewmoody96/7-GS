@@ -5,11 +5,11 @@ import { gamesOn } from '../lib/game';
 import { vocab } from '../vocab';
 import { IconArrowRight } from './icons';
 
-export type StripState = 'win' | 'loss' | 'live' | 'today' | 'pending' | 'upcoming' | 'ppd';
+export type StripState = 'win' | 'loss' | 'nd' | 'live' | 'today' | 'pending' | 'upcoming' | 'ppd' | 'susp';
 
 /** The visual state of one game in the strip, as of `today`. */
 export function stripState(game: GameSummaryDto, today: LocalDate): StripState {
-  if (game.status === 'final') return game.result === 'W' ? 'win' : 'loss';
+  if (game.status === 'final') return game.result === 'W' ? 'win' : game.result === 'L' ? 'loss' : 'nd';
   const cmp = compareDates(game.playedDate, today);
   if (cmp === 0) return game.status === 'live' ? 'live' : 'today';
   if (cmp < 0) return 'pending';
@@ -30,6 +30,12 @@ export function stripText(game: GameSummaryDto, state: StripState, form: 'short'
         ? `${result} · ${vocab.resultDetailShort[game.resultDetail]}`
         : `${result} (${vocab.resultDetail[game.resultDetail]})`;
     }
+    case 'nd':
+      return form === 'short' ? vocab.terms.noDecisionShort : `${vocab.terms.noDecision} (${vocab.terms.suspended.toLowerCase()})`;
+    case 'susp':
+      return form === 'short'
+        ? vocab.suspension.movedTo(weekdayShort(game.playedDate))
+        : `${vocab.terms.suspended}, resumed ${weekdayShort(game.playedDate)}`;
     case 'live':
       return vocab.gameStatus.live;
     case 'today':
@@ -50,7 +56,10 @@ interface CellProps {
 }
 
 function Cell({ game, state, onSelect }: CellProps) {
-  const label = `${vocab.gameLabel(game.gameNumber)}, ${formatDate(state === 'ppd' ? game.scheduledDate : game.playedDate)}: ${stripText(game, state)}`;
+  const moved = state === 'ppd' || state === 'susp';
+  const label = `${vocab.gameLabel(game.gameNumber)}, ${formatDate(moved ? game.scheduledDate : game.playedDate)}: ${stripText(game, state)}${
+    game.suspended && !moved ? ` (${vocab.suspension.resumedFrom(weekdayShort(game.scheduledDate))})` : ''
+  }`;
   const body = (
     <>
       {state === 'win' || state === 'loss' ? (
@@ -67,9 +76,14 @@ function Cell({ game, state, onSelect }: CellProps) {
           </span>
           <span className="cell__small">G{game.gameNumber}</span>
         </>
-      ) : state === 'ppd' ? (
+      ) : state === 'nd' ? (
         <>
-          <span className="cell__ppd">{vocab.terms.postponedShort}</span>
+          <span className="cell__big">{vocab.terms.noDecisionShort}</span>
+          <span className="cell__small">Susp</span>
+        </>
+      ) : state === 'ppd' || state === 'susp' ? (
+        <>
+          <span className="cell__ppd">{state === 'ppd' ? vocab.terms.postponedShort : 'SUSP'}</span>
           <span className="cell__small cell__arrow">
             <IconArrowRight width={10} height={10} />
             {weekdayShort(game.playedDate)}
@@ -83,7 +97,7 @@ function Cell({ game, state, onSelect }: CellProps) {
       )}
     </>
   );
-  const className = `cell cell--${state}${game.postponed && state !== 'ppd' ? ' cell--makeup' : ''}`;
+  const className = `cell cell--${state === 'susp' ? 'ppd cell--susp' : state}${(game.postponed || game.suspended) && !moved ? ' cell--makeup' : ''}`;
   return onSelect ? (
     <button type="button" className={className} aria-label={label} onClick={() => onSelect(game)}>
       {body}
@@ -101,14 +115,17 @@ interface SeriesStripProps {
   onSelect?: (game: GameSummaryDto) => void;
 }
 
-/** Monday–Sunday. Rained-out games show PPD on their day and play as a doubleheader later. */
+/**
+ * Monday–Sunday. Rained-out games show PPD on their day and play as a doubleheader later;
+ * suspended games show SUSP and resume later; a no-decision shows ND.
+ */
 export function SeriesStrip({ series, today, onSelect }: SeriesStripProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(series.startDate, i));
   return (
     <ol className="strip" aria-label={`${vocab.term.series} schedule`}>
       {days.map((date) => {
         const played = gamesOn(series, date);
-        const postponed = series.games.filter((g) => g.postponed && g.scheduledDate === date);
+        const postponed = series.games.filter((g) => (g.postponed || g.suspended) && g.scheduledDate === date && g.playedDate !== date);
         const isToday = date === today;
         return (
           <li key={date} className={`strip__day${isToday ? ' is-today' : ''}`} aria-current={isToday ? 'date' : undefined}>
@@ -116,7 +133,7 @@ export function SeriesStrip({ series, today, onSelect }: SeriesStripProps) {
             <span className="strip__date">{Number(date.slice(8))}</span>
             <div className="strip__games">
               {postponed.map((g) => (
-                <Cell key={`ppd-${g.id}`} game={g} state="ppd" onSelect={onSelect} />
+                <Cell key={`ppd-${g.id}`} game={g} state={g.postponed ? 'ppd' : 'susp'} onSelect={onSelect} />
               ))}
               {played.map((g) => (
                 <Cell key={g.id} game={g} state={stripState(g, today)} onSelect={onSelect} />

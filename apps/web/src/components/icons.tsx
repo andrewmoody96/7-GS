@@ -191,3 +191,18 @@ export const IconDice = (p: IconProps) => (
     <path d="M12 12l8.5-4.5M12 12L3.5 7.5M12 12v9.5" />
   </Icon>
 );
+
+/** Pinch hitter / make must-hit. */
+export const IconStar = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+  </Icon>
+);
+
+/** Suspended game. */
+export const IconPause = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M10 9v6M14 9v6" />
+  </Icon>
+);

@@ -1,6 +1,7 @@
 import type { GameDto, LineupEntryDto } from '@7gs/contracts';
 import { lineupOf } from '../lib/game';
 import { vocab } from '../vocab';
+import { EntryPills } from './EntryPills';
 import { IconCheck, IconX } from './icons';
 
 interface LineupProps {
@@ -8,10 +9,12 @@ interface LineupProps {
   final: boolean;
   onToggle: (entry: LineupEntryDto, done: boolean) => void;
   onPartial: (entry: LineupEntryDto, partial: boolean) => void;
+  /** Roster tasks that are one-offs, for the badge. */
+  oneOffIds?: ReadonlySet<string>;
 }
 
 /** The batting order with one-tap check-offs. */
-export function Lineup({ game, final, onToggle, onPartial }: LineupProps) {
+export function Lineup({ game, final, onToggle, onPartial, oneOffIds }: LineupProps) {
   const lineup = lineupOf(game);
   if (lineup.length === 0) {
     return <p className="empty-line">The lineup is empty. Add tasks before first pitch.</p>;
@@ -33,7 +36,7 @@ export function Lineup({ game, final, onToggle, onPartial }: LineupProps) {
               <p className="atbat__name">{entry.taskName}</p>
               <p className="atbat__meta">
                 <span className="pill pill--runs">{vocab.runs(entry.points)}</span>
-                {entry.required ? <span className="pill pill--must">{vocab.term.required}</span> : null}
+                <EntryPills entry={entry} oneOff={oneOffIds?.has(entry.taskId)} />
                 {entry.subbedInAt ? <span className="pill pill--sub">{vocab.terms.substitution}</span> : null}
                 {entry.partial && !done ? <span className="pill pill--partial">{vocab.terms.partial}</span> : null}
               </p>
