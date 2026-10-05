@@ -223,10 +223,16 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
                   {e.taskName}
                   <span className="sr-only">{e.completedAt ? ', done' : ''}</span>
                 </span>
-                <span className="daylineup__pills">
-                  <EntryPills entry={e} oneOff={oneOffs.has(e.taskId)} />
-                  <span className="pill pill--runs">{e.points}</span>
+                <span className="daylineup__runs">
+                  {e.points}
+                  <span className="sr-only"> {e.points === 1 ? 'run' : 'runs'}</span>
+                  <span aria-hidden="true"> {vocab.terms.runsShort}</span>
                 </span>
+                {e.required || e.pinchHitAt || e.carriedOver || oneOffs.has(e.taskId) ? (
+                  <span className="daylineup__pills">
+                    <EntryPills entry={e} oneOff={oneOffs.has(e.taskId)} />
+                  </span>
+                ) : null}
               </li>
             ))}
           </ol>

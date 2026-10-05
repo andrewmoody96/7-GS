@@ -99,12 +99,15 @@ function DemoBar() {
   if (!backend) return null;
 
   const refresh = () => {
-    qc.clear();
+    // Drop unused data and refetch what is on screen (clear() alone can leave mounted
+    // observers holding the old demo day).
+    qc.removeQueries({ type: 'inactive' });
+    void qc.resetQueries();
     setOpen(false);
     navigate('/');
   };
   const labels: Record<ScenarioName, [string, string]> = {
-    midseason: ['Mid-series Friday', 'Leads 2–1 with a live game, a rally W and a doubleheader Saturday.'],
+    midseason: ['Mid-series Friday', 'Leads 2–1 with a live game (a carried-over one-off pinch hits), a rally W and a doubleheader Saturday.'],
     rally: ['Rally Cap morning', 'Last night’s forfeit is Rally Cap eligible until 11:59 a.m.'],
     doubleheader: ['Doubleheader Saturday', 'Clinch game: two games today, one of them a makeup.'],
     preseason: [vocab.term.preseason, 'Signed up this week; Opening Day is Monday.'],

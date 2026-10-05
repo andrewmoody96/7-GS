@@ -334,7 +334,7 @@ export const baseball: Vocab = {
     action: 'Suspend game',
     title: 'Suspend the game',
     explainer:
-      'For real emergencies: something came up mid-day, or you couldn’t open the app until this morning. It isn’t a loss. Progress is kept and the game resumes later in the week as a doubleheader, with the same must-hits and runs to win.',
+      'Something came up mid-day, or you couldn’t open the app until this morning. It isn’t a loss. Progress is kept and the game resumes later in the week as a doubleheader, with the same must-hits and runs to win.',
     resumeLegend: 'Resume on',
     resumeLede: 'Pick the day it resumes. That day becomes a doubleheader.',
     noDays:

@@ -272,7 +272,7 @@
 
 .daylineup__item {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 8px;
   row-gap: 2px;
@@ -309,8 +309,16 @@
   overflow-wrap: anywhere;
 }
 
+.daylineup__runs {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .daylineup__pills {
-  grid-column: 2;
+  grid-column: 2 / 4;
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -485,4 +493,9 @@
 .projection--nd {
   border-left-color: var(--border-strong);
   color: var(--text-muted);
+}
+
+/* Season: a 7th stat tile (no decisions) takes the whole last row. */
+.statgrid .stat:last-child:nth-child(3n + 1) {
+  grid-column: 1 / -1;
 }
