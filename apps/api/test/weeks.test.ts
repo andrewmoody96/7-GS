@@ -151,6 +151,39 @@ describe('weekly lineup card', () => {
   });
 });
 
+describe('injured list under the weekly lock', () => {
+  it("removes the task from the built week from its start date and keeps every game's runs to win", async () => {
+    const { t, token, ids } = await setup();
+    t.at('2026-10-05', '08:00', CHICAGO);
+    const week = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    const monday = week.games[0]!;
+    await t.ok('completeEntry', {
+      token,
+      params: { gameId: monday.id, entryId: entry(monday, 'Gym').id },
+      body: { clientAt: t.clock.now().toISOString() },
+    });
+    await t.ok('addPinchHitter', { token, params: { gameId: week.games[2]!.id }, body: { taskId: ids.Dishes! } });
+
+    // Read is in today's game after first pitch: it plays today and leaves from tomorrow.
+    const read = await t.ok('placeOnInjuredList', { token, params: { taskId: ids.Read! } });
+    expect(read.task).toMatchObject({ status: 'injured', ilStartedOn: '2026-10-06', ilMinUntil: '2026-10-09' });
+    // Dishes isn't in today's game: its stint starts today.
+    const dishes = await t.ok('placeOnInjuredList', { token, params: { taskId: ids.Dishes! } });
+    expect(dishes.task).toMatchObject({ ilStartedOn: '2026-10-05' });
+
+    const after = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    expect(after.games.map((g) => [g.threshold, g.entries.map((e) => e.taskName)])).toEqual([
+      [3, ['Gym', 'Read', 'Walk']],
+      [3, ['Gym', 'Walk']],
+      [6, ['Gym', 'Walk']],
+      [3, ['Gym', 'Walk']],
+      [3, ['Gym', 'Walk']],
+      [3, ['Gym', 'Walk']],
+      [3, ['Gym', 'Walk']],
+    ]);
+  });
+});
+
 describe('pinch hitters', () => {
   it('adds a new must-hit, promotes bench and non-required entries, and raises runs to win by their runs', async () => {
     const { t, token, ids } = await setup();
