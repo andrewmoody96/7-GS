@@ -3,6 +3,14 @@
 export const TASK_STATUSES = ['active', 'injured', 'retired'] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
+/**
+ * - recurring: stays on the roster ("Lift weights")
+ * - one_off: retires itself once completed; a missed one-off must-hit carries over to the
+ *   next game as a pinch hitter ("Haircut for Dad's inauguration")
+ */
+export const TASK_KINDS = ['recurring', 'one_off'] as const;
+export type TaskKind = (typeof TASK_KINDS)[number];
+
 /** `subbed_out` entries stay on the game for the box score but never count. */
 export const LINEUP_ROLES = ['lineup', 'bench', 'subbed_out'] as const;
 export type LineupRole = (typeof LINEUP_ROLES)[number];
@@ -19,8 +27,10 @@ export type GameResult = (typeof GAME_RESULTS)[number];
  * - forfeit: exactly one must-hit missed
  * - no_appeal: two or more must-hits missed
  * - rally: a loss overturned by a Rally Cap
+ * - suspended: a suspended game that couldn't be resumed that week; final with no
+ *   decision (result null), counted as neither a W nor an L
  */
-export const RESULT_DETAILS = ['clean', 'short', 'forfeit', 'no_appeal', 'rally'] as const;
+export const RESULT_DETAILS = ['clean', 'short', 'forfeit', 'no_appeal', 'rally', 'suspended'] as const;
 export type ResultDetail = (typeof RESULT_DETAILS)[number];
 
 export const SEASON_STATUSES = ['upcoming', 'active', 'offseason', 'complete'] as const;

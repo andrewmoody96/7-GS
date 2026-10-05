@@ -31,3 +31,6 @@ export type RallyQuoteDto = z.infer<typeof S.RallyQuote>;
 export type RallyResultDto = z.infer<typeof S.RallyResult>;
 export type SeasonDto = z.infer<typeof S.Season>;
 export type ApiErrorDto = z.infer<typeof S.ApiError>;
+export type WeekDto = z.infer<typeof S.Week>;
+export type WeekSummaryDto = z.infer<typeof S.WeekSummary>;
+export type SuspensionQuoteDto = z.infer<typeof S.SuspensionQuote>;

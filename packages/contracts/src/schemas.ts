@@ -4,6 +4,7 @@ import {
   GAME_RESULTS,
   GAME_STATUSES,
   LIMITS,
+  LINEUP_EDIT_POLICIES,
   LINEUP_ROLES,
   RAINOUT_INELIGIBLE_REASONS,
   RALLY_INELIGIBLE_REASONS,
@@ -11,6 +12,8 @@ import {
   SEASON_STATUSES,
   SERIES_RESULTS,
   STARTER_WARNINGS,
+  SUSPENSION_INELIGIBLE_REASONS,
+  TASK_KINDS,
   TASK_STATUSES,
 } from '@7gs/rules';
 import { z } from 'zod';
@@ -122,6 +125,9 @@ export const Task = z.object({
   notes: z.string().max(LIMITS.notesMax).nullable(),
   points: Points,
   status: z.enum(TASK_STATUSES),
+  kind: z.enum(TASK_KINDS),
+  /** A missed one-off must-hit waiting to be added to the next game as a pinch hitter. */
+  carryover: z.boolean(),
   ilStartedOn: LocalDate.nullable(),
   ilMinUntil: LocalDate.nullable(),
   currentStreak: Count,
@@ -133,6 +139,7 @@ export const TaskCreate = z.object({
   name: z.string().trim().min(1).max(LIMITS.taskNameMax),
   notes: z.string().max(LIMITS.notesMax).nullable().optional(),
   points: Points.default(1),
+  kind: z.enum(TASK_KINDS).default('recurring'),
 });
 
 export const TaskUpdate = z
@@ -140,6 +147,7 @@ export const TaskUpdate = z
     name: z.string().trim().min(1).max(LIMITS.taskNameMax),
     notes: z.string().max(LIMITS.notesMax).nullable(),
     points: Points,
+    kind: z.enum(TASK_KINDS),
   })
   .partial();
 
@@ -183,6 +191,10 @@ export const LineupEntry = z.object({
   position: z.number().int().min(1),
   role: z.enum(LINEUP_ROLES),
   subbedInAt: Instant.nullable(),
+  /** Added as a pinch hitter after the week locked; raised runs to win by its points. */
+  pinchHitAt: Instant.nullable(),
+  /** A one-off must-hit carried over from an earlier game it was missed in. */
+  carriedOver: z.boolean(),
   completedAt: Instant.nullable(),
   partial: z.boolean(),
 });
@@ -217,6 +229,8 @@ const GameCore = {
   playedDate: LocalDate,
   slot: z.union([z.literal(1), z.literal(2)]),
   postponed: z.boolean(),
+  /** Suspended and moved to resume on `playedDate` (slot 2), keeping earlier progress. */
+  suspended: z.boolean(),
   starterName: z.string(),
   threshold: Threshold,
   minTasks: MinTasks,
@@ -236,6 +250,8 @@ export const Game = z.object({
   lockedAt: Instant.nullable(),
   rallyDeadline: Instant.nullable(),
   finalizedAt: Instant.nullable(),
+  /** free before the week's first pitch; additions_only after; closed when final or the day is over. */
+  editPolicy: z.enum(LINEUP_EDIT_POLICIES),
   /** All entries (lineup, bench, subbed_out). Empty until the game's lineup is built. */
   entries: z.array(LineupEntry),
   rally: RallyRoll.nullable(),
@@ -271,6 +287,28 @@ export const Today = z.object({
   series: Series.nullable(),
 });
 
+export const WeekSummary = z.object({
+  startDate: LocalDate,
+  /** 'current' is this series, 'next' opens on Friday. */
+  label: z.enum(['current', 'next']),
+  locked: z.boolean(),
+});
+export const WeekList = z.object({ weeks: z.array(WeekSummary) });
+
+export const Week = z.object({
+  startDate: LocalDate,
+  endDate: LocalDate,
+  /** The week's first first pitch. After it, lineups only grow. */
+  lockedAt: Instant.nullable(),
+  locked: z.boolean(),
+  series: Series,
+  /** Every game of the week with lineups built (planning builds them early), by date and slot. */
+  games: z.array(Game),
+});
+
+/** A new must-hit added after the week locks, or a bench task promoted to must-hit. */
+export const PinchHitter = z.object({ taskId: Id });
+
 export const LineupPatch = z
   .object({
     threshold: Threshold,
@@ -303,6 +341,19 @@ export const RainoutQuote = z.object({
 });
 export const RainoutRequest = z.object({ makeupDate: LocalDate });
 
+// ── Suspended games ──────────────────────────────────────────────────────────
+
+export const SuspensionQuote = z.object({
+  ok: z.boolean(),
+  reason: z.enum(SUSPENSION_INELIGIBLE_REASONS).nullable(),
+  /** Empty when ok: the game would end as a no-decision. */
+  resumeDates: z.array(LocalDate),
+  deadline: Instant.nullable(),
+  allowancesAvailable: Count,
+});
+/** `resumeDate` is required when the quote offers resume dates; null means no-decision. */
+export const SuspendRequest = z.object({ resumeDate: LocalDate.nullable() });
+
 // ── Rally Cap ────────────────────────────────────────────────────────────────
 
 export const RallyQuote = z.object({
@@ -330,6 +381,7 @@ export const Season = z.object({
   wins: Count,
   losses: Count,
   rallyWins: Count,
+  noDecisions: Count,
   seriesWon: Count,
   seriesLost: Count,
   runDifferential: z.number().int(),

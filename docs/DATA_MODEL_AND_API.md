@@ -1,4 +1,4 @@
-# 7-Game Series — Data Model & API Contract (v0.2)
+# 7-Game Series — Data Model & API Contract (v0.3)
 
 > Companion to [GAME_DESIGN.md](./GAME_DESIGN.md). Game rules live there; this doc
 > defines how they are stored and exposed. Both frontend and backend build against it.
@@ -93,6 +93,8 @@ Unique: `(season_id, number)`.
 | notes | text null | |
 | points | int ≥ 1 | Default 1. Free-form. |
 | status | enum | `active`, `injured`, `retired` |
+| kind | enum | `recurring`, `one_off` |
+| carryover | bool | A missed one-off must-hit waiting for the next game (added as a pinch hitter). |
 | il_started_on | date null | |
 | il_min_until | date null | `il_started_on + 3 days`. Can't be reactivated before this. |
 | current_streak, longest_streak | int | Cached; see §6. |
@@ -126,6 +128,7 @@ Unique: `(season_id, number)`.
 | played_date | date | Equals `scheduled_date`, or the makeup day after a Rainout. |
 | slot | int 1–2 | 2 = second game of a doubleheader. |
 | postponed | bool | True if this game was rained out and moved. |
+| suspended | bool | True if this game was suspended and moved to resume (slot 2) on `played_date`. |
 | template_id | uuid FK | Starter used. |
 | starter_name, threshold, min_tasks, lock_time | snapshot | Copied from the template (lock time falls back to the user default) when the lineup is built. |
 | lineup_built_at | timestamptz null | Lineups are built at the start of the played day, so starter edits apply to every game not yet built. |
@@ -149,6 +152,8 @@ Unique: `(series_id, game_number)` and `(user_id, played_date, slot)`.
 | position | int | |
 | role | enum | `lineup`, `bench`, `subbed_out` |
 | subbed_in_at | timestamptz null | Logged when a bench task enters a live game. |
+| pinch_hit_at | timestamptz null | Added (or promoted from the bench) as a must-hit after the week locked; runs to win was raised by its points. |
+| carried_over | bool | A one-off must-hit carried over from a game it was missed in. |
 | completed_client_at | timestamptz null | Device time of check-off (supports offline). |
 | completed_received_at | timestamptz null | Server receipt time. |
 | partial | bool | "Warning track" flag for a missed must-hit. |
@@ -291,6 +296,11 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | POST | `/v1/games/:id/entries/:entryId/complete` | Body: `{ clientAt, partial? }`. Idempotent. |
 | DELETE | `/v1/games/:id/entries/:entryId/complete` | Undo a check-off (before midnight only). |
 | PATCH | `/v1/games/:id/entries/:entryId` | Body: `{ partial }`. Mark a must-hit as partly done ("warning track"). |
+| POST | `/v1/games/:id/pinch-hitters` | Body: `{ taskId }`. New must-hit (or promote a bench task); raises runs to win by its points. Until the game is final. |
+| GET | `/v1/games/:id/suspension` | Suspension eligibility and resume dates (empty = no-decision). |
+| POST | `/v1/games/:id/suspension` | Body: `{ resumeDate | null }`. Uses a Rainout allowance. |
+| GET | `/v1/weeks` | Plannable weeks: current, plus next from Friday. |
+| GET | `/v1/weeks/:startDate` | The weekly lineup card; builds the week's lineups. `PATCH .../lineup` is free before the week's first pitch and rejected after (`GAME_LOCKED`, reason `WEEK_LOCKED`). |
 | POST | `/v1/games/:id/bench` | Body: `{ taskId }`. Add any active roster task to the bench until the game is final. |
 | POST | `/v1/games/:id/substitutions` | Body: `{ outEntryId, inEntryId }` (a bench entry on the same game). Post-lock, non-required only. |
 | GET | `/v1/games/:id/rainout` | Rainout eligibility and makeup date options. |

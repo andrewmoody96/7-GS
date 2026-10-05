@@ -1,4 +1,4 @@
-# 7-Game Series — Game Design Spec (v0.3)
+# 7-Game Series — Game Design Spec (v0.4)
 
 > Status: pre-code planning. This doc is the shared source of truth for design,
 > frontend, and backend. Decisions marked **DECIDED** are locked for MVP;
@@ -20,7 +20,7 @@ a season record.
 | 4 | Platform | **DECIDED** — Mobile-first PWA. |
 | 5 | Must-hit strictness | **DECIDED** — Missing a must-hit is a loss. Two or more missed must-hits = automatic loss, no appeal. |
 | 6 | Rally Cap scope | **DECIDED** — Any loss can be contested with a Rally Cap, except one with 2+ missed must-hits (§6). |
-| 7 | Skipping days / tasks | **DECIDED** — Only Rainouts (whole day) and the Injured List (a task). |
+| 7 | Skipping days / tasks | **DECIDED** — Only Rainouts (planned, whole day), Suspended games (emergencies) and the Injured List (a task). |
 | 8 | Rainout outcome | **DECIDED** — The game is made up as a doubleheader later in the same series (§7). |
 | 9 | Rainout allowance | **DECIDED** — 2 per month, with a 3rd earnable (§7). |
 | 10 | Seasons | **DECIDED** — Two seasons per year, anchored to the user's start date, with offseason weeks (§5). |
@@ -29,6 +29,12 @@ a season record.
 | 13 | Offseason length | **DECIDED** — Exactly 1 review week per season. The weeks can't be combined. |
 | 14 | Streaks across the offseason | **DECIDED** — Streaks pause and carry over, but never affect the new season's W/L (§5). |
 | 15 | Rally Cap window | **DECIDED** — Until 11:59 a.m. the day after the game. |
+| 16 | Weekly lineups | **DECIDED** — Each week is planned on a lineup card. Free edits until the week's first pitch; after that, lineups only grow (§4a). |
+| 17 | Pinch hitters | **DECIDED** — A must-hit added after the week locks raises that day's runs to win by exactly its runs (§4a). |
+| 18 | Non-required work | **DECIDED** — Lives on the bench. Promoting a bench task to must-hit makes it a pinch hitter. |
+| 19 | One-off tasks | **DECIDED** — Retire when completed. A missed one-off must-hit moves to the next game day automatically (§4a). |
+| 20 | Next week's card | **DECIDED** — Opens on Friday. |
+| 21 | Emergencies | **DECIDED** — Suspended games, sharing the Rainout allowance (§7). |
 
 ## 3. Glossary (UI term → generic data term)
 
@@ -105,6 +111,39 @@ editable. After the lock (a user-set time, or the first check-off, whichever com
 **Day boundary.** Tasks must be checked off by 23:59:59 local time. Midnight starts the
 next game, so there is no grace period for tasks. The result becomes official 30 minutes
 later, so a check-off made at 11:58 p.m. on a weak connection still counts when it syncs.
+
+## 4a. The weekly lineup card
+
+Like a fantasy lineup, each series is planned as a week.
+
+- **The card:** Film Room shows all 7 days of a week. Each day starts from its weekday
+  starter; opening the card builds the week's lineups so they can be edited. (Starter
+  edits after that apply from the next unbuilt day.)
+- **When it opens:** the current week any time, and next week from **Friday** on, so a
+  weekend "game planning" session can set the whole upcoming series. During Spring
+  Training, Opening Week is open right away.
+- **Before the week's first pitch:** anything goes. Add or remove tasks, reorder, set
+  must-hits, change runs to win, place one-offs on specific days.
+- **After the week's first pitch** (the earliest lock of any game that week, normally
+  Monday's): lineups only grow. **The bar never drops.**
+  - **Pinch hitter:** add a new must-hit to today or any later day, even mid-game. That
+    day's runs to win rises by exactly the task's runs, so the cushion between runs to
+    win and available runs stays the same. On the scoreboard the opponent "answers back"
+    with the same number of runs.
+  - **Bench:** add any task to a day's bench. Bench work is optional; it only counts once
+    subbed in for a non-must-hit.
+  - **Promote:** turning a bench task into a must-hit makes it a pinch hitter (same rule).
+  - Not allowed: removing tasks, turning off must-hits, lowering runs to win.
+
+### Recurring and one-off tasks
+
+- **Recurring** tasks ("Lift weights") stay on the roster.
+- **One-off** tasks ("Haircut for Dad's inauguration") retire automatically once the game
+  they were completed in goes final.
+- **A missed one-off must-hit carries over.** The day still counts (an L, a Rally Cap
+  roll, or a Suspended game). The task is then added to the **next game day** as a
+  pinch-hit must-hit, raising that day's runs to win, and repeats until it's done. It
+  skips Review Week. A one-off that wasn't a must-hit doesn't move.
 
 ## 5. Seasons and offseason
 
@@ -242,14 +281,25 @@ Examples:
   record is immutable and idempotent per game: a refresh or retry returns the same
   result.
 
-## 7. Rainouts and the Injured List
+## 7. Rainouts, Suspended games and the Injured List
 
-These are the real tools for deferring or skipping. They are planned, not rescues.
+These are the real tools for deferring or skipping. One principle covers all three:
+**after the week's first pitch, the bar never drops.** A Rainout or Suspension moves the
+bar to another day; the IL changes who clears it.
+
+| Situation | Tool |
+|---|---|
+| You know in advance a whole day is gone (travel, a wedding) | **Rainout**, before that day's first pitch |
+| Something happens mid-day, or you couldn't open the app until the next morning | **Suspended game** |
+| One task is impossible for a while (an injured ankle) | **Injured List** |
+| You could have done it and didn't | The **L**, or a Rally Cap roll |
 
 ### Rainout (whole game → makeup doubleheader)
 
-- Must be called **before first pitch** of that game. After the lock, the game must be
-  played.
+- Must be called **before first pitch** of that game (that day's, not the week's). After
+  that, use a Suspended game for emergencies.
+- The game moves with its full lineup: same must-hits, same runs to win, and any pinch
+  hitters or one-offs placed on it.
 - The user picks a **makeup day later in the same series** (defaults to the next day).
   That day becomes a **doubleheader**: Game A is the day's own starter and lineup, and
   Game B is the postponed starter and lineup. Each game is decided on its own.
@@ -274,8 +324,31 @@ These are the real tools for deferring or skipping. They are planned, not rescue
   rewards consistency (showing up every day as scheduled). They push different habits
   and don't double-reward the same week.
 
+### Suspended game (emergencies)
+
+Baseball's rule for a game stopped partway through: it isn't a loss; it resumes later.
+
+- **When:** any time on the game's day, or until **noon the next day** (the Rally Cap
+  window), because in a real emergency you may not open the app that night. Not after a
+  Rally Cap roll on that game, and not on a W.
+- **What happens:** progress is kept. The game resumes on a later day in the same series
+  (the user picks; it can be the same morning if called the next day) as a
+  doubleheader, with the same must-hits and runs to win.
+- **No day left** (Saturday or Sunday, a game that already moved once, or a multi-day
+  emergency): it ends as **"Suspended — no decision"**. Neither a W nor an L; streaks are
+  frozen, not broken. A finished series tied on wins is decided by run differential, else
+  it's a split.
+- **Cost:** one Rainout from the shared monthly allowance. With none left, the day is
+  played out like any other.
+- Iron Man requires a week with no Rainouts **and** no Suspended games.
+
 ### Injured List (single task)
 
+- **Before the week's first pitch:** placing a task on the IL removes it from the week's
+  card. You're still planning, so you can adjust runs to win yourself.
+- **After the week's first pitch:** the task leaves the rest of the week's lineups from
+  tomorrow, **but runs to win doesn't drop.** Its must-hit status goes with it (that's the
+  relief); its runs are covered from the bench.
 - Placing a task on the IL removes it from future lineups and freezes its streak.
 - **Minimum stint: 3 days**, so the IL can't be used to dodge a single hard day.
 - It can't be applied to a task in today's game after first pitch.

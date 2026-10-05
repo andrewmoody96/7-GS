@@ -10,6 +10,8 @@ export interface RainoutGame {
   playedDate: LocalDate;
   /** True once this game has been rained out and moved (it is now a makeup game). */
   postponed: boolean;
+  /** True once this game has been suspended and moved to resume on another day. */
+  suspended?: boolean;
   status: GameStatus;
   lockedAt: Date | string | null;
 }
@@ -43,7 +45,7 @@ export function rainoutOptions(input: RainoutInput): RainoutOptions {
   const no = (reason: RainoutIneligibleReason): RainoutOptions => ({ ok: false, reason });
 
   if (game.status === 'final') return no('GAME_FINAL');
-  if (game.postponed) return no('MAKEUP_GAME');
+  if (game.postponed || game.suspended) return no('MAKEUP_GAME');
   if (game.lockedAt !== null) return no('GAME_LOCKED');
   if (compareDates(game.scheduledDate, today) < 0) return no('PAST_GAME');
   if (weekday(game.scheduledDate) === 7) return no('SUNDAY');
@@ -51,7 +53,7 @@ export function rainoutOptions(input: RainoutInput): RainoutOptions {
 
   const seriesEnd = addDays(startOfWeek(game.scheduledDate), SERIES_LENGTH - 1);
   const hostsMakeup = new Set(
-    seriesGames.filter((g) => g.postponed && g.id !== game.id).map((g) => g.playedDate),
+    seriesGames.filter((g) => (g.postponed || g.suspended) && g.id !== game.id).map((g) => g.playedDate),
   );
 
   const makeupDates: LocalDate[] = [];

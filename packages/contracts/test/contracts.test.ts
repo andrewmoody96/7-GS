@@ -18,7 +18,7 @@ const uuid = '0192f3a4-5b6c-7d8e-9f01-23456789abcd';
 
 describe('primitives and schemas', () => {
   it('defaults new tasks to 1 run and trims names', () => {
-    expect(TaskCreate.parse({ name: '  Gym  ' })).toEqual({ name: 'Gym', points: 1 });
+    expect(TaskCreate.parse({ name: '  Gym  ' })).toEqual({ name: 'Gym', points: 1, kind: 'recurring' });
     expect(TaskCreate.safeParse({ name: '' }).success).toBe(false);
     expect(TaskCreate.safeParse({ name: 'x', points: 0 }).success).toBe(false);
   });
@@ -60,6 +60,7 @@ describe('primitives and schemas', () => {
       playedDate: '2026-10-05',
       slot: 1,
       postponed: false,
+      suspended: false,
       starterName: 'Gym Day',
       threshold: 3,
       minTasks: null,
@@ -73,6 +74,7 @@ describe('primitives and schemas', () => {
       lockedAt: '2026-10-05T14:00:00.000Z',
       rallyDeadline: null,
       finalizedAt: null,
+      editPolicy: 'additions_only',
       entries: [
         {
           id: uuid,
@@ -83,6 +85,8 @@ describe('primitives and schemas', () => {
           position: 1,
           role: 'lineup',
           subbedInAt: null,
+          pinchHitAt: null,
+          carriedOver: false,
           completedAt: '2026-10-05T15:00:00.000Z',
           partial: false,
         },

@@ -16,6 +16,8 @@ export interface SeasonRecord {
   wins: number;
   losses: number;
   rallyWins: number;
+  /** Suspended games that ended with no decision. */
+  noDecisions: number;
   /** null before the first final game. */
   winPct: number | null;
   /** Scoreboard runs for minus runs against, over final games (never a tie per game). */
@@ -27,7 +29,9 @@ export function seasonRecord(games: readonly SeasonGame[]): SeasonRecord {
   let losses = 0;
   let rallyWins = 0;
   let runDifferential = 0;
+  let noDecisions = 0;
   for (const g of games) {
+    if (g.resultDetail === 'suspended') noDecisions++;
     if (g.result === null) continue;
     if (g.result === 'W') wins++;
     else losses++;
@@ -41,6 +45,7 @@ export function seasonRecord(games: readonly SeasonGame[]): SeasonRecord {
     wins,
     losses,
     rallyWins,
+    noDecisions,
     winPct: played === 0 ? null : Math.round((wins / played) * 1000) / 1000,
     runDifferential,
   };

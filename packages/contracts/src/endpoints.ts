@@ -84,6 +84,12 @@ export const endpoints = {
     body: S.EntryPatch,
     response: S.Game,
   }),
+  addPinchHitter: endpoint({
+    method: 'POST',
+    path: '/v1/games/:gameId/pinch-hitters',
+    body: S.PinchHitter,
+    response: S.Game,
+  }),
   addToBench: endpoint({
     method: 'POST',
     path: '/v1/games/:gameId/bench',
@@ -105,6 +111,19 @@ export const endpoints = {
     body: S.RainoutRequest,
     response: S.Series,
   }),
+
+  // Suspended games (emergencies; uses a Rainout allowance)
+  getSuspensionQuote: endpoint({ method: 'GET', path: '/v1/games/:gameId/suspension', response: S.SuspensionQuote }),
+  suspendGame: endpoint({
+    method: 'POST',
+    path: '/v1/games/:gameId/suspension',
+    body: S.SuspendRequest,
+    response: S.Series,
+  }),
+
+  // Weekly lineup card
+  listWeeks: endpoint({ method: 'GET', path: '/v1/weeks', response: S.WeekList }),
+  getWeek: endpoint({ method: 'GET', path: '/v1/weeks/:startDate', response: S.Week }),
 
   // Rally Cap (POST requires an Idempotency-Key header)
   getRallyQuote: endpoint({ method: 'GET', path: '/v1/games/:gameId/rally', response: S.RallyQuote }),

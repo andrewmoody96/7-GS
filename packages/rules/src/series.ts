@@ -10,8 +10,12 @@ export interface SeriesGameState {
   playedDate?: LocalDate;
   slot?: number;
   postponed?: boolean;
-  /** null until the game is final. */
+  /** null until the game is final, and for a no-decision (suspended) final. */
   result: GameResult | null;
+  /** Final with no decision (a suspended game that couldn't be resumed). */
+  noDecision?: boolean;
+  /** Scoreboard runs for minus against (rules.scoreline); breaks a tied series. */
+  runDiff?: number;
 }
 
 export type SeriesSituation =
@@ -36,6 +40,8 @@ export interface SeriesStatus {
   sweepWatch: boolean;
   /** Won after trailing 0–3 or 1–3. */
   comeback: boolean;
+  /** Finals with no decision (suspended games). */
+  noDecisions: number;
   label: string;
 }
 
@@ -56,9 +62,13 @@ export function seriesStatus(games: readonly SeriesGameState[]): SeriesStatus {
   let decidedAfter: number | null = null;
   let trailedBadly = false;
   let played = 0;
+  let noDecisions = 0;
+  let runDiff = 0;
 
   for (const game of chronological(games)) {
+    if (game.noDecision) noDecisions++;
     if (game.result === null) continue;
+    runDiff += game.runDiff ?? 0;
     played++;
     if (game.result === 'W') wins++;
     else losses++;
@@ -72,8 +82,15 @@ export function seriesStatus(games: readonly SeriesGameState[]): SeriesStatus {
     }
   }
 
-  const complete = played >= SERIES_LENGTH;
-  const remaining = Math.max(0, SERIES_LENGTH - played);
+  const complete = played + noDecisions >= SERIES_LENGTH;
+  const remaining = Math.max(0, SERIES_LENGTH - played - noDecisions);
+  // A no-decision can leave a finished series tied: run differential breaks it.
+  let split = false;
+  if (complete && result === null) {
+    if (wins !== losses) result = wins > losses ? 'won' : 'lost';
+    else if (runDiff !== 0) result = runDiff > 0 ? 'won' : 'lost';
+    else split = true;
+  }
 
   let situation: SeriesSituation;
   if (complete) situation = 'complete';
@@ -85,7 +102,8 @@ export function seriesStatus(games: readonly SeriesGameState[]): SeriesStatus {
 
   const score = `${wins}–${losses}`;
   let label: string;
-  if (complete) label = result === 'won' ? `Won series ${score}` : `Lost series ${score}`;
+  if (complete && split) label = `Series split ${score}`;
+  else if (complete) label = result === 'won' ? `Won series ${score}` : `Lost series ${score}`;
   else if (result === 'won') label = `Clinched ${score}`;
   else if (result === 'lost') label = `Eliminated ${score}`;
   else if (wins === losses) label = `Series tied ${score}`;
@@ -102,12 +120,17 @@ export function seriesStatus(games: readonly SeriesGameState[]): SeriesStatus {
     situation,
     sweepWatch: !complete && losses === 0 && wins >= 3,
     comeback: result === 'won' && trailedBadly,
+    noDecisions,
     label,
   };
 }
 
-/** Iron Man (GAME_DESIGN §7): all 7 games played as scheduled and at least 5 wins. */
+/** Iron Man (GAME_DESIGN §7): all 7 games played as scheduled (no rainouts or suspensions), 5+ wins. */
 export function isIronMan(games: readonly SeriesGameState[]): boolean {
   const status = seriesStatus(games);
-  return status.complete && status.wins >= RAINOUT.ironManMinWins && games.every((g) => !g.postponed);
+  return (
+    status.complete &&
+    status.wins >= RAINOUT.ironManMinWins &&
+    games.every((g) => !g.postponed && !g.noDecision)
+  );
 }

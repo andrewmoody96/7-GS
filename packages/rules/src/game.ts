@@ -30,7 +30,7 @@ export interface GameEvaluation {
   runsMet: boolean;
   minMet: boolean;
   result: GameResult;
-  detail: Exclude<ResultDetail, 'rally'>;
+  detail: Exclude<ResultDetail, 'rally' | 'suspended'>;
   /** The loss can be appealed with a Rally Cap (at most one missed must-hit). */
   rallyEligible: boolean;
   /** Exactly one must-hit was missed and it was marked partial. */

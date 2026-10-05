@@ -13,3 +13,5 @@ export * from './season';
 export * from './opponents';
 export * from './lineup';
 export * from './checkoff';
+export * from './week';
+export * from './suspension';
