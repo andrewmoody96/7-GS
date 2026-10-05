@@ -53,10 +53,12 @@ interface SlotListProps {
   onMoveRole?: (slot: EditorSlot) => void;
   moveRoleLabel?: string;
   allowRequired: boolean;
+  /** Tasks that are one-offs, for the badge. */
+  oneOffIds?: ReadonlySet<string>;
 }
 
 /** An ordered list with ≥44px reorder buttons (no drag needed, works with a keyboard). */
-export function SlotList({ title, slots, role, onChange, onMoveRole, moveRoleLabel, allowRequired }: SlotListProps) {
+export function SlotList({ title, slots, role, onChange, onMoveRole, moveRoleLabel, allowRequired, oneOffIds }: SlotListProps) {
   return (
     <div className="slots">
       <h3 className="slots__title">
@@ -73,6 +75,7 @@ export function SlotList({ title, slots, role, onChange, onMoveRole, moveRoleLab
               <p className="slot__name">{slot.name}</p>
               <p className="slot__meta">
                 <span className="pill pill--runs">{vocab.runs(slot.points)}</span>
+                {oneOffIds?.has(slot.taskId) ? <span className="pill pill--oneoff">{vocab.taskKind.one_off}</span> : null}
                 {slot.status === 'injured' ? (
                   <span className="pill pill--il" title="Sits out until activated">
                     {vocab.terms.pausedShort}
@@ -152,6 +155,7 @@ export function AddFromRoster({ tasks, used, onAdd, includeInjured }: AddFromRos
           <span className="addlist__name">
             {task.name}
             {task.status === 'injured' ? <span className="pill pill--il">{vocab.terms.pausedShort}</span> : null}
+            {task.kind === 'one_off' ? <span className="pill pill--oneoff">{vocab.taskKind.one_off}</span> : null}
             <span className="pill pill--runs">{vocab.runs(task.points)}</span>
           </span>
           <span className="addlist__actions">
@@ -194,6 +198,7 @@ interface LineupEditorProps {
 export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEditorProps) {
   const [state, setState] = useState<EditorState>(() => editorStateFromGame(game));
   const used = useMemo(() => new Set([...state.lineup, ...state.bench].map((s) => s.taskId)), [state]);
+  const oneOffIds = useMemo(() => new Set(tasks.filter((t) => t.kind === 'one_off').map((t) => t.id)), [tasks]);
   const warnings = starterWarnings(
     [
       ...state.lineup.map((s) => ({ taskId: s.taskId, points: s.points, role: 'lineup' as const })),
@@ -244,6 +249,7 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
         role="lineup"
         slots={state.lineup}
         allowRequired
+        oneOffIds={oneOffIds}
         onChange={(lineup) => setState((s) => ({ ...s, lineup }))}
         onMoveRole={(slot) =>
           setState((s) => ({
@@ -259,6 +265,7 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
         role="bench"
         slots={state.bench}
         allowRequired={false}
+        oneOffIds={oneOffIds}
         onChange={(bench) => setState((s) => ({ ...s, bench }))}
         onMoveRole={(slot) =>
           setState((s) => ({
@@ -272,6 +279,7 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
 
       <details className="disclosure">
         <summary>Add from the {vocab.terms.roster.toLowerCase()}</summary>
+        {oneOffIds.size > 0 ? <p className="fine">{vocab.week.oneOffHint}</p> : null}
         <AddFromRoster
           tasks={tasks}
           used={used}

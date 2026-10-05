@@ -5,8 +5,12 @@ import type { GameDto, GameSummaryDto, LineupEntryDto, SeriesDto } from '@7gs/co
 import {
   effectiveLockedAt,
   evaluateGame,
+  opponentScore,
+  pinchHitThreshold,
+  scoreline,
   seriesStatus,
   type GameEvaluation,
+  type SeriesGameState,
   type SeriesStatus,
 } from '@7gs/rules';
 import type { SituationKey, Vocab } from '../vocab';
@@ -62,8 +66,40 @@ export function isLocked(game: GameDto, now: Date, timeZone: string): boolean {
   );
 }
 
+/** A suspended game that ended with no decision (final, neither W nor L). */
+export function isNoDecision(game: Pick<GameSummaryDto, 'status' | 'resultDetail'>): boolean {
+  return game.status === 'final' && game.resultDetail === 'suspended';
+}
+
+/** Series games as the rules see them, with no-decisions and run differential for the tiebreak. */
+export function seriesGameStates(games: readonly GameSummaryDto[]): SeriesGameState[] {
+  return games.map((g) => {
+    const line = g.result ? scoreline(g) : null;
+    return {
+      gameNumber: g.gameNumber,
+      playedDate: g.playedDate,
+      slot: g.slot,
+      postponed: g.postponed || g.suspended,
+      result: g.status === 'final' ? g.result : null,
+      noDecision: isNoDecision(g),
+      runDiff: line ? line.us - line.them : 0,
+    };
+  });
+}
+
 export function statusOfSeries(series: Pick<SeriesDto, 'games'>): SeriesStatus {
-  return seriesStatus(series.games);
+  return seriesStatus(seriesGameStates(series.games));
+}
+
+/** Runs to win added by pinch hitters (each raised it by exactly its runs). */
+export function pinchHitRaise(game: Pick<GameDto, 'entries'>): number {
+  return game.entries.filter((e) => e.pinchHitAt !== null && e.role === 'lineup').reduce((sum, e) => sum + e.points, 0);
+}
+
+/** The math shown before sending in a pinch hitter: "Runs to win 4 → 6". */
+export function pinchHitMath(threshold: number, points: number) {
+  const after = pinchHitThreshold(threshold, points);
+  return { before: threshold, after, opponentBefore: opponentScore(threshold), opponentAfter: opponentScore(after) };
 }
 
 /** Broadcast tags for the chyron, most important first. */

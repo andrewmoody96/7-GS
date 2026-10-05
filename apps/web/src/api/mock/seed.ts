@@ -20,7 +20,19 @@ export const DEMO_USER_ID = '01920000-0000-7000-8000-000000000001';
 export const DEMO_EMAIL = 'demo@7gs.app';
 export const DEMO_TEAM = 'Early Risers';
 
-type TaskKey = 'workout' | 'deepwork' | 'read' | 'inbox' | 'spanish' | 'tidy' | 'walk' | 'mealprep' | 'guitar' | 'coldshower';
+type TaskKey =
+  | 'workout'
+  | 'deepwork'
+  | 'read'
+  | 'inbox'
+  | 'spanish'
+  | 'tidy'
+  | 'walk'
+  | 'mealprep'
+  | 'guitar'
+  | 'coldshower'
+  /** A one-off signed during the demo week (see `planTheWeek`). */
+  | 'passport';
 
 const TASKS: { key: TaskKey; name: string; points: number; notes: string | null }[] = [
   { key: 'workout', name: 'Morning workout', points: 2, notes: '30 minutes. Anything that gets the heart rate up.' },
@@ -368,6 +380,30 @@ function buildScript(seeder: Seeder, scenario: ScenarioName, dates: ScenarioDate
       engine.retireTask(world, seeder.id('coldshower'), now);
     },
   });
+  // Sunday night game planning: open the demo week's card and put a one-off on Thursday
+  // as a must-hit. Missed Thursday, it carries over to Friday as a pinch hitter.
+  const planTheWeek: Scripted = {
+    date: addDays(weekStart, -1),
+    time: '20:00',
+    run: (now) => {
+      const passport = engine.createTask(world, seeder.env, { name: 'Renew passport', notes: 'Photos are in the desk drawer.', points: 1, kind: 'one_off' }, now);
+      seeder.taskIds.set('passport', passport.id);
+      engine.getWeek(world, seeder.env, weekStart, now);
+      const thursday = gameScheduledOn(addDays(weekStart, 3));
+      const entries = thursday.entries.map((e) => ({ taskId: e.taskId, position: e.position, required: e.required, role: e.role as 'lineup' | 'bench' }));
+      const lineupCount = entries.filter((e) => e.role === 'lineup').length;
+      entries.push({ taskId: passport.id, position: lineupCount + 1, required: true, role: 'lineup' });
+      engine.patchLineup(world, seeder.env, thursday.id, { entries }, now);
+    },
+  };
+  // After the week locked: promote Saturday's bench bat to a must-hit (runs to win 4 → 5).
+  const pinchHitSaturday: Scripted = {
+    date: addDays(weekStart, 3),
+    time: '20:00',
+    run: (now) => {
+      engine.pinchHitter(world, seeder.env, gameScheduledOn(addDays(weekStart, 5)).id, seeder.id('spanish'), now);
+    },
+  };
   const rallyThursday = (roll: number): Scripted => ({
     date: addDays(weekStart, 4),
     time: '08:00',
@@ -387,7 +423,7 @@ function buildScript(seeder: Seeder, scenario: ScenarioName, dates: ScenarioDate
           0: { complete: ['workout', 'deepwork', 'read'] },
           1: { complete: ['read', 'tidy', 'walk'], partial: ['spanish'] },
           3: { complete: ['deepwork'] },
-          ...(scenario === 'doubleheader' ? { 4: { complete: ['workout', 'deepwork', 'inbox', 'read', 'walk'] } } : {}),
+          ...(scenario === 'doubleheader' ? { 4: { complete: ['workout', 'deepwork', 'inbox', 'read', 'walk', 'passport'] } } : {}),
         }),
       );
       const todayPlans = new Map<number, { key: TaskKey; time: string }[]>(
@@ -401,7 +437,14 @@ function buildScript(seeder: Seeder, scenario: ScenarioName, dates: ScenarioDate
         winGoal: 110,
         plans,
         todayPlans,
-        actions: [retireColdShower(addDays(signupDate, 20)), rainoutWednesday, guitarToIl(addDays(weekStart, 2)), rallyThursday(7)],
+        actions: [
+          retireColdShower(addDays(signupDate, 20)),
+          planTheWeek,
+          rainoutWednesday,
+          guitarToIl(addDays(weekStart, 2)),
+          pinchHitSaturday,
+          rallyThursday(7),
+        ],
       };
     }
     case 'rally': {

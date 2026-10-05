@@ -17,6 +17,7 @@ import {
   useQueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
+import type { TaskKind } from '@7gs/rules';
 import { useCallback } from 'react';
 import { isApiError, isRetryable } from '../api/client';
 import { overlayQueue, type NewQueuedOp } from '../api/offlineQueue';
@@ -36,6 +37,9 @@ export const qk = {
   game: (id: string) => ['game', id] as const,
   rally: (id: string) => ['rally', id] as const,
   rainout: (id: string) => ['rainout', id] as const,
+  suspension: (id: string) => ['suspension', id] as const,
+  weeks: ['weeks'] as const,
+  week: (startDate: string) => ['week', startDate] as const,
 };
 
 export function createQueryClient(): QueryClient {
@@ -156,6 +160,31 @@ export function useRainoutQuoteQuery(gameId: string | null) {
   });
 }
 
+export function useSuspensionQuoteQuery(gameId: string | null, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: qk.suspension(gameId ?? 'none'),
+    queryFn: () => api.call('getSuspensionQuote', { params: { gameId: gameId ?? '' } }),
+    enabled: enabled && gameId !== null,
+    staleTime: 0,
+  });
+}
+
+export function useWeeksQuery() {
+  const api = useApi();
+  return useQuery({ queryKey: qk.weeks, queryFn: async () => (await api.call('listWeeks')).weeks });
+}
+
+/** The weekly lineup card. Opening it builds the week's lineups (GAME_DESIGN §4a). */
+export function useWeekQuery(startDate: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: qk.week(startDate ?? 'none'),
+    queryFn: () => api.call('getWeek', { params: { startDate: startDate ?? '' } }),
+    enabled: startDate !== null,
+  });
+}
+
 // ── Cache helpers ────────────────────────────────────────────────────────────
 
 function patchTodayGame(qc: QueryClient, gameId: string, update: (game: GameDto) => GameDto): void {
@@ -175,7 +204,7 @@ function invalidate(qc: QueryClient, ...keys: QueryKey[]): void {
 
 /** Everything a game-day change can ripple into. */
 export function invalidateGameDay(qc: QueryClient): void {
-  invalidate(qc, qk.today, ['series'], qk.currentSeason, qk.me, ['game']);
+  invalidate(qc, qk.today, ['series'], qk.currentSeason, qk.me, ['game'], ['week'], qk.weeks, ['suspension'], ['rally']);
 }
 
 // ── Check-offs (optimistic, offline-capable) ─────────────────────────────────
@@ -285,6 +314,30 @@ export function useSubstitute() {
   );
 }
 
+/** A new must-hit (or a promoted bench task); runs to win rises by its runs. */
+export function useAddPinchHitter() {
+  const api = useApi();
+  return useGameMutation((v: { gameId: string; taskId: string }) =>
+    api.call('addPinchHitter', { params: { gameId: v.gameId }, body: { taskId: v.taskId } }),
+  );
+}
+
+export function useSuspendGame() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: (v: { gameId: string; resumeDate: string | null }) =>
+      api.call('suspendGame', { params: { gameId: v.gameId }, body: { resumeDate: v.resumeDate } }),
+    onSuccess: (series) => {
+      qc.setQueryData(qk.currentSeries, series);
+      invalidateGameDay(qc);
+      invalidate(qc, ['rainout'], qk.tasks);
+    },
+    onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
 export function useAddToBench() {
   const api = useApi();
   return useGameMutation((v: { gameId: string; taskId: string }) =>
@@ -347,7 +400,7 @@ function useRosterMutation<V, R>(fn: (vars: V) => Promise<R>, success?: (result:
   return useMutation({
     mutationFn: fn,
     onSuccess: (result) => {
-      invalidate(qc, qk.tasks, qk.starters, qk.today);
+      invalidate(qc, qk.tasks, qk.starters, qk.today, ['week'], ['series']);
       if (success) notify(success(result), 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
@@ -357,7 +410,7 @@ function useRosterMutation<V, R>(fn: (vars: V) => Promise<R>, success?: (result:
 export function useCreateTask() {
   const api = useApi();
   return useRosterMutation(
-    (body: { name: string; points: number; notes?: string | null }) => api.call('createTask', { body }),
+    (body: { name: string; points: number; notes?: string | null; kind?: TaskKind }) => api.call('createTask', { body }),
     (task) => `${task.name} joins the roster.`,
   );
 }

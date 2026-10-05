@@ -8,6 +8,7 @@ import type {
   LocalDate,
   RallyOdds,
   ResultDetail,
+  TaskKind,
   TaskStatus,
   Weekday,
 } from '@7gs/rules';
@@ -29,6 +30,11 @@ export interface TaskRow {
   notes: string | null;
   points: number;
   status: TaskStatus;
+  kind: TaskKind;
+  /** A missed one-off must-hit that's still to do (carried to the next game as a pinch hitter). */
+  carryover: boolean;
+  /** Where a carryover still has to be placed: the game day it moves to. null once placed. */
+  carryoverDate: LocalDate | null;
   ilStartedOn: LocalDate | null;
   ilMinUntil: LocalDate | null;
   createdAt: string;
@@ -73,6 +79,10 @@ export interface EntryRow {
   position: number;
   role: LineupRole;
   subbedInAt: string | null;
+  /** Added as a must-hit after the week locked; the game's threshold rose by its points. */
+  pinchHitAt: string | null;
+  /** A one-off must-hit carried over from a game it was missed in. */
+  carriedOver: boolean;
   completedClientAt: string | null;
   completedReceivedAt: string | null;
   partial: boolean;
@@ -93,6 +103,8 @@ export interface GameRow {
   playedDate: LocalDate;
   slot: 1 | 2;
   postponed: boolean;
+  /** Suspended and moved to resume (slot 2) on `playedDate`, keeping its progress. */
+  suspended: boolean;
   /** Weekday of the starter this game uses (the original day for a makeup game). */
   templateWeekday: Weekday;
   /** Copied from the starter when the lineup is built; null before that. */
@@ -108,6 +120,15 @@ export interface GameRow {
   rallyDeadline: string | null;
   finalizedAt: string | null;
   entries: EntryRow[];
+  /** What going final did to the roster, so a next-morning suspension can undo it. */
+  finalEffects: FinalEffects | null;
+}
+
+export interface FinalEffects {
+  /** One-off tasks retired because they were completed in this game. */
+  retired: string[];
+  /** One-off must-hits missed in this game and carried to a later game. */
+  carried: string[];
 }
 
 export interface RallyTokenRow {
@@ -164,7 +185,7 @@ export interface MagicLinkRow {
   usedAt: string | null;
 }
 
-export const MOCK_DB_VERSION = 1;
+export const MOCK_DB_VERSION = 2;
 
 export interface MockDb {
   version: typeof MOCK_DB_VERSION;

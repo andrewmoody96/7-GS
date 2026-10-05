@@ -121,7 +121,9 @@ for (const theme of ['light', 'dark']) {
   await shot(page, '02-today-live', theme);
   await noHorizontalScroll(page, 'today');
 
-  // Check off the last must-hit: projection flips to W in hand.
+  // Check off the last must-hits (one a carried-over one-off): projection flips to W in hand.
+  await page.getByRole('button', { name: 'Check off Renew passport' }).click();
+  await page.waitForTimeout(250);
   await page.getByRole('button', { name: 'Check off Deep work block' }).click();
   await page.waitForSelector('.jumbotron');
   await settle(page);
@@ -137,9 +139,12 @@ for (const theme of ['light', 'dark']) {
   await settle(page);
   await shot(page, '05-series-boxscore', theme, { fullPage: false });
 
-  // Film Room: rotation, starter editor with warnings, roster with IL.
+  // Film Room: this week's lineup card (locked), rotation, starter editor, roster with IL.
   await open(page, '/film-room');
-  await shot(page, '06-filmroom-rotation', theme);
+  await shot(page, '06-filmroom-week-locked', theme);
+  await noHorizontalScroll(page, 'week card');
+  await open(page, '/film-room?tab=rotation');
+  await shot(page, '06b-filmroom-rotation', theme);
   await open(page, '/film-room/starters/2');
   await shot(page, '07-starter-editor', theme);
   await open(page, '/film-room?tab=roster');
@@ -159,10 +164,6 @@ for (const theme of ['light', 'dark']) {
   await open(page, '/', 'doubleheader');
   await dismissJumbotron(page);
   await shot(page, '11-today-doubleheader', theme);
-  await page.getByRole('button', { name: 'Edit lineup' }).click();
-  await settle(page);
-  await shot(page, '12-lineup-editor', theme);
-  await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('button', { name: 'Rainout' }).click();
   await page.waitForSelector('.radios');
   await settle(page);
@@ -196,6 +197,63 @@ for (const theme of ['light', 'dark']) {
   await open(page, '/', 'offseason');
   await shot(page, '21-today-review-week', theme);
 
+  // Next week's card (opens Friday): free planning and the day editor.
+  await open(page, '/', 'preseason');
+  await open(page, '/film-room', 'midseason');
+  await page.getByRole('tab', { name: /Next week/ }).click();
+  await page.waitForSelector('.weekbanner--open');
+  await settle(page);
+  await shot(page, '40-week-next-unlocked', theme);
+  await noHorizontalScroll(page, 'next week card');
+  await page.getByRole('button', { name: /Edit day/ }).first().click();
+  await settle(page);
+  await shot(page, '41-week-day-editor', theme);
+
+  // Today: send in a pinch hitter (the math shows before confirming).
+  await open(page, '/');
+  await dismissJumbotron(page);
+  await page.getByRole('button', { name: /^Pinch hit$/ }).click();
+  await page.getByLabel(/Meal prep/).check();
+  await settle(page);
+  await shot(page, '42-pinch-hit-sheet', theme, { fullPage: false });
+  await page.getByRole('button', { name: 'Send in' }).click();
+  await page.waitForSelector('dialog[open]', { state: 'detached' }).catch(() => {});
+  await page.waitForFunction(() => document.body.textContent?.includes('+3 pinch hit'));
+  await settle(page);
+  await shot(page, '43-today-pinch-hitter', theme);
+
+  // Suspend today's game: it resumes Sunday as a doubleheader.
+  await page.getByRole('button', { name: /Suspend game/ }).click();
+  await page.waitForSelector('.radios');
+  await settle(page);
+  await shot(page, '44-suspend-sheet', theme, { fullPage: false });
+  await page.getByRole('button', { name: 'Suspend and resume' }).click();
+  await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+  await settle(page);
+
+  // Two days later: the resumed game can only end as a no-decision.
+  for (let i = 0; i < 2; i++) {
+    await page.getByRole('button', { name: 'Demo controls' }).click();
+    await page.getByRole('button', { name: 'Advance one day' }).click();
+    await page.waitForSelector('.app__main');
+    await page.waitForFunction(() => !document.querySelector('.state--loading'));
+    await settle(page);
+    await dismissJumbotron(page);
+  }
+  await page.getByRole('tab', { name: /Game 2/ }).click();
+  await settle(page);
+  await shot(page, '45-today-resumed', theme);
+  await page.getByRole('button', { name: /Suspend game/ }).click();
+  await page.getByRole('button', { name: 'End as no decision' }).waitFor();
+  await settle(page);
+  await shot(page, '46-suspend-no-decision', theme, { fullPage: false });
+  await page.getByRole('button', { name: 'End as no decision' }).click();
+  await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+  await open(page, '/series');
+  await shot(page, '47-series-no-decision', theme);
+  await open(page, '/season');
+  await shot(page, '48-season-no-decision', theme);
+
   // Sign-in (sign out from the Season screen's clubhouse).
   await open(page, '/season', 'midseason');
   await page.getByRole('button', { name: 'Sign out' }).click();
@@ -211,6 +269,12 @@ for (const theme of ['light', 'dark']) {
   await page.waitForSelector('.addtask');
   await settle(page);
   await shot(page, '24-new-user-roster', theme);
+  await page.getByLabel('Sign a free agent').fill('Haircut for Dad’s inauguration');
+  await page.getByText('One-off', { exact: true }).click();
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.waitForSelector('.pill--oneoff');
+  await settle(page);
+  await shot(page, '25-roster-one-off', theme);
 
   if (errors.length) console.warn(`⚠ ${theme}: page errors:\n  ${errors.join('\n  ')}`);
   await context.close();

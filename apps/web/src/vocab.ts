@@ -10,6 +10,8 @@ import type {
   ResultDetail,
   SeriesStatus,
   StarterWarning,
+  SuspensionIneligibleReason,
+  TaskKind,
   TaskStatus,
 } from '@7gs/rules';
 import type { ErrorCode } from '@7gs/contracts';
@@ -98,6 +100,60 @@ export interface Vocab {
     boxScore: string;
     you: string;
     ironMan: string;
+    pinchHitter: string;
+    pinchHitterShort: string;
+    carriedOver: string;
+    suspended: string;
+    noDecision: string;
+    noDecisionShort: string;
+    noDecisions: string;
+    weekLocked: string;
+  };
+  taskKind: Record<TaskKind, string>;
+  /** Roster line for a missed one-off must-hit that's still to do. */
+  carryoverNote: string;
+  week: {
+    title: string;
+    thisWeek: string;
+    nextWeek: string;
+    lockedTitle: string;
+    lockedBlurb: string;
+    planningTitle: string;
+    planningBlurb: (firstPitch: string | null) => string;
+    nextOpensFriday: string;
+    editDay: string;
+    addToBench: string;
+    oneOffHint: string;
+  };
+  pinchHit: {
+    action: string;
+    makeMustHit: string;
+    title: string;
+    explainer: string;
+    raise: (runs: number) => string;
+    thresholdLine: (threshold: number, raise: number) => string;
+    confirm: string;
+    fromBench: string;
+    fromRoster: string;
+    none: string;
+    done: (name: string, threshold: number) => string;
+  };
+  suspension: {
+    action: string;
+    title: string;
+    explainer: string;
+    resumeLegend: string;
+    resumeLede: string;
+    noDays: string;
+    endNoDecision: string;
+    resume: string;
+    cost: (available: number) => string;
+    deadline: (time: string) => string;
+    resumedFrom: (day: string) => string;
+    movedTo: (day: string) => string;
+    noDecisionBlurb: string;
+    done: (day: string | null) => string;
+    reason: Record<SuspensionIneligibleReason, string>;
   };
   tabs: { today: string; series: string; filmRoom: string; season: string };
   /** "1 run", "3 runs". */
@@ -234,6 +290,71 @@ export const baseball: Vocab = {
     boxScore: 'Box score',
     you: 'You',
     ironMan: 'Iron Man',
+    pinchHitter: 'Pinch hitter',
+    pinchHitterShort: 'PH',
+    carriedOver: 'Carried over',
+    suspended: 'Suspended',
+    noDecision: 'No decision',
+    noDecisionShort: 'ND',
+    noDecisions: 'No decisions',
+    weekLocked: 'Week locked',
+  },
+  taskKind: { recurring: 'Recurring', one_off: 'One-off' },
+  carryoverNote: 'Still to do · carries to next game',
+  week: {
+    title: 'Lineup card',
+    thisWeek: 'This week',
+    nextWeek: 'Next week',
+    lockedTitle: 'Week locked — additions only',
+    lockedBlurb:
+      'The week’s first pitch has passed, so lineups only grow: pinch hit, add to the bench, or make a bench task a must-hit. Runs to win never drops.',
+    planningTitle: 'Planning',
+    planningBlurb: (firstPitch) =>
+      `Anything goes until the week’s first pitch${firstPitch ? ` (${firstPitch})` : ''}: add or remove tasks, reorder, set must-hits and runs to win, and place one-offs on a day.`,
+    nextOpensFriday: 'Next week’s card opens Friday.',
+    editDay: 'Edit day',
+    addToBench: 'Add to bench',
+    oneOffHint: 'One-offs retire once done. A missed one-off must-hit moves to the next game day as a pinch hitter.',
+  },
+  pinchHit: {
+    action: 'Pinch hit',
+    makeMustHit: 'Make must-hit',
+    title: 'Send in a pinch hitter',
+    explainer:
+      'A pinch hitter is a new must-hit. Runs to win rises by exactly its runs, so your cushion stays the same. The opponent answers back with the same runs.',
+    raise: (runs) => `+${runs} pinch hit`,
+    thresholdLine: (threshold, raise) => `Runs to win ${threshold}${raise > 0 ? ` · +${raise} pinch hit` : ''}`,
+    confirm: 'Send in',
+    fromBench: 'On the bench',
+    fromRoster: 'From the roster',
+    none: 'Every active task is already in this lineup.',
+    done: (name, threshold) => `${name} pinch hits. Runs to win is ${threshold}.`,
+  },
+  suspension: {
+    action: 'Suspend game',
+    title: 'Suspend the game',
+    explainer:
+      'Something came up mid-day, or you couldn’t open the app until this morning. It isn’t a loss. Progress is kept and the game resumes later in the week as a doubleheader, with the same must-hits and runs to win.',
+    resumeLegend: 'Resume on',
+    resumeLede: 'Pick the day it resumes. That day becomes a doubleheader.',
+    noDays:
+      'No day is left to resume it this week, so it ends as a no-decision: neither a W nor an L. Streaks are frozen, not broken.',
+    endNoDecision: 'End as no decision',
+    resume: 'Suspend and resume',
+    cost: (n) => `Uses 1 of your ${n} Rainouts this month (Rainouts and suspensions share the allowance).`,
+    deadline: (time) => `Can be called until ${time}.`,
+    resumedFrom: (day) => `Resumed · from ${day}`,
+    movedTo: (day) => `Suspended → ${day}`,
+    noDecisionBlurb: 'Suspended — no decision. Neither a W nor an L; streaks are frozen.',
+    done: (day) => (day ? `Suspended. It resumes ${day} as a doubleheader.` : 'Suspended. It ends as a no-decision.'),
+    reason: {
+      FUTURE_GAME: 'That game hasn’t started. Plan around it with a Rainout.',
+      GAME_WON: 'You won this one. Nothing to suspend.',
+      NO_DECISION: 'This game already ended as a no-decision.',
+      WINDOW_CLOSED: 'Suspensions close at 11:59 a.m. the day after the game.',
+      RALLY_ROLLED: 'The Rally Cap dice already rolled for this game.',
+      NO_ALLOWANCE: 'No Rainouts left this month, so this one is played out.',
+    },
   },
   tabs: { today: 'Today', series: 'Series', filmRoom: 'Film Room', season: 'Season' },
   runs: (n) => plural(n, 'run', 'runs'),
@@ -246,6 +367,7 @@ export const baseball: Vocab = {
     forfeit: 'Forfeit · 1 must-hit missed',
     no_appeal: 'No appeal · 2+ must-hits missed',
     rally: 'Rally W',
+    suspended: 'Suspended · no decision',
   },
   resultDetailShort: {
     clean: '',
@@ -253,6 +375,7 @@ export const baseball: Vocab = {
     forfeit: 'Forfeit',
     no_appeal: 'No appeal',
     rally: 'Rally',
+    suspended: 'ND',
   },
   gameStatus: { scheduled: 'Pregame', live: 'Live', final: 'Final' },
   phase: { preseason: 'Spring Training', season: 'Season', offseason: 'Review Week' },

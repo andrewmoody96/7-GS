@@ -19,8 +19,11 @@ import type {
   SeriesDto,
   StarterDto,
   StarterPutDto,
+  SuspensionQuoteDto,
   TaskDto,
   TodayDto,
+  WeekDto,
+  WeekSummaryDto,
 } from '@7gs/contracts';
 import {
   addDays,
@@ -35,6 +38,14 @@ import {
   hashSeed,
   IL_MIN_DAYS,
   isIronMan,
+  LIMITS,
+  lineupEditPolicy,
+  nextGameDate,
+  pinchHitThreshold,
+  plannableWeeks,
+  scoreline,
+  suspensionOptions,
+  weekLockedAt,
   isRallyHit,
   localDateOf,
   longestWinStreak,
@@ -58,7 +69,10 @@ import {
   type GameRules,
   type LocalDate,
   type RainoutGame,
+  type LineupEditPolicy,
   type SeriesGameState,
+  type SuspensionGame,
+  type TaskKind,
   type Weekday,
 } from '@7gs/rules';
 import { ApiError } from '../client';
@@ -131,8 +145,24 @@ export function evaluate(world: UserWorld, game: GameRow) {
   return evaluateGame(game.entries.map(toEntryState), rulesOf(world, game));
 }
 
-function toSeriesGameState(g: GameRow): SeriesGameState {
-  return { gameNumber: g.gameNumber, playedDate: g.playedDate, slot: g.slot, postponed: g.postponed, result: g.status === 'final' ? g.result : null };
+function toSeriesGameState(world: UserWorld, g: GameRow): SeriesGameState {
+  const final = g.status === 'final';
+  const result = final ? g.result : null;
+  let runDiff = 0;
+  if (result) {
+    const line = scoreline({ result, resultDetail: g.resultDetail, runs: g.runs, threshold: rulesOf(world, g).threshold });
+    runDiff = line.us - line.them;
+  }
+  return {
+    gameNumber: g.gameNumber,
+    playedDate: g.playedDate,
+    slot: g.slot,
+    // A suspended game was moved too, so it also costs Iron Man (rules only see `postponed`).
+    postponed: g.postponed || g.suspended,
+    result,
+    noDecision: final && g.resultDetail === 'suspended',
+    runDiff,
+  };
 }
 
 function seasonNumberOfGame(world: UserWorld, game: GameRow): number {
@@ -182,6 +212,7 @@ function ensureSeries(world: UserWorld, env: Env, seasonNumber: number, number: 
       playedDate: date,
       slot: 1,
       postponed: false,
+      suspended: false,
       templateWeekday: weekday(date),
       snapshot: null,
       lineupBuiltAt: null,
@@ -195,6 +226,7 @@ function ensureSeries(world: UserWorld, env: Env, seasonNumber: number, number: 
       rallyDeadline: null,
       finalizedAt: null,
       entries: [],
+      finalEffects: null,
     });
   }
   return series;
@@ -224,6 +256,8 @@ export function buildGameLineup(world: UserWorld, env: Env, game: GameRow, at: D
     id: env.ids(),
     ...e,
     subbedInAt: null,
+    pinchHitAt: null,
+    carriedOver: false,
     completedClientAt: null,
     completedReceivedAt: null,
     partial: false,
@@ -235,6 +269,7 @@ export function buildGameLineup(world: UserWorld, env: Env, game: GameRow, at: D
     lockTime: starter.lockTime ?? world.user.defaultLockTime,
   };
   game.lineupBuiltAt = iso(at);
+  placeCarryovers(world, env, at);
 }
 
 function runDay(world: UserWorld, env: Env, date: LocalDate): void {
@@ -264,7 +299,8 @@ function snapshotEntries(world: UserWorld, game: GameRow): void {
     const task = world.tasks.find((t) => t.id === entry.taskId);
     if (task) {
       entry.taskName = task.name;
-      entry.points = task.points;
+      // A pinch hitter's runs already raised the threshold; keep the two in step.
+      if (!entry.pinchHitAt) entry.points = task.points;
     }
   }
 }
@@ -284,7 +320,7 @@ function autoLock(world: UserWorld, now: Date): void {
   }
 }
 
-function finalizeGame(world: UserWorld, game: GameRow, at: Date): void {
+function finalizeGame(world: UserWorld, env: Env, game: GameRow, at: Date): void {
   const ev = evaluate(world, game);
   game.status = 'final';
   game.runs = ev.runs;
@@ -294,6 +330,149 @@ function finalizeGame(world: UserWorld, game: GameRow, at: Date): void {
   game.resultDetail = ev.detail;
   game.rallyDeadline = iso(rallyDeadline(game.playedDate, world.user.timezone));
   game.finalizedAt = iso(at);
+  applyFinalEffects(world, env, game, at);
+}
+
+// ── One-offs and pinch hitters ───────────────────────────────────────────────
+
+/**
+ * GAME_DESIGN §4a: a one-off completed in a game retires when that game goes final; a
+ * missed one-off must-hit carries over to the next game day as a pinch hitter.
+ */
+function applyFinalEffects(world: UserWorld, env: Env, game: GameRow, at: Date): void {
+  const effects = { retired: [] as string[], carried: [] as string[] };
+  for (const entry of game.entries) {
+    if (entry.role !== 'lineup') continue;
+    const task = world.tasks.find((t) => t.id === entry.taskId);
+    if (!task || task.kind !== 'one_off') continue;
+    if (entry.completedClientAt) {
+      if (task.status === 'retired') continue;
+      task.status = 'retired';
+      task.carryover = false;
+      task.carryoverDate = null;
+      task.ilStartedOn = null;
+      task.ilMinUntil = null;
+      effects.retired.push(task.id);
+    } else if (entry.required && task.status === 'active') {
+      task.carryover = true;
+      task.carryoverDate = nextGameDate(world.user.startDate, game.playedDate);
+      effects.carried.push(task.id);
+    }
+  }
+  game.finalEffects = effects;
+  placeCarryovers(world, env, at);
+}
+
+/** Reverses applyFinalEffects when a final game is suspended the next morning. */
+function undoFinalEffects(world: UserWorld, game: GameRow): void {
+  const effects = game.finalEffects;
+  game.finalEffects = null;
+  if (!effects) return;
+  for (const taskId of effects.retired) {
+    const task = world.tasks.find((t) => t.id === taskId);
+    if (task?.status === 'retired') task.status = 'active';
+  }
+  for (const taskId of effects.carried) {
+    const task = world.tasks.find((t) => t.id === taskId);
+    if (!task) continue;
+    for (const other of world.games) {
+      if (other.id === game.id || other.status === 'final') continue;
+      const entry = other.entries.find((e) => e.taskId === taskId && e.carriedOver && !e.completedClientAt);
+      if (!entry) continue;
+      other.entries = other.entries.filter((e) => e !== entry);
+      if (entry.pinchHitAt && other.snapshot) other.snapshot.threshold = Math.max(1, other.snapshot.threshold - entry.points);
+      renumber(other);
+    }
+    const ownEntry = game.entries.find((e) => e.taskId === taskId);
+    task.carryover = ownEntry?.carriedOver ?? false;
+    task.carryoverDate = null;
+  }
+}
+
+function renumber(game: GameRow): void {
+  for (const role of ['lineup', 'bench'] as const) {
+    game.entries
+      .filter((e) => e.role === role)
+      .sort((a, b) => a.position - b.position)
+      .forEach((e, i) => {
+        e.position = i + 1;
+      });
+  }
+}
+
+/**
+ * Makes `task` a must-hit in `game` and raises runs to win by exactly its runs
+ * (rules.pinchHitThreshold). A bench task is promoted; a new task bats last.
+ */
+function addPinchHit(world: UserWorld, env: Env, game: GameRow, task: TaskRow, at: Date, carriedOver: boolean): void {
+  const snapshot = game.snapshot ?? fail(409, 'NOT_ELIGIBLE', 'Open the week’s lineup card first.', 'NOT_BUILT');
+  const existing = game.entries.find((e) => e.taskId === task.id && e.role !== 'subbed_out');
+  if (existing?.role === 'lineup' && existing.required) {
+    if (carriedOver) existing.carriedOver = true;
+    return;
+  }
+  const lastPosition = Math.max(0, ...game.entries.filter((e) => e.role === 'lineup').map((e) => e.position));
+  snapshot.threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(snapshot.threshold, task.points));
+  if (existing) {
+    // Promote from the bench (or, for a carryover, a lineup spot that wasn't a must-hit).
+    if (existing.role === 'bench') existing.position = lastPosition + 1;
+    existing.role = 'lineup';
+    existing.required = true;
+    existing.points = task.points;
+    existing.pinchHitAt = iso(at);
+    existing.carriedOver = existing.carriedOver || carriedOver;
+  } else {
+    game.entries.push({
+      id: env.ids(),
+      taskId: task.id,
+      taskName: task.name,
+      points: task.points,
+      required: true,
+      position: lastPosition + 1,
+      role: 'lineup',
+      subbedInAt: null,
+      pinchHitAt: iso(at),
+      carriedOver,
+      completedClientAt: null,
+      completedReceivedAt: null,
+      partial: false,
+    });
+  }
+  renumber(game);
+}
+
+/** Puts waiting one-off carryovers into the next game day that has a game with a built lineup. */
+function placeCarryovers(world: UserWorld, env: Env, at: Date): void {
+  for (const task of world.tasks) {
+    if (task.carryoverDate === null) continue;
+    if (task.status !== 'active') {
+      if (task.status === 'retired') task.carryoverDate = null;
+      continue;
+    }
+    let date: LocalDate = task.carryoverDate;
+    // A day can be empty when its game was rained out or suspended; try the next one.
+    for (let i = 0; i < 30; i++) {
+      const open = world.games
+        .filter((g) => g.playedDate === date && g.status !== 'final')
+        .sort((a, b) => a.slot - b.slot);
+      const target = open[0];
+      if (target) {
+        if (target.lineupBuiltAt) {
+          addPinchHit(world, env, target, task, at, true);
+          task.carryoverDate = null;
+        } else {
+          task.carryoverDate = date;
+        }
+        break;
+      }
+      if (!world.games.some((g) => g.scheduledDate === date)) {
+        // That series isn't on the calendar yet; the carryover waits for it.
+        task.carryoverDate = date;
+        break;
+      }
+      date = nextGameDate(world.user.startDate, date);
+    }
+  }
 }
 
 function finalizeDue(world: UserWorld, env: Env, now: Date): void {
@@ -305,7 +484,7 @@ function finalizeDue(world: UserWorld, env: Env, now: Date): void {
     if (!game.lineupBuiltAt) buildGameLineup(world, env, game, startOfLocalDay(game.playedDate, tz));
     const scheduled = scheduledLockAt(game.playedDate, rulesOf(world, game).lockTime, tz);
     if (scheduled) lockAt(world, game, scheduled);
-    finalizeGame(world, game, due);
+    finalizeGame(world, env, game, due);
   }
 }
 
@@ -317,7 +496,7 @@ function closeSeries(world: UserWorld, env: Env, now: Date): void {
     const games = gamesOfSeries(world, series.id);
     if (games.length < SERIES_LENGTH || games.some((g) => g.status !== 'final')) continue;
     series.closedAt = games.map((g) => g.finalizedAt ?? '').sort().at(-1) ?? iso(now);
-    const states = games.map(toSeriesGameState);
+    const states = games.map((g) => toSeriesGameState(world, g));
     series.ironMan = isIronMan(states);
 
     if (series.ironMan) {
@@ -403,6 +582,8 @@ export function toTaskDto(world: UserWorld, task: TaskRow): TaskDto {
     notes: task.notes,
     points: task.points,
     status: task.status,
+    kind: task.kind,
+    carryover: task.carryover,
     ilStartedOn: task.ilStartedOn,
     ilMinUntil: task.ilMinUntil,
     currentStreak: streaks.current,
@@ -445,6 +626,8 @@ function toEntryDto(e: EntryRow): LineupEntryDto {
     position: e.position,
     role: e.role,
     subbedInAt: e.subbedInAt,
+    pinchHitAt: e.pinchHitAt,
+    carriedOver: e.carriedOver,
     completedAt: e.completedClientAt,
     partial: e.partial,
   };
@@ -461,6 +644,7 @@ export function toGameSummary(world: UserWorld, game: GameRow): GameSummaryDto {
     playedDate: game.playedDate,
     slot: game.slot,
     postponed: game.postponed,
+    suspended: game.suspended,
     starterName: rules.starterName,
     threshold: rules.threshold,
     minTasks: rules.minTasks,
@@ -485,7 +669,30 @@ export function toRallyRollDto(roll: RallyRollRow): RallyRollDto {
   };
 }
 
-export function toGameDto(world: UserWorld, game: GameRow): GameDto {
+// ── The week's lock ──────────────────────────────────────────────────────────
+
+/** The series' first first pitch (GAME_DESIGN §4a), or null while it's still being planned. */
+export function weekLock(world: UserWorld, seriesId: string, now: Date): Date | null {
+  return weekLockedAt(
+    gamesOfSeries(world, seriesId).map((g) => ({
+      playedDate: g.playedDate,
+      lockedAt: g.lockedAt ? new Date(g.lockedAt) : null,
+      lockTime: rulesOf(world, g).lockTime,
+    })),
+    world.user.timezone,
+    now,
+  );
+}
+
+export function editPolicyOf(world: UserWorld, game: GameRow, now: Date): LineupEditPolicy {
+  return lineupEditPolicy({
+    weekLocked: weekLock(world, game.seriesId, now) !== null,
+    gameFinal: game.status === 'final',
+    dayOver: compareDates(todayOf(world, now), game.playedDate) > 0,
+  });
+}
+
+export function toGameDto(world: UserWorld, game: GameRow, now: Date): GameDto {
   const roll = world.rallyRolls.find((r) => r.gameId === game.id);
   return {
     ...toGameSummary(world, game),
@@ -493,6 +700,7 @@ export function toGameDto(world: UserWorld, game: GameRow): GameDto {
     lockedAt: game.lockedAt,
     rallyDeadline: game.rallyDeadline,
     finalizedAt: game.finalizedAt,
+    editPolicy: editPolicyOf(world, game, now),
     entries: [...game.entries]
       .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || a.position - b.position)
       .map(toEntryDto),
@@ -502,7 +710,7 @@ export function toGameDto(world: UserWorld, game: GameRow): GameDto {
 
 export function toSeriesDto(world: UserWorld, series: SeriesRow): SeriesDto {
   const games = gamesOfSeries(world, series.id);
-  const status = seriesStatus(games.map(toSeriesGameState));
+  const status = seriesStatus(games.map((g) => toSeriesGameState(world, g)));
   return {
     id: series.id,
     seasonNumber: series.seasonNumber,
@@ -535,7 +743,7 @@ export function toSeasonDto(world: UserWorld, season: SeasonRow, now: Date): Sea
   let seriesWon = 0;
   let seriesLost = 0;
   for (const series of world.series.filter((s) => s.seasonNumber === season.number)) {
-    const result = seriesStatus(gamesOfSeries(world, series.id).map(toSeriesGameState)).result;
+    const result = seriesStatus(gamesOfSeries(world, series.id).map((g) => toSeriesGameState(world, g))).result;
     if (result === 'won') seriesWon++;
     if (result === 'lost') seriesLost++;
   }
@@ -558,6 +766,7 @@ export function toSeasonDto(world: UserWorld, season: SeasonRow, now: Date): Sea
     wins: record.wins,
     losses: record.losses,
     rallyWins: record.rallyWins,
+    noDecisions: record.noDecisions,
     seriesWon,
     seriesLost,
     runDifferential: record.runDifferential,
@@ -614,7 +823,7 @@ export function toTodayDto(world: UserWorld, now: Date): TodayDto {
     games: world.games
       .filter((g) => g.playedDate === today)
       .sort((a, b) => a.slot - b.slot)
-      .map((g) => toGameDto(world, g)),
+      .map((g) => toGameDto(world, g, now)),
     series: series ? toSeriesDto(world, series) : null,
   };
 }
@@ -653,12 +862,12 @@ export function completeEntry(world: UserWorld, gameId: string, entryId: string,
         fail(409, 'NOT_ELIGIBLE', 'That task can’t be checked off in this game.', check.reason);
     }
   }
-  if (entry.completedClientAt) return toGameDto(world, game);
+  if (entry.completedClientAt) return toGameDto(world, game, now);
   lockAt(world, game, clientAt);
   entry.completedClientAt = iso(clientAt);
   entry.completedReceivedAt = iso(now);
   game.status = 'live';
-  return toGameDto(world, game);
+  return toGameDto(world, game, now);
 }
 
 export function uncompleteEntry(world: UserWorld, gameId: string, entryId: string, now: Date): GameDto {
@@ -668,7 +877,7 @@ export function uncompleteEntry(world: UserWorld, gameId: string, entryId: strin
   assertBeforeMidnight(world, game, now);
   entry.completedClientAt = null;
   entry.completedReceivedAt = null;
-  return toGameDto(world, game);
+  return toGameDto(world, game, now);
 }
 
 export function setPartial(world: UserWorld, gameId: string, entryId: string, partial: boolean, now: Date): GameDto {
@@ -680,28 +889,32 @@ export function setPartial(world: UserWorld, gameId: string, entryId: string, pa
     fail(409, 'NOT_ELIGIBLE', 'Only must-hits can be marked as warning track.', 'NOT_REQUIRED');
   }
   entry.partial = partial;
-  return toGameDto(world, game);
+  return toGameDto(world, game, now);
 }
 
 export function lockGame(world: UserWorld, gameId: string, now: Date): GameDto {
   const game = findGame(world, gameId);
   assertNotFinal(game);
-  if (game.lockedAt) return toGameDto(world, game);
+  if (game.lockedAt) return toGameDto(world, game, now);
   if (game.playedDate !== todayOf(world, now) || !game.lineupBuiltAt) {
     fail(409, 'NOT_ELIGIBLE', 'Only today’s game can be locked.', 'NOT_GAME_DAY');
   }
   lockAt(world, game, now);
-  return toGameDto(world, game);
+  return toGameDto(world, game, now);
 }
 
 export function patchLineup(world: UserWorld, env: Env, gameId: string, patch: LineupPatchDto, now: Date): GameDto {
   const game = findGame(world, gameId);
   assertNotFinal(game);
+  assertBeforeMidnight(world, game, now);
+  // GAME_DESIGN §4a: free planning until the week's first pitch; after it, lineups only grow.
+  if (weekLock(world, game.seriesId, now) !== null) {
+    fail(409, 'GAME_LOCKED', 'The week’s first pitch has passed. Lineups only grow now.', 'WEEK_LOCKED');
+  }
   if (game.lockedAt) fail(409, 'GAME_LOCKED', 'First pitch has passed; the lineup is locked.');
   if (!game.lineupBuiltAt || !game.snapshot) {
-    fail(409, 'NOT_ELIGIBLE', 'Lineups are built on game day. Edit the starter instead.', 'NOT_GAME_DAY');
+    fail(409, 'NOT_ELIGIBLE', 'Open the week’s lineup card to build this game first.', 'NOT_BUILT');
   }
-  assertBeforeMidnight(world, game, now);
 
   if (patch.entries) {
     const ids = patch.entries.map((e) => e.taskId);
@@ -717,15 +930,19 @@ export function patchLineup(world: UserWorld, env: Env, gameId: string, patch: L
       const ordered = patch.entries.filter((e) => e.role === role).sort((a, b) => a.position - b.position);
       ordered.forEach((slot, i) => {
         const task = findTask(world, slot.taskId);
+        const before = previous.get(slot.taskId);
+        const required = role === 'lineup' && slot.required;
         next.push({
-          id: previous.get(slot.taskId)?.id ?? env.ids(),
+          id: before?.id ?? env.ids(),
           taskId: task.id,
           taskName: task.name,
           points: task.points,
-          required: role === 'lineup' && slot.required,
+          required,
           position: i + 1,
           role,
           subbedInAt: null,
+          pinchHitAt: null,
+          carriedOver: required && (before?.carriedOver ?? false),
           completedClientAt: null,
           completedReceivedAt: null,
           partial: false,
@@ -736,7 +953,7 @@ export function patchLineup(world: UserWorld, env: Env, gameId: string, patch: L
   }
   if (patch.threshold !== undefined) game.snapshot.threshold = patch.threshold;
   if (patch.minTasks !== undefined) game.snapshot.minTasks = patch.minTasks;
-  return toGameDto(world, game);
+  return toGameDto(world, game, now);
 }
 
 export function addToBench(world: UserWorld, env: Env, gameId: string, taskId: string, now: Date): GameDto {
@@ -757,11 +974,13 @@ export function addToBench(world: UserWorld, env: Env, gameId: string, taskId: s
     position: Math.max(0, ...benchPositions) + 1,
     role: 'bench',
     subbedInAt: null,
+    pinchHitAt: null,
+    carriedOver: false,
     completedClientAt: null,
     completedReceivedAt: null,
     partial: false,
   });
-  return toGameDto(world, game);
+  return toGameDto(world, game, now);
 }
 
 export function substitute(world: UserWorld, gameId: string, outEntryId: string, inEntryId: string, now: Date): GameDto {
@@ -782,7 +1001,7 @@ export function substitute(world: UserWorld, gameId: string, outEntryId: string,
   sub.position = out.position;
   sub.subbedInAt = iso(now);
   out.role = 'subbed_out';
-  return toGameDto(world, game);
+  return toGameDto(world, game, now);
 }
 
 // ── Rainouts ─────────────────────────────────────────────────────────────────
@@ -837,15 +1056,173 @@ export function callRainout(world: UserWorld, gameId: string, makeupDate: LocalD
   const allowance = availableRainouts(world, today)[0] ?? fail(409, 'NO_ALLOWANCE', 'No Rainouts left.');
   allowance.usedGameId = game.id;
   allowance.usedAt = iso(now);
+  // GAME_DESIGN §7: the game moves with its full lineup (pinch hitters and one-offs too).
+  // A lineup not built yet is built from the starter on the makeup day.
   game.postponed = true;
   game.playedDate = makeupDate;
   game.slot = 2;
-  game.entries = [];
-  game.snapshot = null;
-  game.lineupBuiltAt = null;
   game.lockedAt = null;
   game.status = 'scheduled';
   return toSeriesDto(world, seriesById(world, game.seriesId));
+}
+
+// ── Suspended games ──────────────────────────────────────────────────────────
+
+function toSuspensionGame(g: GameRow): SuspensionGame {
+  return {
+    id: g.id,
+    scheduledDate: g.scheduledDate,
+    playedDate: g.playedDate,
+    status: g.status,
+    result: g.result,
+    postponed: g.postponed,
+    suspended: g.suspended,
+  };
+}
+
+export function suspensionQuote(world: UserWorld, gameId: string, now: Date): SuspensionQuoteDto {
+  const game = findGame(world, gameId);
+  const today = todayOf(world, now);
+  const allowancesAvailable = availableRainouts(world, today).length;
+  const options = suspensionOptions({
+    game: toSuspensionGame(game),
+    seriesGames: gamesOfSeries(world, game.seriesId).map(toSuspensionGame),
+    allowancesAvailable,
+    rallyRolled: world.rallyRolls.some((r) => r.gameId === game.id),
+    today,
+    now,
+    timeZone: world.user.timezone,
+  });
+  return {
+    ok: options.ok,
+    reason: options.ok ? null : options.reason,
+    resumeDates: options.ok ? options.resumeDates : [],
+    deadline: options.ok ? iso(options.deadline) : null,
+    allowancesAvailable,
+  };
+}
+
+/**
+ * GAME_DESIGN §7. With a resume date the game moves there as game 2 of a doubleheader,
+ * keeping its progress (a final L called the next morning is reopened and its effects
+ * undone). With none left it ends as a no-decision. Either way it uses a Rainout.
+ */
+export function suspendGame(world: UserWorld, env: Env, gameId: string, resumeDate: LocalDate | null, now: Date): SeriesDto {
+  const game = findGame(world, gameId);
+  const quote = suspensionQuote(world, gameId, now);
+  if (!quote.ok) {
+    const code: ErrorCode =
+      quote.reason === 'NO_ALLOWANCE' ? 'NO_ALLOWANCE' : quote.reason === 'NO_DECISION' ? 'GAME_FINAL' : 'NOT_ELIGIBLE';
+    fail(409, code, 'This game can’t be suspended.', quote.reason ?? undefined);
+  }
+  if (quote.resumeDates.length > 0) {
+    if (resumeDate === null || !quote.resumeDates.includes(resumeDate)) {
+      fail(409, 'INVALID_MAKEUP_DATE', 'Pick one of the days it can resume on.');
+    }
+  } else if (resumeDate !== null) {
+    fail(409, 'INVALID_MAKEUP_DATE', 'No days are left in the series; it ends as a no-decision.');
+  }
+  const today = todayOf(world, now);
+  const allowance = availableRainouts(world, today)[0] ?? fail(409, 'NO_ALLOWANCE', 'No Rainouts left.');
+  allowance.usedGameId = game.id;
+  allowance.usedAt = iso(now);
+  const wasFinal = game.status === 'final';
+
+  if (resumeDate !== null) {
+    if (wasFinal) undoFinalEffects(world, game);
+    game.suspended = true;
+    game.playedDate = resumeDate;
+    game.slot = 2;
+    game.status = game.lockedAt ? 'live' : 'scheduled';
+    game.runs = 0;
+    game.tasksDone = 0;
+    game.missedRequired = 0;
+    game.result = null;
+    game.resultDetail = null;
+    game.rallyDeadline = null;
+    game.finalizedAt = null;
+  } else {
+    if (!wasFinal) {
+      const ev = evaluate(world, game);
+      game.runs = ev.runs;
+      game.tasksDone = ev.tasksDone;
+      game.missedRequired = ev.missedRequired;
+      game.finalizedAt = iso(now);
+    }
+    game.status = 'final';
+    game.result = null;
+    game.resultDetail = 'suspended';
+    game.rallyDeadline = null;
+    // A missed one-off must-hit still carries over from a no-decision (§4a).
+    if (!wasFinal) applyFinalEffects(world, env, game, now);
+  }
+  return toSeriesDto(world, seriesById(world, game.seriesId));
+}
+
+// ── Pinch hitters ────────────────────────────────────────────────────────────
+
+/** POST /games/:id/pinch-hitters: a new must-hit (or a promoted bench task) until the game is final. */
+export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: string, now: Date): GameDto {
+  const game = findGame(world, gameId);
+  assertNotFinal(game);
+  assertBeforeMidnight(world, game, now);
+  if (!game.lineupBuiltAt || !game.snapshot) {
+    fail(409, 'NOT_ELIGIBLE', 'Open the week’s lineup card to build this game first.', 'NOT_BUILT');
+  }
+  const task = findTask(world, taskId);
+  if (task.status !== 'active') fail(409, 'CONFLICT', 'Only active tasks can pinch hit.', 'TASK_NOT_ACTIVE');
+  const existing = game.entries.find((e) => e.taskId === taskId);
+  if (existing && existing.role !== 'bench') {
+    fail(409, 'CONFLICT', 'That task is already in this game’s lineup.', 'ALREADY_IN_GAME');
+  }
+  if (pinchHitThreshold(game.snapshot.threshold, task.points) > LIMITS.thresholdMax) {
+    fail(400, 'VALIDATION_FAILED', 'Runs to win would go past the limit.');
+  }
+  addPinchHit(world, env, game, task, now, false);
+  return toGameDto(world, game, now);
+}
+
+// ── The weekly lineup card ───────────────────────────────────────────────────
+
+export function listWeeks(world: UserWorld, now: Date): { weeks: WeekSummaryDto[] } {
+  const today = todayOf(world, now);
+  const position = calendarPosition(world.user.startDate, today);
+  return {
+    weeks: plannableWeeks(world.user.startDate, today).map((startDate) => {
+      const series = world.series.find((s) => s.startDate === startDate);
+      return {
+        startDate,
+        label: position.phase === 'season' && position.seriesStart === startDate ? 'current' : 'next',
+        locked: series ? weekLock(world, series.id, now) !== null : false,
+      };
+    }),
+  };
+}
+
+/** GET /weeks/:startDate: the week's card. Opening it builds every lineup of the week. */
+export function getWeek(world: UserWorld, env: Env, startDate: LocalDate, now: Date): WeekDto {
+  const today = todayOf(world, now);
+  if (!plannableWeeks(world.user.startDate, today).includes(startDate)) {
+    fail(404, 'NOT_FOUND', 'That week’s lineup card isn’t open.');
+  }
+  const position = calendarPosition(world.user.startDate, startDate);
+  if (position.phase !== 'season') fail(404, 'NOT_FOUND', 'That week has no games.');
+  ensureSeason(world, env, position.seasonNumber);
+  const series = ensureSeries(world, env, position.seasonNumber, position.seriesNumber, position.seriesStart);
+  for (const game of gamesOfSeries(world, series.id)) {
+    if (!game.lineupBuiltAt && game.status !== 'final') buildGameLineup(world, env, game, now);
+  }
+  const lock = weekLock(world, series.id, now);
+  return {
+    startDate: series.startDate,
+    endDate: addDays(series.startDate, SERIES_LENGTH - 1),
+    lockedAt: lock ? iso(lock) : null,
+    locked: lock !== null,
+    series: toSeriesDto(world, series),
+    games: gamesOfSeries(world, series.id)
+      .sort(chronological)
+      .map((g) => toGameDto(world, g, now)),
+  };
 }
 
 // ── Rally Cap ────────────────────────────────────────────────────────────────
@@ -944,30 +1321,35 @@ export function rollRally(
 
 // ── Roster ───────────────────────────────────────────────────────────────────
 
-/** Today's games whose lineup is built but not yet locked: they still track the roster. */
+/**
+ * Games from today on whose lineup is built (the weekly card builds them early) but not
+ * yet locked: they still track the roster.
+ */
 function editableGames(world: UserWorld, now: Date): GameRow[] {
   const today = todayOf(world, now);
-  return world.games.filter((g) => g.playedDate === today && g.lineupBuiltAt && !g.lockedAt && g.status !== 'final');
+  return world.games.filter(
+    (g) => compareDates(g.playedDate, today) >= 0 && g.lineupBuiltAt && !g.lockedAt && g.status !== 'final',
+  );
 }
 
+/**
+ * Takes a task out of upcoming lineups (IL or retirement). Runs to win never changes:
+ * before the week's first pitch the user adjusts it while planning; after it, the bar
+ * never drops and the task leaves lineups from tomorrow (GAME_DESIGN §7).
+ */
 function removeFromEditableGames(world: UserWorld, taskId: string, now: Date): void {
+  const today = todayOf(world, now);
   for (const game of editableGames(world, now)) {
+    if (game.playedDate === today && weekLock(world, game.seriesId, now) !== null) continue;
     game.entries = game.entries.filter((e) => e.taskId !== taskId);
-    for (const role of ['lineup', 'bench'] as const) {
-      game.entries
-        .filter((e) => e.role === role)
-        .sort((a, b) => a.position - b.position)
-        .forEach((e, i) => {
-          e.position = i + 1;
-        });
-    }
+    renumber(game);
   }
 }
 
 export function createTask(
   world: UserWorld,
   env: Env,
-  body: { name: string; notes?: string | null; points: number },
+  body: { name: string; notes?: string | null; points: number; kind?: TaskKind },
   now: Date,
 ): TaskDto {
   const task: TaskRow = {
@@ -976,6 +1358,9 @@ export function createTask(
     notes: body.notes ?? null,
     points: body.points,
     status: 'active',
+    kind: body.kind ?? 'recurring',
+    carryover: false,
+    carryoverDate: null,
     ilStartedOn: null,
     ilMinUntil: null,
     createdAt: iso(now),
@@ -987,13 +1372,20 @@ export function createTask(
 export function updateTask(
   world: UserWorld,
   taskId: string,
-  body: { name?: string; notes?: string | null; points?: number },
+  body: { name?: string; notes?: string | null; points?: number; kind?: TaskKind },
   now: Date,
 ): TaskDto {
   const task = findTask(world, taskId);
   if (body.name !== undefined) task.name = body.name;
   if (body.notes !== undefined) task.notes = body.notes;
   if (body.points !== undefined) task.points = body.points;
+  if (body.kind !== undefined) {
+    task.kind = body.kind;
+    if (body.kind === 'recurring') {
+      task.carryover = false;
+      task.carryoverDate = null;
+    }
+  }
   for (const game of editableGames(world, now)) snapshotEntries(world, game);
   return toTaskDto(world, task);
 }
@@ -1001,6 +1393,8 @@ export function updateTask(
 export function retireTask(world: UserWorld, taskId: string, now: Date): TaskDto {
   const task = findTask(world, taskId);
   task.status = 'retired';
+  task.carryover = false;
+  task.carryoverDate = null;
   task.ilStartedOn = null;
   task.ilMinUntil = null;
   removeFromEditableGames(world, taskId, now);

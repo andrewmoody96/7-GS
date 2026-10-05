@@ -63,8 +63,10 @@ function Standings({ season: s }: { season: SeasonDto }) {
     [vocab.terms.seriesRecord, `${s.seriesWon}–${s.seriesLost}`],
     [vocab.terms.winStreak, String(s.currentWinStreak)],
     [vocab.terms.longestWinStreak, String(s.longestWinStreak)],
-    ['Games left', String(Math.max(0, GAMES_PER_SEASON - played))],
+    ['Games left', String(Math.max(0, GAMES_PER_SEASON - played - s.noDecisions))],
   ];
+  // Suspended games that ended with no decision: neither a W nor an L.
+  if (s.noDecisions > 0) stats.splice(2, 0, [vocab.terms.noDecisions, String(s.noDecisions)]);
   return (
     <>
       <section className="board board--record" aria-label={vocab.terms.record}>

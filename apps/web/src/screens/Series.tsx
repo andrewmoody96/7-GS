@@ -114,6 +114,7 @@ export function SeriesScreen() {
                         {vocab.terms.postponedShort} → {formatDate(g.playedDate)}
                       </small>
                     ) : null}
+                    {g.suspended ? <small>{vocab.suspension.movedTo(formatDate(g.playedDate))}</small> : null}
                   </span>
                   <span className="gamelog__starter">{g.starterName}</span>
                   <span className={`gamelog__result gamelog__result--${state}`}>

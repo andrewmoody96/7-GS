@@ -1,5 +1,5 @@
 import type { AllowancesDto, StarterDto, TaskDto } from '@7gs/contracts';
-import { compareDates, IL_MIN_DAYS, LIMITS, type LocalDate } from '@7gs/rules';
+import { compareDates, IL_MIN_DAYS, LIMITS, type LocalDate, type TaskKind } from '@7gs/rules';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
@@ -18,6 +18,7 @@ import { Sheet } from '../components/Sheet';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { formatDate, formatTimeOfDay } from '../lib/format';
 import { vocab } from '../vocab';
+import { WeekCardView } from './WeekCard';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
@@ -42,7 +43,8 @@ export function AllowanceChips({ allowances }: { allowances: AllowancesDto | und
 
 export function FilmRoomScreen() {
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'roster' ? 'roster' : 'rotation';
+  const raw = params.get('tab');
+  const tab = raw === 'roster' || raw === 'rotation' ? raw : 'week';
   const me = useMeQuery();
   return (
     <div className="screen screen--filmroom">
@@ -57,11 +59,22 @@ export function FilmRoomScreen() {
         <button
           type="button"
           role="tab"
+          id="tab-week"
+          aria-controls="panel-week"
+          aria-selected={tab === 'week'}
+          className="segmented__item"
+          onClick={() => setParams({}, { replace: true })}
+        >
+          {vocab.week.title}
+        </button>
+        <button
+          type="button"
+          role="tab"
           id="tab-rotation"
           aria-controls="panel-rotation"
           aria-selected={tab === 'rotation'}
           className="segmented__item"
-          onClick={() => setParams({}, { replace: true })}
+          onClick={() => setParams({ tab: 'rotation' }, { replace: true })}
         >
           Rotation
         </button>
@@ -78,7 +91,7 @@ export function FilmRoomScreen() {
         </button>
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === 'rotation' ? <Rotation /> : <Roster today={me.data?.today ?? null} />}
+        {tab === 'week' ? <WeekCardView /> : tab === 'rotation' ? <Rotation /> : <Roster today={me.data?.today ?? null} />}
       </div>
     </div>
   );
@@ -211,6 +224,13 @@ function TaskGroup({ title, tasks, onSelect }: { title: string; tasks: TaskDto[]
                 <span className="taskrow__name">{task.name}</span>
                 <span className="taskrow__meta">
                   <span className="pill pill--runs">{vocab.runs(task.points)}</span>
+                  {task.kind === 'one_off' ? (
+                    <span className="pill pill--oneoff">
+                      {vocab.taskKind.one_off}
+                      {task.status === 'retired' ? ' · done' : ''}
+                    </span>
+                  ) : null}
+                  {task.carryover && task.status !== 'retired' ? <span className="pill pill--carried">{vocab.carryoverNote}</span> : null}
                   {task.status === 'injured' && task.ilMinUntil ? (
                     <span className="pill pill--il">{vocab.il.eligibleOn(formatDate(task.ilMinUntil))}</span>
                   ) : null}
@@ -230,20 +250,47 @@ function TaskGroup({ title, tasks, onSelect }: { title: string; tasks: TaskDto[]
   );
 }
 
+/** Recurring (stays on the roster) or one-off (retires once done). */
+function KindPicker({ value, onChange, name }: { value: TaskKind; onChange: (kind: TaskKind) => void; name: string }) {
+  const labelId = useId();
+  return (
+    <div className="field">
+      <span className="field__label" id={labelId}>
+        Kind
+      </span>
+      <div className="segmented segmented--kind" role="radiogroup" aria-labelledby={labelId}>
+        {(['recurring', 'one_off'] as const).map((kind) => (
+          <label key={kind} className={`segmented__item${value === kind ? ' is-selected' : ''}`}>
+            <input type="radio" name={name} className="sr-only" checked={value === kind} onChange={() => onChange(kind)} />
+            {vocab.taskKind[kind]}
+          </label>
+        ))}
+      </div>
+      <p className="field__hint">
+        {value === 'one_off'
+          ? `Retires once done. Missed as a ${vocab.term.required.toLowerCase()}, it moves to the next game as a ${vocab.terms.pinchHitter.toLowerCase()}.`
+          : 'Stays on the roster, day after day.'}
+      </p>
+    </div>
+  );
+}
+
 function AddTaskForm() {
   const create = useCreateTask();
   const [name, setName] = useState('');
   const [points, setPoints] = useState(1);
+  const [kind, setKind] = useState<TaskKind>('recurring');
   const inputId = useId();
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     create.mutate(
-      { name: name.trim(), points },
+      { name: name.trim(), points, kind },
       {
         onSuccess: () => {
           setName('');
           setPoints(1);
+          setKind('recurring');
         },
       },
     );
@@ -267,6 +314,7 @@ function AddTaskForm() {
         </button>
       </div>
       <Stepper label="Worth" value={points} min={1} max={LIMITS.pointsMax} suffix={points === 1 ? 'run' : 'runs'} onChange={setPoints} />
+      <KindPicker value={kind} onChange={setKind} name="new-task-kind" />
     </form>
   );
 }
@@ -279,6 +327,7 @@ function TaskSheet({ task, today, onClose }: { task: TaskDto; today: LocalDate |
   const [name, setName] = useState(task.name);
   const [points, setPoints] = useState(task.points);
   const [notes, setNotes] = useState(task.notes ?? '');
+  const [kind, setKind] = useState<TaskKind>(task.kind);
   const [confirmRetire, setConfirmRetire] = useState(false);
   const nameId = useId();
   const notesId = useId();
@@ -287,9 +336,11 @@ function TaskSheet({ task, today, onClose }: { task: TaskDto; today: LocalDate |
     setName(task.name);
     setPoints(task.points);
     setNotes(task.notes ?? '');
-  }, [task.id, task.name, task.points, task.notes]);
+    setKind(task.kind);
+  }, [task.id, task.name, task.points, task.notes, task.kind]);
 
-  const dirty = name.trim() !== task.name || points !== task.points || (notes || null) !== task.notes;
+  const dirty =
+    name.trim() !== task.name || points !== task.points || (notes || null) !== task.notes || kind !== task.kind;
   const canActivate = task.ilMinUntil === null || today === null || compareDates(today, task.ilMinUntil) >= 0;
   const retired = task.status === 'retired';
 
@@ -310,7 +361,7 @@ function TaskSheet({ task, today, onClose }: { task: TaskDto; today: LocalDate |
             disabled={!dirty || !name.trim() || update.isPending}
             onClick={() =>
               update.mutate(
-                { taskId: task.id, body: { name: name.trim(), points, notes: notes.trim() ? notes : null } },
+                { taskId: task.id, body: { name: name.trim(), points, notes: notes.trim() ? notes : null, kind } },
                 { onSuccess: onClose },
               )
             }
@@ -349,6 +400,8 @@ function TaskSheet({ task, today, onClose }: { task: TaskDto; today: LocalDate |
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
+        {!retired ? <KindPicker value={kind} onChange={setKind} name={`kind-${task.id}`} /> : null}
+        {task.carryover && !retired ? <p className="notice">{vocab.carryoverNote}.</p> : null}
         <p className="streakline">
           <IconFlame width={16} height={16} /> Streak {task.currentStreak} · best {task.longestStreak}
         </p>
