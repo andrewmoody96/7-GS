@@ -1,5 +1,5 @@
 import type { Deps } from '../deps';
-import { conflict, validationFailed } from '../errors';
+import { validationFailed } from '../errors';
 import { route, type AnyRoute } from '../http/router';
 import { toRallyRollDto } from '../services/dto';
 import {
@@ -15,6 +15,7 @@ import {
 import { loadUserGame } from '../services/lineups';
 import { callRainout, rainoutQuote } from '../services/rainouts';
 import { rallyQuote, rollRally } from '../services/rally';
+import { suspendGame, suspensionQuote } from '../services/suspensions';
 import { inUserTx, todayView } from '../services/today';
 import { gameView, seriesView } from '../services/views';
 
@@ -96,17 +97,20 @@ export function gameRoutes(deps: Deps): AnyRoute[] {
       });
     }),
 
-    // Built in the following steps.
     route('addPinchHitter', ({ auth, params, body, now }) =>
       inUserTx(db, auth.user, now, async (tx, user) =>
         gameView(tx, user, await pinchHit(tx, user, params.gameId, body.taskId, now), now),
       ),
     ),
 
-    ...(['getSuspensionQuote', 'suspendGame'] as const).map((name) =>
-      route(name, () => {
-        throw conflict('CONFLICT', 'Not available yet.', 'NOT_IMPLEMENTED');
-      }) as AnyRoute,
+    route('getSuspensionQuote', ({ auth, params, now }) =>
+      inUserTx(db, auth.user, now, (tx, user) => suspensionQuote(tx, user, params.gameId, now)),
+    ),
+
+    route('suspendGame', ({ auth, params, body, now }) =>
+      inUserTx(db, auth.user, now, async (tx, user) =>
+        seriesView(tx, user, await suspendGame(tx, user, params.gameId, body.resumeDate, now), now),
+      ),
     ),
   ];
 }
