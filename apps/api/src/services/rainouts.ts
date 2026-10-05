@@ -6,7 +6,7 @@ import type { RainoutQuoteDto } from '@7gs/contracts';
 import { localDateOf, rainoutOptions, type RainoutGame, type RainoutIneligibleReason } from '@7gs/rules';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { games, lineupEntries, rainoutAllowances, type GameRow, type SeriesRow, type UserRow } from '../db/schema';
+import { games, rainoutAllowances, type GameRow, type SeriesRow, type UserRow } from '../db/schema';
 import { conflict, type ApiException } from '../errors';
 import { availableRainouts } from './allowances';
 import { loadUserGame, materializeLock } from './lineups';
@@ -65,8 +65,9 @@ export async function rainoutQuote(tx: Db, user: UserRow, gameId: string, now: D
 
 /**
  * Call a Rainout: uses an allowance (this month's first, then the Iron Man bonus) and
- * moves the game to `makeupDate` as slot 2. If its lineup was already built today, it
- * is cleared so the makeup day snapshots the starter afresh, like any other game.
+ * moves the game to `makeupDate` as slot 2. A built lineup moves with it (GAME_DESIGN
+ * §7: same must-hits, runs to win, pinch hitters and one-offs); an unbuilt game is built
+ * from its original starter when it is played or planned.
  */
 export async function callRainout(
   tx: Db,
@@ -92,26 +93,9 @@ export async function callRainout(
     : [];
   if (!claimed) throw REJECTIONS.NO_ALLOWANCE();
 
-  await tx.delete(lineupEntries).where(eq(lineupEntries.gameId, game.id));
   await tx
     .update(games)
-    .set({
-      postponed: true,
-      slot: 2,
-      playedDate: makeupDate,
-      templateId: null,
-      starterName: null,
-      threshold: null,
-      minTasks: null,
-      lockTime: null,
-      timeZone: null,
-      lineupBuiltAt: null,
-      lockedAt: null,
-      status: 'scheduled',
-      runs: 0,
-      tasksDone: 0,
-      missedRequired: 0,
-    })
+    .set({ postponed: true, slot: 2, playedDate: makeupDate, lockedAt: null, status: 'scheduled' })
     .where(eq(games.id, game.id));
   return loadUserSeries(tx, user.id, game.seriesId);
 }

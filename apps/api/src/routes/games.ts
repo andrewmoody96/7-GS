@@ -9,6 +9,7 @@ import {
   setPartial,
   substitute,
   addToBench,
+  pinchHit,
   uncompleteEntry,
 } from '../services/games';
 import { loadUserGame } from '../services/lineups';
@@ -96,7 +97,13 @@ export function gameRoutes(deps: Deps): AnyRoute[] {
     }),
 
     // Built in the following steps.
-    ...(['addPinchHitter', 'getSuspensionQuote', 'suspendGame', 'listWeeks', 'getWeek'] as const).map((name) =>
+    route('addPinchHitter', ({ auth, params, body, now }) =>
+      inUserTx(db, auth.user, now, async (tx, user) =>
+        gameView(tx, user, await pinchHit(tx, user, params.gameId, body.taskId, now), now),
+      ),
+    ),
+
+    ...(['getSuspensionQuote', 'suspendGame'] as const).map((name) =>
       route(name, () => {
         throw conflict('CONFLICT', 'Not available yet.', 'NOT_IMPLEMENTED');
       }) as AnyRoute,
