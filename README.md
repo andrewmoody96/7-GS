@@ -25,7 +25,9 @@ and `package.json`.
 
 ### One-time setup
 
-1. Install [Node.js 22 or newer](https://nodejs.org).
+1. Install [Node.js 22](https://nodejs.org/en/download) (choose the 22.x version). On macOS 12 (Monterey)
+   it must be 22: newer Node versions require macOS 13.5 or later. The first time you run `git`
+   on a Mac, it may ask to install Command Line Tools; click Install.
 2. Turn on pnpm (it ships with Node): `corepack enable`
 3. Get the code and move into its root folder:
    ```sh
