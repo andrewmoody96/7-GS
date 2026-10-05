@@ -1,4 +1,4 @@
-import { evaluateGame, seriesStatus, type LineupRole } from '@7gs/rules';
+import { evaluateGame, scoreline, seriesStatus, type LineupRole } from '@7gs/rules';
 import { describe, expect, it } from 'vitest';
 import { ApiError, withResponseValidation, type ApiClient } from '../client';
 import { createMockApi } from './index';
@@ -79,10 +79,18 @@ describe('mock backend seeds', () => {
     expect(today.games).toHaveLength(1);
 
     const game = today.games[0]!;
-    expect(game).toMatchObject({ status: 'live', starterName: 'Friday Finisher', threshold: 5, runs: 3 });
+    // Runs to win 5, plus 1 for Thursday's missed one-off, carried over as a pinch hitter.
+    expect(game).toMatchObject({ status: 'live', starterName: 'Friday Finisher', threshold: 6, runs: 3, editPolicy: 'additions_only' });
     expect(game.lockedAt).not.toBeNull();
+    expect(game.entries.find((e) => e.taskName === 'Renew passport')).toMatchObject({
+      role: 'lineup',
+      required: true,
+      carriedOver: true,
+      completedAt: null,
+    });
+    expect(game.entries.find((e) => e.taskName === 'Renew passport')?.pinchHitAt).not.toBeNull();
     const projection = project(game);
-    expect(projection).toMatchObject({ runsNeeded: 2, missedRequired: 1, result: 'L' });
+    expect(projection).toMatchObject({ runsNeeded: 3, missedRequired: 2, result: 'L' });
 
     const series = today.series!;
     const byNumber = (n: number) => series.games.find((g) => g.gameNumber === n)!;
@@ -93,10 +101,18 @@ describe('mock backend seeds', () => {
     expect(seriesStatus(series.games).label).toBe('Leads 2–1');
 
     const thursday = await api.call('getGame', { params: { gameId: byNumber(4).id } });
-    expect(thursday.rally).toMatchObject({ hit: true, roll: 7, oddsPct: 20 });
+    // Short and the one-off missed: 20 − 5 (missed must-hit) = 15%.
+    expect(thursday.rally).toMatchObject({ hit: true, roll: 7, oddsPct: 15 });
+    expect(thursday).toMatchObject({ threshold: 4, missedRequired: 1 });
+
+    // Saturday's bench bat was promoted after the week locked: runs to win 4 → 5.
+    const saturday = await api.call('getGame', { params: { gameId: byNumber(6).id } });
+    expect(saturday.threshold).toBe(5);
+    expect(saturday.entries.find((e) => e.taskName === 'Practice Spanish')).toMatchObject({ role: 'lineup', required: true });
 
     const tasks = (await api.call('listTasks')).tasks;
-    expect(tasks.filter((t) => t.status === 'active')).toHaveLength(8);
+    expect(tasks.filter((t) => t.status === 'active')).toHaveLength(9);
+    expect(tasks.find((t) => t.kind === 'one_off')).toMatchObject({ name: 'Renew passport', status: 'active', carryover: true });
     expect(tasks.find((t) => t.status === 'injured')).toMatchObject({ name: 'Guitar practice', ilMinUntil: '2026-10-03' });
     expect(tasks.find((t) => t.status === 'retired')?.name).toBe('Cold shower');
 
@@ -140,12 +156,17 @@ describe('mock backend game day', () => {
     const { api, backend, tick } = setup('midseason');
     const game = (await api.call('getToday')).games[0]!;
     const deepWork = game.entries.find((e) => e.taskName === 'Deep work block')!;
+    const passport = game.entries.find((e) => e.taskName === 'Renew passport')!;
 
+    await api.call('completeEntry', {
+      params: { gameId: game.id, entryId: passport.id },
+      body: { clientAt: backend.now().toISOString() },
+    });
     const after = await api.call('completeEntry', {
       params: { gameId: game.id, entryId: deepWork.id },
       body: { clientAt: backend.now().toISOString() },
     });
-    expect(after.runs).toBe(6);
+    expect(after.runs).toBe(7);
     expect(project(after)).toMatchObject({ result: 'W', runsNeeded: 0, missedRequired: 0 });
 
     // Repeating a check-off is idempotent.
@@ -162,7 +183,9 @@ describe('mock backend game day', () => {
     expect((await api.call('getGame', { params: { gameId: game.id } })).status).toBe('live');
     tick(40 * 60 * 1000);
     const final = await api.call('getGame', { params: { gameId: game.id } });
-    expect(final).toMatchObject({ status: 'final', result: 'W', resultDetail: 'clean', runs: 6 });
+    expect(final).toMatchObject({ status: 'final', result: 'W', resultDetail: 'clean', runs: 7 });
+    // The one-off was done in a game that went final, so it retires.
+    expect((await api.call('listTasks')).tasks.find((t) => t.name === 'Renew passport')).toMatchObject({ status: 'retired', carryover: false });
     // Noon the next day, Chicago time.
     expect(final.rallyDeadline).toBe('2026-10-03T17:00:00.000Z');
 
@@ -314,6 +337,208 @@ describe('mock backend rainouts, Rally Cap and IL', () => {
     const upcoming = (await pre.api.call('getCurrentSeason'))!;
     const updated = await pre.api.call('updateSeason', { params: { seasonId: upcoming.id }, body: { winGoal: 120 } });
     expect(updated.winGoal).toBe(120);
+  });
+});
+
+const HOUR = 60 * 60 * 1000;
+
+describe('mock backend pinch hitters and one-offs', () => {
+  it('raises runs to win by exactly the pinch hitter’s runs, mid-game', async () => {
+    const { api } = setup('midseason');
+    const game = (await api.call('getToday')).games[0]!;
+    expect(game).toMatchObject({ threshold: 6, runs: 3, editPolicy: 'additions_only' });
+    expect(scoreline({ result: null, runs: game.runs, threshold: game.threshold }).them).toBe(5);
+
+    const yoga = await api.call('createTask', { body: { name: 'Yoga', points: 2 } });
+    const after = await api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: yoga.id } });
+    expect(after.threshold).toBe(8);
+    expect(after.runs).toBe(3);
+    const entry = after.entries.find((e) => e.taskId === yoga.id)!;
+    expect(entry).toMatchObject({ role: 'lineup', required: true, carriedOver: false, points: 2 });
+    expect(entry.pinchHitAt).not.toBeNull();
+    expect(entry.position).toBe(after.entries.filter((e) => e.role === 'lineup').length);
+    // The opponent answers back with the same number of runs.
+    expect(scoreline({ result: null, runs: after.runs, threshold: after.threshold }).them).toBe(7);
+
+    // Promoting a bench task to must-hit is the same rule.
+    const spanish = after.entries.find((e) => e.role === 'bench' && e.taskName === 'Practice Spanish')!;
+    const promoted = await api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: spanish.taskId } });
+    expect(promoted.threshold).toBe(9);
+    expect(promoted.entries.find((e) => e.id === spanish.id)).toMatchObject({ role: 'lineup', required: true });
+    expect(promoted.entries.filter((e) => e.role === 'bench').map((e) => e.position)).toEqual([1]);
+
+    const inbox = game.entries.find((e) => e.taskName === 'Inbox zero')!;
+    await expectApiError(
+      api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: inbox.taskId } }),
+      'CONFLICT',
+      'ALREADY_IN_GAME',
+    );
+    const thursday = (await api.call('getToday')).series!.games.find((g) => g.gameNumber === 4)!;
+    await expectApiError(api.call('addPinchHitter', { params: { gameId: thursday.id }, body: { taskId: yoga.id } }), 'GAME_FINAL');
+    // Lowering the bar isn't possible once the week is locked.
+    await expectApiError(api.call('patchLineup', { params: { gameId: game.id }, body: { threshold: 1 } }), 'GAME_LOCKED', 'WEEK_LOCKED');
+  });
+
+  it('pinch hits on a later day of a locked week and adds to its bench', async () => {
+    const { api } = setup('midseason');
+    const week = await api.call('getWeek', { params: { startDate: '2026-09-28' } });
+    expect(week.locked).toBe(true);
+    const sunday = week.games.find((g) => g.playedDate === '2026-10-04')!;
+    expect(sunday).toMatchObject({ threshold: 3, editPolicy: 'additions_only' });
+    const deep = sunday.entries.find((e) => e.taskName === 'Deep work block');
+    expect(deep).toBeUndefined();
+    const deepWork = (await api.call('listTasks')).tasks.find((t) => t.name === 'Deep work block')!;
+    const after = await api.call('addPinchHitter', { params: { gameId: sunday.id }, body: { taskId: deepWork.id } });
+    expect(after.threshold).toBe(6);
+    const walk = (await api.call('listTasks')).tasks.find((t) => t.name === '10-minute tidy')!;
+    await expectApiError(api.call('addToBench', { params: { gameId: sunday.id }, body: { taskId: walk.id } }), 'CONFLICT', 'ALREADY_IN_GAME');
+  });
+
+  it('carries a missed one-off must-hit to the next game as a pinch hitter, until it’s done', async () => {
+    const { api, tick } = setup('midseason');
+    // Friday goes final without the passport renewed.
+    tick(6 * HOUR + 20 * 60 * 1000); // Saturday 01:00
+    const today = await api.call('getToday');
+    const friday = today.series!.games.find((g) => g.gameNumber === 5)!;
+    expect(friday).toMatchObject({ status: 'final', result: 'L', resultDetail: 'no_appeal' });
+    const saturday = today.games.find((g) => g.slot === 1)!;
+    expect(saturday.threshold).toBe(6); // 4 + Spanish (pinch hit Thursday) + the passport
+    const carried = saturday.entries.find((e) => e.taskName === 'Renew passport')!;
+    expect(carried).toMatchObject({ role: 'lineup', required: true, carriedOver: true, points: 1 });
+    // Not on the makeup game too.
+    expect(today.games.find((g) => g.slot === 2)!.entries.some((e) => e.taskName === 'Renew passport')).toBe(false);
+    const task = (await api.call('listTasks')).tasks.find((t) => t.name === 'Renew passport')!;
+    expect(task).toMatchObject({ status: 'active', kind: 'one_off', carryover: true });
+  });
+
+  it('retires a one-off that was done, and doesn’t move a missed one-off that wasn’t a must-hit', async () => {
+    const { api, backend, tick } = setup('midseason');
+    const game = (await api.call('getToday')).games[0]!;
+    const chores = await api.call('createTask', { body: { name: 'Pick up dry cleaning', kind: 'one_off' } });
+    expect(chores).toMatchObject({ kind: 'one_off', carryover: false });
+    const benched = await api.call('addToBench', { params: { gameId: game.id }, body: { taskId: chores.id } });
+    const read = benched.entries.find((e) => e.taskName === 'Read 20 pages')!;
+    const sub = benched.entries.find((e) => e.taskId === chores.id)!;
+    await api.call('substitute', { params: { gameId: game.id }, body: { outEntryId: read.id, inEntryId: sub.id } });
+    const passport = game.entries.find((e) => e.taskName === 'Renew passport')!;
+    await api.call('completeEntry', { params: { gameId: game.id, entryId: passport.id }, body: { clientAt: backend.now().toISOString() } });
+    tick(6 * HOUR + 20 * 60 * 1000);
+    const tasks = (await api.call('listTasks')).tasks;
+    expect(tasks.find((t) => t.id === chores.id)).toMatchObject({ status: 'active', carryover: false });
+    expect(tasks.find((t) => t.name === 'Renew passport')).toMatchObject({ status: 'retired', carryover: false });
+    const saturday = (await api.call('getToday')).games[0]!;
+    expect(saturday.entries.some((e) => e.taskId === chores.id)).toBe(false);
+  });
+
+  it('the Injured List removes a task from later lineups without lowering runs to win', async () => {
+    const { api } = setup('midseason');
+    const before = await api.call('getWeek', { params: { startDate: '2026-09-28' } });
+    const thresholds = before.games.map((g) => g.threshold);
+    const mealPrep = (await api.call('listTasks')).tasks.find((t) => t.name === 'Meal prep')!;
+    const sunday = before.games.find((g) => g.playedDate === '2026-10-04')!;
+    expect(sunday.entries.find((e) => e.taskId === mealPrep.id)).toMatchObject({ required: true });
+
+    await api.call('placeOnInjuredList', { params: { taskId: mealPrep.id } });
+    const after = await api.call('getWeek', { params: { startDate: '2026-09-28' } });
+    expect(after.games.map((g) => g.threshold)).toEqual(thresholds);
+    for (const g of after.games.filter((g) => g.playedDate > '2026-10-02')) {
+      expect(g.entries.some((e) => e.taskId === mealPrep.id)).toBe(false);
+    }
+  });
+
+  it('before the week locks, the Injured List takes a task off the whole card', async () => {
+    const { api } = setup('midseason');
+    const next = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
+    const workout = (await api.call('listTasks')).tasks.find((t) => t.name === 'Morning workout')!;
+    expect(next.games[0]!.entries.some((e) => e.taskId === workout.id)).toBe(true);
+    await expectApiError(api.call('placeOnInjuredList', { params: { taskId: workout.id } }), 'GAME_LOCKED');
+    const reading = (await api.call('listTasks')).tasks.find((t) => t.name === 'Meal prep')!;
+    await api.call('placeOnInjuredList', { params: { taskId: reading.id } });
+    const after = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
+    expect(after.games.some((g) => g.entries.some((e) => e.taskId === reading.id))).toBe(false);
+    expect(after.games.map((g) => g.threshold)).toEqual(next.games.map((g) => g.threshold));
+  });
+});
+
+describe('mock backend suspended games', () => {
+  it('suspends today’s game to resume later in the week as a doubleheader, keeping progress', async () => {
+    const { api, tick } = setup('midseason');
+    const before = await api.call('getMe');
+    const game = (await api.call('getToday')).games[0]!;
+    const quote = await api.call('getSuspensionQuote', { params: { gameId: game.id } });
+    // Saturday already hosts the Wednesday makeup, so Sunday is the only day left.
+    expect(quote).toMatchObject({ ok: true, reason: null, resumeDates: ['2026-10-04'], allowancesAvailable: before.allowances.rainouts });
+    expect(quote.deadline).toBe('2026-10-03T17:00:00.000Z');
+
+    await expectApiError(api.call('suspendGame', { params: { gameId: game.id }, body: { resumeDate: null } }), 'INVALID_MAKEUP_DATE');
+    await expectApiError(
+      api.call('suspendGame', { params: { gameId: game.id }, body: { resumeDate: '2026-10-03' } }),
+      'INVALID_MAKEUP_DATE',
+    );
+    const series = await api.call('suspendGame', { params: { gameId: game.id }, body: { resumeDate: '2026-10-04' } });
+    expect(series.games.find((g) => g.id === game.id)).toMatchObject({
+      suspended: true,
+      playedDate: '2026-10-04',
+      slot: 2,
+      status: 'live',
+      runs: 3,
+      threshold: 6,
+      result: null,
+    });
+    expect((await api.call('getMe')).allowances.rainouts).toBe(before.allowances.rainouts - 1);
+    expect((await api.call('getToday')).games).toHaveLength(0);
+
+    // A game that already moved can't move again: on Sunday it can only end as a no-decision.
+    expect(await api.call('getSuspensionQuote', { params: { gameId: game.id } })).toMatchObject({ ok: false, reason: 'FUTURE_GAME' });
+    tick(DAY + 15 * HOUR + 20 * 60 * 1000); // Sunday 10:00
+    const again = await api.call('getSuspensionQuote', { params: { gameId: game.id } });
+    expect(again).toMatchObject({ ok: true, resumeDates: [] });
+    const nd = await api.call('suspendGame', { params: { gameId: game.id }, body: { resumeDate: null } });
+    expect(nd.games.find((g) => g.id === game.id)).toMatchObject({ status: 'final', result: null, resultDetail: 'suspended', runs: 3 });
+    const status = seriesStatus(nd.games.map((g) => ({ ...g, noDecision: g.resultDetail === 'suspended' })));
+    // Saturday's doubleheader went final unplayed: two Ls.
+    expect(status).toMatchObject({ noDecisions: 1, wins: 2, losses: 3 });
+    expect((await api.call('getCurrentSeason'))!.noDecisions).toBe(1);
+    expect(await api.call('getSuspensionQuote', { params: { gameId: game.id } })).toMatchObject({ ok: false, reason: 'NO_DECISION' });
+    // The missed one-off still carries over from a no-decision.
+    expect((await api.call('listTasks')).tasks.find((t) => t.name === 'Renew passport')?.carryover).toBe(true);
+  });
+
+  it('called the next morning, it reopens a final L and undoes its effects', async () => {
+    const { api, tick } = setup('midseason');
+    tick(13 * HOUR + 20 * 60 * 1000); // Saturday 08:00
+    let today = await api.call('getToday');
+    const friday = today.series!.games.find((g) => g.gameNumber === 5)!;
+    expect(friday).toMatchObject({ status: 'final', result: 'L' });
+    expect(today.games[0]!.threshold).toBe(6);
+
+    const quote = await api.call('getSuspensionQuote', { params: { gameId: friday.id } });
+    expect(quote).toMatchObject({ ok: true, resumeDates: ['2026-10-04'] });
+    await api.call('suspendGame', { params: { gameId: friday.id }, body: { resumeDate: '2026-10-04' } });
+    const reopened = await api.call('getGame', { params: { gameId: friday.id } });
+    expect(reopened).toMatchObject({ status: 'live', result: null, resultDetail: null, playedDate: '2026-10-04', slot: 2, suspended: true, rallyDeadline: null });
+    expect(reopened.entries.filter((e) => e.completedAt !== null)).toHaveLength(2);
+    // The carried-over one-off left Saturday's game (it's still in Friday's), and the bar went back.
+    today = await api.call('getToday');
+    expect(today.games[0]!.threshold).toBe(5);
+    expect(today.games[0]!.entries.some((e) => e.taskName === 'Renew passport')).toBe(false);
+    expect((await api.call('listTasks')).tasks.find((t) => t.name === 'Renew passport')?.carryover).toBe(true);
+  });
+
+  it('isn’t offered after a Rally Cap roll, on a W, or after the noon window', async () => {
+    const { api } = setup('midseason');
+    const games = (await api.call('getCurrentSeries'))!.games;
+    const byNumber = (n: number) => games.find((g) => g.gameNumber === n)!;
+    expect(await api.call('getSuspensionQuote', { params: { gameId: byNumber(1).id } })).toMatchObject({ ok: false, reason: 'GAME_WON' });
+    expect(await api.call('getSuspensionQuote', { params: { gameId: byNumber(2).id } })).toMatchObject({ ok: false, reason: 'WINDOW_CLOSED' });
+    expect(await api.call('getSuspensionQuote', { params: { gameId: byNumber(7).id } })).toMatchObject({ ok: false, reason: 'FUTURE_GAME' });
+
+    const rally = setup('rally');
+    const thursday = (await rally.api.call('getCurrentSeries'))!.games.find((g) => g.gameNumber === 4)!;
+    expect(await rally.api.call('getSuspensionQuote', { params: { gameId: thursday.id } })).toMatchObject({ ok: true });
+    const roll = await rally.api.call('rollRally', { params: { gameId: thursday.id }, headers: { 'Idempotency-Key': 'k' } });
+    const after = await rally.api.call('getSuspensionQuote', { params: { gameId: thursday.id } });
+    expect(after).toMatchObject({ ok: false, reason: roll.roll.hit ? 'GAME_WON' : 'RALLY_ROLLED' });
   });
 });
 
