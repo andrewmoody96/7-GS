@@ -348,16 +348,26 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 
 ### Injured List (single task)
 
-- **Before the week's first pitch:** placing a task on the IL removes it from the week's
-  card. You're still planning, so you can adjust runs to win yourself.
-- **After the week's first pitch:** the task leaves the rest of the week's lineups from
-  tomorrow, **but runs to win doesn't drop.** Its must-hit status goes with it (that's the
-  relief); its runs are covered from the bench.
-- Placing a task on the IL removes it from future lineups and freezes its streak.
-- **Minimum stint: 3 days**, so the IL can't be used to dodge a single hard day.
-- It can't be applied to a task in today's game after first pitch.
-- Activating a task returns it to its starter's lineups the next day.
-- IL stints pause automatically during the offseason and resume afterward.
+- **When it starts:** today, unless the task is in today's game and that game (or its
+  week) has already had first pitch. Then today's game keeps it and the stint starts
+  tomorrow.
+- **What it does:** from the start date the task leaves every planned day, **and runs to
+  win doesn't drop.** Its must-hit status goes with it (that's the relief); its runs are
+  covered from the bench. Its streak is frozen.
+- **Held spots:** each day it leaves keeps a hold on its spot (batting order position,
+  must-hit or not, its runs), shown on that day as **"On the IL"**. Days built while the
+  task is already out hold a spot the same way.
+- **Activation** (after the minimum stint) puts the task back into every held spot from
+  **tomorrow** on, in the same batting order position, without changing runs to win. Days
+  not planned yet simply include it from its starter. Cancelling a stint that hasn't
+  started yet puts it back everywhere.
+- **Your plan wins:** if you re-plan a day yourself while the task is out (before the
+  week's first pitch), that day drops its hold and keeps your plan. Retiring a task drops
+  all its holds.
+- **Minimum stint: 3 game days.** Spring Training and Review Week don't count, so a stint
+  pauses through the offseason. The IL can't be used to dodge a single hard day.
+- When a task leaves a lineup, the batting order closes up (1, 2, 3), and substitutions
+  stay paired in the box score.
 
 ## 8. Opponents (generic teams)
 

@@ -451,13 +451,6 @@
   flex: 1 1 auto;
 }
 
-.benchlist__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
 .explainer--warn {
   margin-top: 0;
   margin-bottom: 12px;

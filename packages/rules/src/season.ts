@@ -65,10 +65,15 @@ export interface SeasonPace {
   goalStillPossible: boolean;
 }
 
-export function seasonPace(wins: number, losses: number, winGoal: number): SeasonPace {
+/**
+ * Pace toward `winGoal`. No-decisions (suspended games) shrink the season's decidable
+ * games, so the goal stays the same over fewer games.
+ */
+export function seasonPace(wins: number, losses: number, winGoal: number, noDecisions = 0): SeasonPace {
   const played = wins + losses;
-  const remaining = Math.max(0, GAMES_PER_SEASON - played);
-  const expectedWins = (winGoal * played) / GAMES_PER_SEASON;
+  const decidable = Math.max(1, GAMES_PER_SEASON - noDecisions);
+  const remaining = Math.max(0, decidable - played);
+  const expectedWins = (winGoal * played) / decidable;
   const gamesBehind = Math.round((expectedWins - wins) * 10) / 10;
   const winsNeeded = Math.max(0, winGoal - wins);
   return {
@@ -77,7 +82,7 @@ export function seasonPace(wins: number, losses: number, winGoal: number): Seaso
     expectedWins: Math.round(expectedWins * 10) / 10,
     gamesBehind: gamesBehind === 0 ? 0 : gamesBehind,
     onPace: gamesBehind <= 0,
-    projectedWins: played === 0 ? null : Math.round((wins / played) * GAMES_PER_SEASON),
+    projectedWins: played === 0 ? null : Math.round((wins / played) * decidable),
     winsNeeded,
     goalStillPossible: winsNeeded <= remaining,
   };

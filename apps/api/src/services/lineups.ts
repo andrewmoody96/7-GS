@@ -31,6 +31,7 @@ import {
 import { conflict, notFound } from '../errors';
 import { uuidv7 } from '../ids';
 import { starterFor } from './starters';
+import { recordHolds, type HeldSpot } from './ilHolds';
 
 export async function loadUserGame(
   tx: Db,
@@ -94,6 +95,29 @@ export function evaluateRows(game: GameRow, entries: readonly EntryRow[]): GameE
 }
 
 /** Store the live score (runs, tasks done, must-hits still open) on a non-final game. */
+/**
+ * Close gaps in the batting order and bench after entries leave (IL, retirement), so
+ * positions read 1, 2, 3. A subbed-out entry shares its replacement's position (that's
+ * how the box score pairs them), so it moves with it.
+ */
+export async function compactPositions(tx: Db, gameId: string): Promise<void> {
+  const entries = await loadEntries(tx, [gameId]);
+  for (const role of ['lineup', 'bench'] as const) {
+    const list = entries.filter((e) => e.role === role).sort((a, b) => a.position - b.position || (a.id < b.id ? -1 : 1));
+    const moved = new Map<number, number>();
+    for (const [i, e] of list.entries()) {
+      if (e.position === i + 1) continue;
+      moved.set(e.position, i + 1);
+      await tx.update(lineupEntries).set({ position: i + 1 }).where(eq(lineupEntries.id, e.id));
+    }
+    if (role !== 'lineup' || moved.size === 0) continue;
+    for (const out of entries.filter((e) => e.role === 'subbed_out')) {
+      const to = moved.get(out.position);
+      if (to !== undefined) await tx.update(lineupEntries).set({ position: to }).where(eq(lineupEntries.id, out.id));
+    }
+  }
+}
+
 export async function refreshScore(tx: Db, game: GameRow): Promise<GameRow> {
   if (game.status === 'final') return game;
   const ev = evaluateRows(game, await loadEntries(tx, [game.id]));
@@ -157,6 +181,21 @@ export async function buildLineupNow(tx: Db, user: UserRow, game: GameRow, now: 
     .where(and(eq(games.id, game.id), isNull(games.lineupBuiltAt)))
     .returning();
   if (!claimed) return reloadGame(tx, game.id);
+
+  // Slots whose task is on the IL become holds, so activation can return it here.
+  const held: HeldSpot[] = [];
+  for (const role of ['lineup', 'bench'] as const) {
+    const ordered = slots
+      .filter((s) => s.role === role)
+      .sort((a, b) => a.position - b.position)
+      .map((s) => ({ slot: s, task: roster.find((t) => t.id === s.taskId) }))
+      .filter((x) => x.task && (x.task.status === 'active' || x.task.status === 'injured'));
+    ordered.forEach(({ slot, task }, i) => {
+      if (task?.status !== 'injured') return;
+      held.push({ taskId: task.id, taskName: task.name, points: task.points, required: slot.required, position: i + 1, role });
+    });
+  }
+  await recordHolds(tx, user.id, claimed.id, held, now);
 
   if (snapshot.length > 0) {
     await tx.insert(lineupEntries).values(

@@ -25,6 +25,7 @@ import { loadUserSeries } from './seasons';
 import { seriesGames } from './standings';
 import { assertPlannable } from './weekCard';
 import { weekLockOf } from './weeks';
+import { dropHoldsForGame } from './ilHolds';
 
 const STALE_MESSAGES: Record<CheckoffRejection, string> = {
   GAME_FINAL: 'This game is already final.',
@@ -84,7 +85,11 @@ export async function patchLineup(
     const [row] = await tx.update(games).set(set).where(eq(games.id, game.id)).returning();
     if (row) game = row;
   }
-  if (patch.entries !== undefined) await replaceEntries(tx, user, game, patch.entries);
+  if (patch.entries !== undefined) {
+    await replaceEntries(tx, user, game, patch.entries);
+    // The day was re-planned while a task was on the IL: the user's plan stands.
+    await dropHoldsForGame(tx, game.id);
+  }
   return refreshScore(tx, game);
 }
 

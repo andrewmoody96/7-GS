@@ -457,12 +457,60 @@ describe('mock backend pinch hitters and one-offs', () => {
     const next = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
     const workout = (await api.call('listTasks')).tasks.find((t) => t.name === 'Morning workout')!;
     expect(next.games[0]!.entries.some((e) => e.taskId === workout.id)).toBe(true);
-    await expectApiError(api.call('placeOnInjuredList', { params: { taskId: workout.id } }), 'GAME_LOCKED');
+    // It's in today's started game: it still plays today and leaves from tomorrow.
+    const placed = await api.call('placeOnInjuredList', { params: { taskId: workout.id } });
+    expect(placed.task.ilStartedOn).toBe('2026-10-03');
+    expect((await api.call('getToday')).games[0]!.entries.some((e) => e.taskId === workout.id)).toBe(true);
     const reading = (await api.call('listTasks')).tasks.find((t) => t.name === 'Meal prep')!;
     await api.call('placeOnInjuredList', { params: { taskId: reading.id } });
     const after = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
     expect(after.games.some((g) => g.entries.some((e) => e.taskId === reading.id))).toBe(false);
     expect(after.games.map((g) => g.threshold)).toEqual(next.games.map((g) => g.threshold));
+    // Every day it left is holding its spot, and positions stay 1, 2, 3.
+    for (const g of after.games) {
+      const had = next.games.find((n) => n.id === g.id)!.entries.find((e) => e.taskId === reading.id);
+      expect(g.ilHolds.some((h) => h.taskId === reading.id)).toBe(Boolean(had));
+      const order = g.entries.filter((e) => e.role === 'lineup').map((e) => e.position);
+      expect(order).toEqual(order.map((_, i) => i + 1));
+    }
+  });
+
+  it('activation puts the task back in every held spot, runs to win untouched', async () => {
+    const { api, tick } = setup('midseason');
+    const next = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
+    const prep = (await api.call('listTasks')).tasks.find((t) => t.name === 'Meal prep')!;
+    const placed = await api.call('placeOnInjuredList', { params: { taskId: prep.id } });
+    // Cancelling a stint is allowed only once it hasn't started; this one started today.
+    await expectApiError(api.call('activateFromInjuredList', { params: { taskId: prep.id } }), 'IL_MINIMUM');
+    while ((await api.call('getMe')).today < placed.task.ilMinUntil!) tick(DAY);
+    const today = (await api.call('getMe')).today;
+    const justBefore = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
+    await api.call('activateFromInjuredList', { params: { taskId: prep.id } });
+    const after = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
+    for (const g of after.games) {
+      const before = justBefore.games.find((n) => n.id === g.id)!;
+      const had = next.games.find((n) => n.id === g.id)!.entries.find((e) => e.taskId === prep.id);
+      const back = g.entries.find((e) => e.taskId === prep.id);
+      if (had && g.playedDate > today && g.status !== 'final') {
+        expect(back).toMatchObject({ role: had.role, position: had.position, required: had.required, points: had.points });
+      }
+      expect(g.threshold).toBe(before.threshold);
+      expect(g.ilHolds.filter((h) => h.taskId === prep.id)).toEqual([]);
+    }
+  });
+
+  it('a day re-planned while the task is out keeps its plan', async () => {
+    const { api } = setup('midseason');
+    const prep = (await api.call('listTasks')).tasks.find((t) => t.name === 'Meal prep')!;
+    await api.call('placeOnInjuredList', { params: { taskId: prep.id } });
+    const card = await api.call('getWeek', { params: { startDate: '2026-10-05' } });
+    const held = card.games.find((g) => g.ilHolds.length > 0)!;
+    const kept = held.entries.filter((e) => e.role !== 'subbed_out');
+    const patched = await api.call('patchLineup', {
+      params: { gameId: held.id },
+      body: { entries: kept.map((e) => ({ taskId: e.taskId, position: e.position, required: e.required, role: e.role === 'bench' ? ('bench' as const) : ('lineup' as const) })) },
+    });
+    expect(patched.ilHolds).toEqual([]);
   });
 });
 

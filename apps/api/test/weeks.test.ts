@@ -45,7 +45,7 @@ describe('weekly lineup card', () => {
   it('opens Opening Week during Spring Training and builds every lineup so it can be edited', async () => {
     const { t, token, ids } = await setup();
     t.at('2026-10-03', '10:00', CHICAGO); // Saturday of Spring Training
-    expect(await t.ok('listWeeks', { token })).toEqual({ weeks: [{ startDate: '2026-10-05', label: 'next', locked: false }] });
+    expect(await t.ok('listWeeks', { token })).toEqual({ weeks: [{ startDate: '2026-10-05', label: 'opening', locked: false }] });
 
     const week = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
     expect(week).toMatchObject({ startDate: '2026-10-05', endDate: '2026-10-11', lockedAt: null, locked: false });
@@ -181,6 +181,123 @@ describe('injured list under the weekly lock', () => {
       [3, ['Gym', 'Walk']],
       [3, ['Gym', 'Walk']],
     ]);
+  });
+});
+
+describe('injured list holds', () => {
+  it('holds a must-hit’s spot through the stint and puts it back on activation, runs to win untouched', async () => {
+    const { t, token, ids } = await setup();
+    t.at('2026-10-05', '08:00', CHICAGO);
+    const week = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    const monday = week.games[0]!;
+    await t.ok('completeEntry', {
+      token,
+      params: { gameId: monday.id, entryId: entry(monday, 'Gym').id },
+      body: { clientAt: t.clock.now().toISOString() },
+    });
+
+    // Gym (must-hit, batting 1st) is in today's started game: out from Tuesday.
+    const placed = await t.ok('placeOnInjuredList', { token, params: { taskId: ids.Gym! } });
+    expect(placed.task).toMatchObject({ ilStartedOn: '2026-10-06', ilMinUntil: '2026-10-09' });
+    let card = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    expect(card.games[0]!.ilHolds).toEqual([]);
+    for (const g of card.games.slice(1)) {
+      expect(g.entries.filter((e) => e.role === 'lineup').map((e) => e.taskName)).toEqual(['Read']);
+      expect(g.threshold).toBe(3);
+      expect(g.ilHolds).toEqual([
+        { taskId: ids.Gym!, taskName: 'Gym', points: 2, required: true, role: 'lineup', position: 1 },
+      ]);
+    }
+
+    // A pinch hitter joins Saturday while Gym is out.
+    const saturday = card.games[5]!;
+    await t.ok('addPinchHitter', { token, params: { gameId: saturday.id }, body: { taskId: ids.Dishes! } });
+
+    // Activation is allowed from Friday; Gym returns from Saturday (tomorrow).
+    t.at('2026-10-08', '20:00', CHICAGO);
+    expect((await t.fails('activateFromInjuredList', { token, params: { taskId: ids.Gym! } }, 409)).code).toBe('IL_MINIMUM');
+    t.at('2026-10-09', '08:00', CHICAGO);
+    await t.finalize();
+    await t.ok('activateFromInjuredList', { token, params: { taskId: ids.Gym! } });
+
+    card = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    const lineupOf = (g: GameDto) =>
+      g.entries.filter((e) => e.role === 'lineup').map((e) => [e.taskName, e.position, e.required]);
+    expect(lineupOf(card.games[4]!)).toEqual([['Read', 1, false]]); // Friday: still without Gym
+    expect(lineupOf(card.games[5]!)).toEqual([
+      ['Gym', 1, true],
+      ['Read', 2, false],
+      ['Dishes', 3, true],
+    ]);
+    expect(card.games[5]!.threshold).toBe(6); // 3 + the Dishes pinch hit; Gym's return adds nothing
+    expect(lineupOf(card.games[6]!)).toEqual([
+      ['Gym', 1, true],
+      ['Read', 2, false],
+    ]);
+    expect(card.games[6]!.threshold).toBe(3);
+    expect(card.games.flatMap((g) => g.ilHolds)).toEqual([]);
+  });
+
+  it('holds spots in days built while the task is out, and a re-planned day keeps its plan', async () => {
+    const { t, token, ids } = await setup();
+    // Spring Training: Read goes on the IL before the week is built.
+    const placed = await t.ok('placeOnInjuredList', { token, params: { taskId: ids.Read! } });
+    expect(placed.task).toMatchObject({ ilStartedOn: '2026-10-02', ilMinUntil: '2026-10-08' });
+    let card = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    for (const g of card.games) {
+      expect(g.ilHolds).toEqual([{ taskId: ids.Read!, taskName: 'Read', points: 1, required: false, role: 'lineup', position: 2 }]);
+    }
+    // Tuesday is re-planned without Read while it's out: that plan stands.
+    const tuesday = card.games[1]!;
+    const replanned = await t.ok('patchLineup', {
+      token,
+      params: { gameId: tuesday.id },
+      body: { entries: [{ taskId: ids.Gym!, position: 1, required: true, role: 'lineup' }] },
+    });
+    expect(replanned.ilHolds).toEqual([]);
+
+    // Activated Thursday evening: back from Friday.
+    t.at('2026-10-08', '20:00', CHICAGO);
+    await t.finalize();
+    await t.ok('activateFromInjuredList', { token, params: { taskId: ids.Read! } });
+    card = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    expect(card.games.map((g) => g.entries.some((e) => e.taskName === 'Read'))).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+    ]);
+    expect(entry(card.games[4]!, 'Read')).toMatchObject({ role: 'lineup', position: 2, required: false });
+  });
+
+  it('after the week locks, a stint starts tomorrow even if today’s game hasn’t started', async () => {
+    const { t, token, ids } = await setup();
+    t.at('2026-10-05', '08:00', CHICAGO);
+    const week = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    await t.ok('completeEntry', {
+      token,
+      params: { gameId: week.games[0]!.id, entryId: entry(week.games[0]!, 'Gym').id },
+      body: { clientAt: t.clock.now().toISOString() },
+    });
+    t.at('2026-10-06', '07:00', CHICAGO); // Tuesday, before Tuesday's first pitch
+    await t.finalize();
+    const placed = await t.ok('placeOnInjuredList', { token, params: { taskId: ids.Read! } });
+    expect(placed.task.ilStartedOn).toBe('2026-10-07');
+    const card = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    expect(card.games[1]!.entries.some((e) => e.taskName === 'Read')).toBe(true);
+    expect(card.games[2]!.entries.some((e) => e.taskName === 'Read')).toBe(false);
+  });
+
+  it('forgets holds when the task is retired', async () => {
+    const { t, token, ids } = await setup();
+    await t.ok('placeOnInjuredList', { token, params: { taskId: ids.Read! } });
+    expect((await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } })).games[0]!.ilHolds).toHaveLength(1);
+    await t.ok('retireTask', { token, params: { taskId: ids.Read! } });
+    const card = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    expect(card.games.flatMap((g) => g.ilHolds)).toEqual([]);
   });
 });
 

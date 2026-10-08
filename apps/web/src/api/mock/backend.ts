@@ -229,7 +229,7 @@ export class MockBackend {
     retireTask: ({ world, params, now }) => engine.retireTask(world(), params.taskId ?? '', now),
     placeOnInjuredList: ({ world, params, now }) => ({ task: engine.placeOnInjuredList(world(), params.taskId ?? '', now) }),
     activateFromInjuredList: ({ world, params, now }) => ({
-      task: engine.activateFromInjuredList(world(), params.taskId ?? '', now),
+      task: engine.activateFromInjuredList(world(), this.env, params.taskId ?? '', now),
     }),
 
     // ── Starters ──

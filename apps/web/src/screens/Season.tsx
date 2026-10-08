@@ -63,7 +63,7 @@ function Standings({ season: s }: { season: SeasonDto }) {
     [vocab.terms.seriesRecord, `${s.seriesWon}–${s.seriesLost}`],
     [vocab.terms.winStreak, String(s.currentWinStreak)],
     [vocab.terms.longestWinStreak, String(s.longestWinStreak)],
-    ['Games left', String(Math.max(0, GAMES_PER_SEASON - played - s.noDecisions))],
+    ['Games left', String(seasonPace(s.wins, s.losses, 0, s.noDecisions).remaining)],
   ];
   // Suspended games that ended with no decision: neither a W nor an L.
   if (s.noDecisions > 0) stats.splice(2, 0, [vocab.terms.noDecisions, String(s.noDecisions)]);
@@ -110,7 +110,7 @@ function Pace({ season: s }: { season: SeasonDto }) {
       </section>
     );
   }
-  const pace = seasonPace(s.wins, s.losses, s.winGoal);
+  const pace = seasonPace(s.wins, s.losses, s.winGoal, s.noDecisions);
   const pct = (n: number) => `${Math.min(100, (n / s.winGoal!) * 100)}%`;
   const gb = Math.abs(pace.gamesBehind).toFixed(1);
   const verdict = !pace.goalStillPossible

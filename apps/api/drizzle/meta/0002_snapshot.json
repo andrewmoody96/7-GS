@@ -1,0 +1,2035 @@
+{
+  "id": "a23903bd-f330-4e5a-8d42-104147c3ea1a",
+  "prevId": "f122e910-8eb0-42d0-b878-c02445866382",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.day_template_tasks": {
+      "name": "day_template_tasks",
+      "schema": "",
+      "columns": {
+        "template_id": {
+          "name": "template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required": {
+          "name": "required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "role": {
+          "name": "role",
+          "type": "template_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "day_template_tasks_task_idx": {
+          "name": "day_template_tasks_task_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "day_template_tasks_template_id_day_templates_id_fk": {
+          "name": "day_template_tasks_template_id_day_templates_id_fk",
+          "tableFrom": "day_template_tasks",
+          "tableTo": "day_templates",
+          "columnsFrom": [
+            "template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "day_template_tasks_task_id_task_definitions_id_fk": {
+          "name": "day_template_tasks_task_id_task_definitions_id_fk",
+          "tableFrom": "day_template_tasks",
+          "tableTo": "task_definitions",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "day_template_tasks_pk": {
+          "name": "day_template_tasks_pk",
+          "columns": [
+            "template_id",
+            "task_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "day_template_tasks_position_ck": {
+          "name": "day_template_tasks_position_ck",
+          "value": "\"day_template_tasks\".\"position\" >= 1"
+        },
+        "day_template_tasks_bench_ck": {
+          "name": "day_template_tasks_bench_ck",
+          "value": "\"day_template_tasks\".\"role\" = 'lineup' OR NOT \"day_template_tasks\".\"required\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.day_templates": {
+      "name": "day_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "weekday": {
+          "name": "weekday",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "threshold": {
+          "name": "threshold",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "min_tasks": {
+          "name": "min_tasks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lock_time": {
+          "name": "lock_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "day_templates_user_id_users_id_fk": {
+          "name": "day_templates_user_id_users_id_fk",
+          "tableFrom": "day_templates",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "day_templates_user_weekday_uq": {
+          "name": "day_templates_user_weekday_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "weekday"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "day_templates_weekday_ck": {
+          "name": "day_templates_weekday_ck",
+          "value": "\"day_templates\".\"weekday\" BETWEEN 1 AND 7"
+        },
+        "day_templates_threshold_ck": {
+          "name": "day_templates_threshold_ck",
+          "value": "\"day_templates\".\"threshold\" >= 1"
+        },
+        "day_templates_min_tasks_ck": {
+          "name": "day_templates_min_tasks_ck",
+          "value": "\"day_templates\".\"min_tasks\" IS NULL OR \"day_templates\".\"min_tasks\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.games": {
+      "name": "games",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "series_id": {
+          "name": "series_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "game_number": {
+          "name": "game_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scheduled_date": {
+          "name": "scheduled_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "played_date": {
+          "name": "played_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot": {
+          "name": "slot",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "postponed": {
+          "name": "postponed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "suspended": {
+          "name": "suspended",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "starter_name": {
+          "name": "starter_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "threshold": {
+          "name": "threshold",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "min_tasks": {
+          "name": "min_tasks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lock_time": {
+          "name": "lock_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "time_zone": {
+          "name": "time_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lineup_built_at": {
+          "name": "lineup_built_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "game_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'scheduled'"
+        },
+        "runs": {
+          "name": "runs",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "tasks_done": {
+          "name": "tasks_done",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "missed_required": {
+          "name": "missed_required",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "result": {
+          "name": "result",
+          "type": "game_result",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result_detail": {
+          "name": "result_detail",
+          "type": "result_detail",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rally_deadline": {
+          "name": "rally_deadline",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finalized_at": {
+          "name": "finalized_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "games_user_id_users_id_fk": {
+          "name": "games_user_id_users_id_fk",
+          "tableFrom": "games",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "games_series_id_series_id_fk": {
+          "name": "games_series_id_series_id_fk",
+          "tableFrom": "games",
+          "tableTo": "series",
+          "columnsFrom": [
+            "series_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "games_template_id_day_templates_id_fk": {
+          "name": "games_template_id_day_templates_id_fk",
+          "tableFrom": "games",
+          "tableTo": "day_templates",
+          "columnsFrom": [
+            "template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "games_series_number_uq": {
+          "name": "games_series_number_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "series_id",
+            "game_number"
+          ]
+        },
+        "games_user_played_slot_uq": {
+          "name": "games_user_played_slot_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "played_date",
+            "slot"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "games_number_ck": {
+          "name": "games_number_ck",
+          "value": "\"games\".\"game_number\" BETWEEN 1 AND 7"
+        },
+        "games_slot_ck": {
+          "name": "games_slot_ck",
+          "value": "\"games\".\"slot\" IN (1, 2)"
+        },
+        "games_makeup_ck": {
+          "name": "games_makeup_ck",
+          "value": "(\"games\".\"postponed\" OR \"games\".\"suspended\") = (\"games\".\"slot\" = 2)"
+        },
+        "games_threshold_ck": {
+          "name": "games_threshold_ck",
+          "value": "\"games\".\"threshold\" IS NULL OR \"games\".\"threshold\" >= 1"
+        },
+        "games_min_tasks_ck": {
+          "name": "games_min_tasks_ck",
+          "value": "\"games\".\"min_tasks\" IS NULL OR \"games\".\"min_tasks\" >= 1"
+        },
+        "games_snapshot_ck": {
+          "name": "games_snapshot_ck",
+          "value": "\"games\".\"lineup_built_at\" IS NULL OR (\"games\".\"starter_name\" IS NOT NULL AND \"games\".\"threshold\" IS NOT NULL AND \"games\".\"time_zone\" IS NOT NULL)"
+        },
+        "games_counts_ck": {
+          "name": "games_counts_ck",
+          "value": "\"games\".\"runs\" >= 0 AND \"games\".\"tasks_done\" >= 0 AND \"games\".\"missed_required\" >= 0"
+        },
+        "games_final_ck": {
+          "name": "games_final_ck",
+          "value": "(\"games\".\"status\" = 'final') = (\"games\".\"result_detail\" IS NOT NULL)"
+        },
+        "games_final_built_ck": {
+          "name": "games_final_built_ck",
+          "value": "\"games\".\"status\" <> 'final' OR \"games\".\"lineup_built_at\" IS NOT NULL"
+        },
+        "games_detail_ck": {
+          "name": "games_detail_ck",
+          "value": "(\"games\".\"result\" IS NULL) = (\"games\".\"result_detail\" IS NULL OR \"games\".\"result_detail\"::text = 'suspended')"
+        },
+        "games_live_ck": {
+          "name": "games_live_ck",
+          "value": "\"games\".\"status\" <> 'live' OR \"games\".\"locked_at\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.il_holds": {
+      "name": "il_holds",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "game_id": {
+          "name": "game_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_name": {
+          "name": "task_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "points": {
+          "name": "points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required": {
+          "name": "required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "lineup_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "il_holds_task_idx": {
+          "name": "il_holds_task_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "il_holds_user_id_users_id_fk": {
+          "name": "il_holds_user_id_users_id_fk",
+          "tableFrom": "il_holds",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "il_holds_task_id_task_definitions_id_fk": {
+          "name": "il_holds_task_id_task_definitions_id_fk",
+          "tableFrom": "il_holds",
+          "tableTo": "task_definitions",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "il_holds_game_id_games_id_fk": {
+          "name": "il_holds_game_id_games_id_fk",
+          "tableFrom": "il_holds",
+          "tableTo": "games",
+          "columnsFrom": [
+            "game_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "il_holds_game_task_uq": {
+          "name": "il_holds_game_task_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "game_id",
+            "task_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "il_holds_role_ck": {
+          "name": "il_holds_role_ck",
+          "value": "\"il_holds\".\"role\" <> 'subbed_out'"
+        },
+        "il_holds_bench_ck": {
+          "name": "il_holds_bench_ck",
+          "value": "\"il_holds\".\"role\" <> 'bench' OR NOT \"il_holds\".\"required\""
+        },
+        "il_holds_points_ck": {
+          "name": "il_holds_points_ck",
+          "value": "\"il_holds\".\"points\" >= 1"
+        },
+        "il_holds_position_ck": {
+          "name": "il_holds_position_ck",
+          "value": "\"il_holds\".\"position\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.lineup_entries": {
+      "name": "lineup_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "game_id": {
+          "name": "game_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_name": {
+          "name": "task_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "points": {
+          "name": "points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required": {
+          "name": "required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "lineup_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subbed_in_at": {
+          "name": "subbed_in_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pinch_hit_at": {
+          "name": "pinch_hit_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "carried_over": {
+          "name": "carried_over",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "completed_client_at": {
+          "name": "completed_client_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_received_at": {
+          "name": "completed_received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "partial": {
+          "name": "partial",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {
+        "lineup_entries_task_idx": {
+          "name": "lineup_entries_task_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "lineup_entries_game_id_games_id_fk": {
+          "name": "lineup_entries_game_id_games_id_fk",
+          "tableFrom": "lineup_entries",
+          "tableTo": "games",
+          "columnsFrom": [
+            "game_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "lineup_entries_task_id_task_definitions_id_fk": {
+          "name": "lineup_entries_task_id_task_definitions_id_fk",
+          "tableFrom": "lineup_entries",
+          "tableTo": "task_definitions",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "lineup_entries_game_task_uq": {
+          "name": "lineup_entries_game_task_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "game_id",
+            "task_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "lineup_entries_points_ck": {
+          "name": "lineup_entries_points_ck",
+          "value": "\"lineup_entries\".\"points\" >= 1"
+        },
+        "lineup_entries_position_ck": {
+          "name": "lineup_entries_position_ck",
+          "value": "\"lineup_entries\".\"position\" >= 1"
+        },
+        "lineup_entries_completed_ck": {
+          "name": "lineup_entries_completed_ck",
+          "value": "(\"lineup_entries\".\"completed_client_at\" IS NULL) = (\"lineup_entries\".\"completed_received_at\" IS NULL)"
+        },
+        "lineup_entries_bench_ck": {
+          "name": "lineup_entries_bench_ck",
+          "value": "\"lineup_entries\".\"role\" <> 'bench' OR NOT \"lineup_entries\".\"required\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.login_tokens": {
+      "name": "login_tokens",
+      "schema": "",
+      "columns": {
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rainout_allowances": {
+      "name": "rainout_allowances",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "rainout_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month": {
+          "name": "month",
+          "type": "char(7)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seq": {
+          "name": "seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "expires_on": {
+          "name": "expires_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "earned_month": {
+          "name": "earned_month",
+          "type": "char(7)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "series_id": {
+          "name": "series_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "used_game_id": {
+          "name": "used_game_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "rainout_allowances_used_game_idx": {
+          "name": "rainout_allowances_used_game_idx",
+          "columns": [
+            {
+              "expression": "used_game_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "rainout_allowances_iron_man_month_uq": {
+          "name": "rainout_allowances_iron_man_month_uq",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "earned_month",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"rainout_allowances\".\"source\" = 'iron_man'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rainout_allowances_user_id_users_id_fk": {
+          "name": "rainout_allowances_user_id_users_id_fk",
+          "tableFrom": "rainout_allowances",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rainout_allowances_series_id_series_id_fk": {
+          "name": "rainout_allowances_series_id_series_id_fk",
+          "tableFrom": "rainout_allowances",
+          "tableTo": "series",
+          "columnsFrom": [
+            "series_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "rainout_allowances_used_game_id_games_id_fk": {
+          "name": "rainout_allowances_used_game_id_games_id_fk",
+          "tableFrom": "rainout_allowances",
+          "tableTo": "games",
+          "columnsFrom": [
+            "used_game_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rainout_allowances_monthly_uq": {
+          "name": "rainout_allowances_monthly_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "source",
+            "month",
+            "seq"
+          ]
+        },
+        "rainout_allowances_series_uq": {
+          "name": "rainout_allowances_series_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "series_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "rainout_allowances_source_ck": {
+          "name": "rainout_allowances_source_ck",
+          "value": "(\"rainout_allowances\".\"source\" = 'monthly' AND \"rainout_allowances\".\"month\" IS NOT NULL AND \"rainout_allowances\".\"expires_on\" IS NULL AND \"rainout_allowances\".\"seq\" IN (1, 2))\n        OR (\"rainout_allowances\".\"source\" = 'iron_man' AND \"rainout_allowances\".\"month\" IS NULL AND \"rainout_allowances\".\"expires_on\" IS NOT NULL AND \"rainout_allowances\".\"earned_month\" IS NOT NULL)"
+        },
+        "rainout_allowances_used_ck": {
+          "name": "rainout_allowances_used_ck",
+          "value": "(\"rainout_allowances\".\"used_game_id\" IS NULL) = (\"rainout_allowances\".\"used_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.rally_rolls": {
+      "name": "rally_rolls",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "game_id": {
+          "name": "game_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_id": {
+          "name": "token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "odds_pct": {
+          "name": "odds_pct",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "odds_breakdown": {
+          "name": "odds_breakdown",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "roll": {
+          "name": "roll",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hit": {
+          "name": "hit",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "rally_rolls_user_id_users_id_fk": {
+          "name": "rally_rolls_user_id_users_id_fk",
+          "tableFrom": "rally_rolls",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rally_rolls_game_id_games_id_fk": {
+          "name": "rally_rolls_game_id_games_id_fk",
+          "tableFrom": "rally_rolls",
+          "tableTo": "games",
+          "columnsFrom": [
+            "game_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rally_rolls_token_id_rally_tokens_id_fk": {
+          "name": "rally_rolls_token_id_rally_tokens_id_fk",
+          "tableFrom": "rally_rolls",
+          "tableTo": "rally_tokens",
+          "columnsFrom": [
+            "token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rally_rolls_game_uq": {
+          "name": "rally_rolls_game_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "game_id"
+          ]
+        },
+        "rally_rolls_token_uq": {
+          "name": "rally_rolls_token_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_id"
+          ]
+        },
+        "rally_rolls_user_key_uq": {
+          "name": "rally_rolls_user_key_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "idempotency_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "rally_rolls_odds_ck": {
+          "name": "rally_rolls_odds_ck",
+          "value": "\"rally_rolls\".\"odds_pct\" BETWEEN 10 AND 40"
+        },
+        "rally_rolls_roll_ck": {
+          "name": "rally_rolls_roll_ck",
+          "value": "\"rally_rolls\".\"roll\" BETWEEN 1 AND 100"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.rally_tokens": {
+      "name": "rally_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "rally_token_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month": {
+          "name": "month",
+          "type": "char(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "series_id": {
+          "name": "series_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "used_game_id": {
+          "name": "used_game_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "rally_tokens_user_id_users_id_fk": {
+          "name": "rally_tokens_user_id_users_id_fk",
+          "tableFrom": "rally_tokens",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rally_tokens_series_id_series_id_fk": {
+          "name": "rally_tokens_series_id_series_id_fk",
+          "tableFrom": "rally_tokens",
+          "tableTo": "series",
+          "columnsFrom": [
+            "series_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "rally_tokens_used_game_id_games_id_fk": {
+          "name": "rally_tokens_used_game_id_games_id_fk",
+          "tableFrom": "rally_tokens",
+          "tableTo": "games",
+          "columnsFrom": [
+            "used_game_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rally_tokens_user_source_month_uq": {
+          "name": "rally_tokens_user_source_month_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "source",
+            "month"
+          ]
+        },
+        "rally_tokens_used_game_uq": {
+          "name": "rally_tokens_used_game_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "used_game_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "rally_tokens_month_ck": {
+          "name": "rally_tokens_month_ck",
+          "value": "\"rally_tokens\".\"month\" ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'"
+        },
+        "rally_tokens_used_ck": {
+          "name": "rally_tokens_used_ck",
+          "value": "(\"rally_tokens\".\"used_game_id\" IS NULL) = (\"rally_tokens\".\"used_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.seasons": {
+      "name": "seasons",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "play_end_date": {
+          "name": "play_end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "offseason_end_date": {
+          "name": "offseason_end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "win_goal": {
+          "name": "win_goal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "season_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "wins": {
+          "name": "wins",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "losses": {
+          "name": "losses",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "rally_wins": {
+          "name": "rally_wins",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "no_decisions": {
+          "name": "no_decisions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "series_won": {
+          "name": "series_won",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "series_lost": {
+          "name": "series_lost",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "run_differential": {
+          "name": "run_differential",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "seasons_user_id_users_id_fk": {
+          "name": "seasons_user_id_users_id_fk",
+          "tableFrom": "seasons",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "seasons_user_number_uq": {
+          "name": "seasons_user_number_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "seasons_number_ck": {
+          "name": "seasons_number_ck",
+          "value": "\"seasons\".\"number\" >= 1"
+        },
+        "seasons_win_goal_ck": {
+          "name": "seasons_win_goal_ck",
+          "value": "\"seasons\".\"win_goal\" IS NULL OR \"seasons\".\"win_goal\" BETWEEN 1 AND 175"
+        },
+        "seasons_counts_ck": {
+          "name": "seasons_counts_ck",
+          "value": "\"seasons\".\"wins\" >= 0 AND \"seasons\".\"losses\" >= 0 AND \"seasons\".\"rally_wins\" >= 0 AND \"seasons\".\"series_won\" >= 0 AND \"seasons\".\"series_lost\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.series": {
+      "name": "series",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "season_id": {
+          "name": "season_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opponent_name": {
+          "name": "opponent_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opponent_colors": {
+          "name": "opponent_colors",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opponent_seed": {
+          "name": "opponent_seed",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "wins": {
+          "name": "wins",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "losses": {
+          "name": "losses",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "result": {
+          "name": "result",
+          "type": "series_result",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "iron_man": {
+          "name": "iron_man",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "series_user_id_users_id_fk": {
+          "name": "series_user_id_users_id_fk",
+          "tableFrom": "series",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "series_season_id_seasons_id_fk": {
+          "name": "series_season_id_seasons_id_fk",
+          "tableFrom": "series",
+          "tableTo": "seasons",
+          "columnsFrom": [
+            "season_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "series_season_number_uq": {
+          "name": "series_season_number_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "season_id",
+            "number"
+          ]
+        },
+        "series_user_start_uq": {
+          "name": "series_user_start_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "start_date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "series_number_ck": {
+          "name": "series_number_ck",
+          "value": "\"series\".\"number\" BETWEEN 1 AND 25"
+        },
+        "series_colors_ck": {
+          "name": "series_colors_ck",
+          "value": "cardinality(\"series\".\"opponent_colors\") = 2"
+        },
+        "series_seed_ck": {
+          "name": "series_seed_ck",
+          "value": "\"series\".\"opponent_seed\" BETWEEN 0 AND 4294967295"
+        },
+        "series_counts_ck": {
+          "name": "series_counts_ck",
+          "value": "\"series\".\"wins\" BETWEEN 0 AND 7 AND \"series\".\"losses\" BETWEEN 0 AND 7"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "id_hash": {
+          "name": "id_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "sessions_user_idx": {
+          "name": "sessions_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.task_definitions": {
+      "name": "task_definitions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "points": {
+          "name": "points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "status": {
+          "name": "status",
+          "type": "task_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "kind": {
+          "name": "kind",
+          "type": "task_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recurring'"
+        },
+        "carryover": {
+          "name": "carryover",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "il_started_on": {
+          "name": "il_started_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "il_min_until": {
+          "name": "il_min_until",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_streak": {
+          "name": "current_streak",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "longest_streak": {
+          "name": "longest_streak",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "task_definitions_user_idx": {
+          "name": "task_definitions_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "task_definitions_user_id_users_id_fk": {
+          "name": "task_definitions_user_id_users_id_fk",
+          "tableFrom": "task_definitions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "task_definitions_points_ck": {
+          "name": "task_definitions_points_ck",
+          "value": "\"task_definitions\".\"points\" >= 1"
+        },
+        "task_definitions_streaks_ck": {
+          "name": "task_definitions_streaks_ck",
+          "value": "\"task_definitions\".\"current_streak\" >= 0 AND \"task_definitions\".\"longest_streak\" >= \"task_definitions\".\"current_streak\""
+        },
+        "task_definitions_il_ck": {
+          "name": "task_definitions_il_ck",
+          "value": "(\"task_definitions\".\"status\" = 'injured') = (\"task_definitions\".\"il_started_on\" IS NOT NULL AND \"task_definitions\".\"il_min_until\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "default_lock_time": {
+          "name": "default_lock_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finalized_through": {
+          "name": "finalized_through",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.game_result": {
+      "name": "game_result",
+      "schema": "public",
+      "values": [
+        "W",
+        "L"
+      ]
+    },
+    "public.game_status": {
+      "name": "game_status",
+      "schema": "public",
+      "values": [
+        "scheduled",
+        "live",
+        "final"
+      ]
+    },
+    "public.lineup_role": {
+      "name": "lineup_role",
+      "schema": "public",
+      "values": [
+        "lineup",
+        "bench",
+        "subbed_out"
+      ]
+    },
+    "public.rainout_source": {
+      "name": "rainout_source",
+      "schema": "public",
+      "values": [
+        "monthly",
+        "iron_man"
+      ]
+    },
+    "public.rally_token_source": {
+      "name": "rally_token_source",
+      "schema": "public",
+      "values": [
+        "monthly",
+        "series_bonus"
+      ]
+    },
+    "public.result_detail": {
+      "name": "result_detail",
+      "schema": "public",
+      "values": [
+        "clean",
+        "short",
+        "forfeit",
+        "no_appeal",
+        "rally",
+        "suspended"
+      ]
+    },
+    "public.season_status": {
+      "name": "season_status",
+      "schema": "public",
+      "values": [
+        "upcoming",
+        "active",
+        "offseason",
+        "complete"
+      ]
+    },
+    "public.series_result": {
+      "name": "series_result",
+      "schema": "public",
+      "values": [
+        "won",
+        "lost"
+      ]
+    },
+    "public.task_kind": {
+      "name": "task_kind",
+      "schema": "public",
+      "values": [
+        "recurring",
+        "one_off"
+      ]
+    },
+    "public.task_status": {
+      "name": "task_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "injured",
+        "retired"
+      ]
+    },
+    "public.template_role": {
+      "name": "template_role",
+      "schema": "public",
+      "values": [
+        "lineup",
+        "bench"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

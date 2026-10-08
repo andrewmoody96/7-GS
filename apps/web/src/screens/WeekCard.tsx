@@ -17,6 +17,7 @@ import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { formatDayTime, formatMonthDay, formatRange, formatTimeOfDay, gameScore, weekdayShort } from '../lib/format';
 import { benchOf, isNoDecision, lineupOf, pinchHitRaise } from '../lib/game';
 import { vocab } from '../vocab';
+import { IlHolds } from '../components/IlHolds';
 
 export function WeekCardView() {
   const weeks = useWeeksQuery();
@@ -50,6 +51,8 @@ export function WeekCardView() {
             />
           ))}
         </div>
+      ) : selected.label === 'opening' ? (
+        <p className="fine weekcard__opens">{vocab.week.openingBlurb}</p>
       ) : weekday(today) < 5 && selected.label === 'current' ? (
         <p className="fine weekcard__opens">{vocab.week.nextOpensFriday}</p>
       ) : null}
@@ -61,7 +64,7 @@ export function WeekCardView() {
 function WeekTab({ week, selected, onSelect }: { week: WeekSummaryDto; selected: boolean; onSelect: () => void }) {
   return (
     <button type="button" role="tab" aria-selected={selected} className="segmented__item" onClick={onSelect}>
-      {week.label === 'current' ? vocab.week.thisWeek : vocab.week.nextWeek}
+      {week.label === 'current' ? vocab.week.thisWeek : week.label === 'opening' ? vocab.week.openingWeek : vocab.week.nextWeek}
       {week.locked ? <IconLock width={14} height={14} title={vocab.terms.weekLocked} /> : null}
     </button>
   );
@@ -189,7 +192,7 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
     );
 
   const meta: string[] = [vocab.gameLabel(game.gameNumber)];
-  if (game.slot === 2) meta.push(`${vocab.term.game} 2`);
+  if (game.slot === 2) meta.push(`${vocab.term.doubleheader} nightcap`);
   if (game.postponed) meta.push(`${vocab.terms.makeup} of ${weekdayShort(game.scheduledDate)}`);
   if (game.suspended) meta.push(vocab.suspension.resumedFrom(weekdayShort(game.scheduledDate)));
 
@@ -257,6 +260,7 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
               </ul>
             </div>
           ) : null}
+          <IlHolds holds={game.ilHolds} />
           {policy === 'free' ? (
             <div className="dayg__actions">
               <button type="button" className="btn btn--small" onClick={() => setEditing(true)}>

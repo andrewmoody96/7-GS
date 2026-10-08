@@ -221,6 +221,16 @@ export const RallyRoll = z.object({
   createdAt: Instant,
 });
 
+/** A spot an Injured List stint vacated; the task returns to it on activation. */
+export const IlHold = z.object({
+  taskId: Id,
+  taskName: z.string(),
+  points: Points,
+  required: z.boolean(),
+  role: z.enum(['lineup', 'bench']),
+  position: z.number().int().min(1),
+});
+
 const GameCore = {
   id: Id,
   seriesId: Id,
@@ -254,6 +264,8 @@ export const Game = z.object({
   editPolicy: z.enum(LINEUP_EDIT_POLICIES),
   /** All entries (lineup, bench, subbed_out). Empty until the game's lineup is built. */
   entries: z.array(LineupEntry),
+  /** Tasks on the Injured List that this game is holding a spot for. */
+  ilHolds: z.array(IlHold),
   rally: RallyRoll.nullable(),
 });
 
@@ -289,8 +301,8 @@ export const Today = z.object({
 
 export const WeekSummary = z.object({
   startDate: LocalDate,
-  /** 'current' is this series, 'next' opens on Friday. */
-  label: z.enum(['current', 'next']),
+  /** 'current' is this series, 'next' opens on Friday, 'opening' is Opening Week during Spring Training. */
+  label: z.enum(['current', 'next', 'opening']),
   locked: z.boolean(),
 });
 export const WeekList = z.object({ weeks: z.array(WeekSummary) });

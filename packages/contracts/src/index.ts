@@ -33,4 +33,6 @@ export type SeasonDto = z.infer<typeof S.Season>;
 export type ApiErrorDto = z.infer<typeof S.ApiError>;
 export type WeekDto = z.infer<typeof S.Week>;
 export type WeekSummaryDto = z.infer<typeof S.WeekSummary>;
+export type WeekListDto = z.infer<typeof S.WeekList>;
+export type IlHoldDto = z.infer<typeof S.IlHold>;
 export type SuspensionQuoteDto = z.infer<typeof S.SuspensionQuote>;

@@ -26,8 +26,12 @@ export async function listWeeks(tx: Db, user: UserRow, now: Date): Promise<Respo
     const lock = row ? weekLockOf(await seriesGames(tx, row.id), user, now) : null;
     weeks.push({
       startDate,
-      // Opening Week during Spring Training is the upcoming one, so it reads 'next'.
-      label: isInWeek(startDate, today) ? ('current' as const) : ('next' as const),
+      label:
+        calendarPosition(user.startDate, today).phase === 'preseason'
+          ? ('opening' as const)
+          : isInWeek(startDate, today)
+            ? ('current' as const)
+            : ('next' as const),
       locked: lock !== null,
     });
   }

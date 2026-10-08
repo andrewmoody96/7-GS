@@ -15,6 +15,13 @@
       "when": 1791232385899,
       "tag": "0001_weekly_lineups_suspensions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791488538422,
+      "tag": "0002_il_holds",
+      "breakpoints": true
     }
   ]
 }

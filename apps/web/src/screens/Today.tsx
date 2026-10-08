@@ -42,6 +42,7 @@ import {
 } from '../lib/game';
 import { buzz } from '../lib/motion';
 import { vocab } from '../vocab';
+import { IlHolds } from '../components/IlHolds';
 
 export function TodayScreen() {
   const today = useTodayQuery();
@@ -371,6 +372,7 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
               entryAction.mutate({ kind: 'partial', gameId: game.id, entryId: entry.id, clientAt: api.now().toISOString(), partial })
             }
           />
+          <IlHolds holds={game.ilHolds} />
         </section>
       )}
 

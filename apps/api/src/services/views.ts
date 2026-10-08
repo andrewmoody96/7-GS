@@ -11,6 +11,7 @@ import { loadEntries } from './lineups';
 import { seasonWinStreaks, seriesGames } from './standings';
 import { ensureStarters, projectStarter, type StarterProjection } from './starters';
 import { editPolicyOf, weekLocks } from './weeks';
+import { holdsByGame } from './ilHolds';
 
 async function projections(
   tx: Db,
@@ -71,6 +72,7 @@ export async function gameViews(tx: Db, user: UserRow, rows: readonly GameRow[],
   const proj = await projections(tx, user, rows, now);
   const entries = await loadEntries(tx, ids);
   const rolls = await tx.select().from(rallyRolls).where(inArray(rallyRolls.gameId, ids));
+  const holds = await holdsByGame(tx, ids);
   const locks = await weekLocks(
     tx,
     user,
@@ -91,6 +93,7 @@ export async function gameViews(tx: Db, user: UserRow, rows: readonly GameRow[],
       finalizedAt: iso(row.finalizedAt),
       editPolicy: editPolicyOf(row, user, locks.get(row.seriesId) ?? null, now),
       entries: sortEntries(entriesByGame.get(row.id) ?? []).map(toEntryDto),
+      ilHolds: holds.get(row.id) ?? [],
       rally: roll ? toRallyRollDto(roll) : null,
     };
   });

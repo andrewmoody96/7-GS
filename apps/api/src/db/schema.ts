@@ -351,6 +351,40 @@ export const lineupEntries = pgTable(
   ],
 );
 
+/**
+ * A lineup spot an Injured List stint vacated (GAME_DESIGN §7). Activation puts the task
+ * back in that spot without touching runs to win. Re-planning the day drops the hold.
+ */
+export const ilHolds = pgTable(
+  'il_holds',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => taskDefinitions.id, { onDelete: 'cascade' }),
+    gameId: uuid('game_id')
+      .notNull()
+      .references(() => games.id, { onDelete: 'cascade' }),
+    taskName: text('task_name').notNull(),
+    points: integer('points').notNull(),
+    required: boolean('required').notNull().default(false),
+    position: integer('position').notNull(),
+    role: lineupRole('role').notNull(),
+    createdAt: instant('created_at').notNull(),
+  },
+  (t) => [
+    unique('il_holds_game_task_uq').on(t.gameId, t.taskId),
+    index('il_holds_task_idx').on(t.taskId),
+    check('il_holds_role_ck', sql`${t.role} <> 'subbed_out'`),
+    check('il_holds_bench_ck', sql`${t.role} <> 'bench' OR NOT ${t.required}`),
+    check('il_holds_points_ck', sql`${t.points} >= 1`),
+    check('il_holds_position_ck', sql`${t.position} >= 1`),
+  ],
+);
+
 // ── Rally Cap ────────────────────────────────────────────────────────────────
 
 export const rallyTokens = pgTable(
@@ -457,6 +491,7 @@ export type StarterRow = typeof dayTemplates.$inferSelect;
 export type StarterSlotRow = typeof dayTemplateTasks.$inferSelect;
 export type GameRow = typeof games.$inferSelect;
 export type EntryRow = typeof lineupEntries.$inferSelect;
+export type IlHoldRow = typeof ilHolds.$inferSelect;
 export type RallyTokenRow = typeof rallyTokens.$inferSelect;
 export type RallyRollRow = typeof rallyRolls.$inferSelect;
 export type RainoutAllowanceRow = typeof rainoutAllowances.$inferSelect;

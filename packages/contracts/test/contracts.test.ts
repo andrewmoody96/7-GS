@@ -91,6 +91,7 @@ describe('primitives and schemas', () => {
           partial: false,
         },
       ],
+      ilHolds: [{ taskId: uuid, taskName: 'Run', points: 2, required: true, role: 'lineup', position: 2 }],
       rally: null,
     };
     expect(Game.parse(game)).toEqual(game);

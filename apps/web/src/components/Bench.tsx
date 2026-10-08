@@ -67,7 +67,7 @@ export function Bench({ game, locked, final }: BenchProps) {
             </span>
             <span className="benchlist__actions">
             {canPromote ? (
-              <button type="button" className="btn btn--small btn--quiet" onClick={() => setPromote(entry.taskId)}>
+              <button type="button" className="btn btn--small" onClick={() => setPromote(entry.taskId)}>
                 <IconStar width={16} height={16} /> {vocab.pinchHit.makeMustHit}
               </button>
             ) : null}
@@ -89,7 +89,7 @@ export function Bench({ game, locked, final }: BenchProps) {
       </ul>
       {!final && addable.length > 0 ? (
         <form
-          className="field"
+          className="field bench__add"
           onSubmit={(e) => {
             e.preventDefault();
             if (addId) addToBench.mutate({ gameId: game.id, taskId: addId }, { onSuccess: () => setAddId('') });

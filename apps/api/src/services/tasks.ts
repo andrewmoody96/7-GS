@@ -1,15 +1,18 @@
 // Roster (task_definitions) and the Injured List (GAME_DESIGN §7).
 
 import type { TaskDto, TaskUpdateDto } from '@7gs/contracts';
-import { addDays, compareDates, IL_MIN_DAYS, isGameDay, localDateOf, type LocalDate, type TaskKind } from '@7gs/rules';
+import { compareDates, IL_MIN_DAYS, ilMinUntil, ilReturnDate, ilStartDate, localDateOf, type LocalDate, type TaskKind } from '@7gs/rules';
 import { and, asc, eq, gte, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { dayTemplateTasks, games, lineupEntries, taskDefinitions, type GameRow, type TaskRow, type UserRow } from '../db/schema';
 import { conflict, notFound } from '../errors';
 import { uuidv7 } from '../ids';
 import { toTaskDto } from './dto';
-import { openGames, refreshScore } from './lineups';
+import { compactPositions, openGames, refreshScore } from './lineups';
+import { dropHoldsForTask, recordHolds, restoreHolds } from './ilHolds';
 import { ensureToday } from './today';
+import { seriesGames } from './standings';
+import { weekLockOf } from './weeks';
 
 export async function listTasks(tx: Db, user: UserRow): Promise<TaskDto[]> {
   const rows = await tx
@@ -99,12 +102,17 @@ async function removeFromOpenLineups(tx: Db, games: readonly GameRow[], taskId: 
       .delete(lineupEntries)
       .where(and(eq(lineupEntries.gameId, game.id), eq(lineupEntries.taskId, taskId)))
       .returning({ id: lineupEntries.id });
-    if (removed.length > 0) await refreshScore(tx, game);
+    if (removed.length === 0) continue;
+    await compactPositions(tx, game.id);
+    await refreshScore(tx, game);
   }
 }
 
-/** Drop a task's unfinished entries from built, non-final games played on `from` or later. */
-async function removeFromBuiltLineupsFrom(tx: Db, user: UserRow, taskId: string, from: LocalDate): Promise<void> {
+/**
+ * Take a task's unfinished entries out of built, non-final games played on `from` or
+ * later, remembering each spot as an IL hold so activation can put it back.
+ */
+async function removeFromBuiltLineupsFrom(tx: Db, user: UserRow, taskId: string, from: LocalDate, now: Date): Promise<void> {
   const targets = await tx
     .select()
     .from(games)
@@ -122,8 +130,24 @@ async function removeFromBuiltLineupsFrom(tx: Db, user: UserRow, taskId: string,
           ne(lineupEntries.role, 'subbed_out'),
         ),
       )
-      .returning({ id: lineupEntries.id });
-    if (removed.length > 0) await refreshScore(tx, game);
+      .returning();
+    if (removed.length === 0) continue;
+    await recordHolds(
+      tx,
+      user.id,
+      game.id,
+      removed.map((e) => ({
+        taskId: e.taskId,
+        taskName: e.taskName,
+        points: e.points,
+        required: e.required,
+        position: e.position,
+        role: e.role === 'bench' ? 'bench' : 'lineup',
+      })),
+      now,
+    );
+    await compactPositions(tx, game.id);
+    await refreshScore(tx, game);
   }
 }
 
@@ -138,28 +162,17 @@ export async function retireTask(tx: Db, user: UserRow, taskId: string, now: Dat
     .returning();
   if (!row) throw notFound('Task');
   await tx.delete(dayTemplateTasks).where(eq(dayTemplateTasks.taskId, task.id));
+  await dropHoldsForTask(tx, task.id);
   await removeFromOpenLineups(tx, await openGames(tx, user, now), task.id);
   return toTaskDto(row);
 }
 
-/**
- * The date an IL stint that starts on `start` may end: IL_MIN_DAYS game days later.
- * Days without games (Review Week, Spring Training) don't count, so a stint pauses
- * through the offseason (GAME_DESIGN §7). In season this is `start + 3 days`.
- */
-export function ilMinUntil(signupDate: LocalDate, start: LocalDate): LocalDate {
-  let day = start;
-  let counted = 0;
-  for (let i = 0; i < 400 && counted < IL_MIN_DAYS; i++) {
-    if (isGameDay(signupDate, day)) counted++;
-    day = addDays(day, 1);
-  }
-  return day;
-}
+/** The IL minimum is a rule shared with the web app's demo backend. */
+export { ilMinUntil } from '@7gs/rules';
 
 /**
  * Place a task on the IL (GAME_DESIGN §7). If it is in one of today's games that already
- * had first pitch, it must still be played today, so the stint starts tomorrow;
+ * had first pitch (or whose week has), it must still be played today, so the stint starts tomorrow;
  * otherwise it starts today. From that date on it leaves every built lineup (the week's
  * card may already be built) except entries already completed, and those games keep
  * their runs to win: the bar never drops, the IL only changes who clears it.
@@ -188,22 +201,29 @@ export async function placeOnInjuredList(tx: Db, user: UserRow, taskId: string, 
               ),
             ),
           );
-  const inLockedGame = builtToday.some((g) => g.lockedAt !== null && appearsIn.some((a) => a.gameId === g.id));
+  // Today's game keeps it if that game had first pitch, or once the week's first pitch has
+  // passed (after the lock, the IL takes effect from tomorrow: GAME_DESIGN §7).
+  let playsToday = false;
+  for (const g of builtToday) {
+    if (!appearsIn.some((a) => a.gameId === g.id)) continue;
+    if (g.lockedAt !== null || weekLockOf(await seriesGames(tx, g.seriesId), user, now) !== null) playsToday = true;
+  }
 
-  const start = inLockedGame ? addDays(today, 1) : today;
+  const start = ilStartDate(today, playsToday);
   const [row] = await tx
     .update(taskDefinitions)
     .set({ status: 'injured', ilStartedOn: start, ilMinUntil: ilMinUntil(user.startDate, start), updatedAt: now })
     .where(eq(taskDefinitions.id, task.id))
     .returning();
   if (!row) throw notFound('Task');
-  await removeFromBuiltLineupsFrom(tx, user, task.id, start);
+  await removeFromBuiltLineupsFrom(tx, user, task.id, start, now);
   return toTaskDto(row);
 }
 
 /**
- * Activate from the IL once the minimum stint is over; it rejoins its starters'
- * lineups from the next game built. A stint that hasn't started yet can be cancelled.
+ * Activate from the IL once the minimum stint is over. The task goes back into every
+ * spot the stint vacated from tomorrow on (or everywhere, when cancelling a stint that
+ * hasn't started), and into its starters' lineups for days not built yet.
  */
 export async function activateFromInjuredList(tx: Db, user: UserRow, taskId: string, now: Date): Promise<TaskDto> {
   const task = await loadTask(tx, user, taskId);
@@ -225,5 +245,6 @@ export async function activateFromInjuredList(tx: Db, user: UserRow, taskId: str
     .where(eq(taskDefinitions.id, task.id))
     .returning();
   if (!row) throw notFound('Task');
+  await restoreHolds(tx, user, task.id, ilReturnDate(today, task.ilStartedOn), now);
   return toTaskDto(row);
 }

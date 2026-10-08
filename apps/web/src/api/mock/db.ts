@@ -120,8 +120,19 @@ export interface GameRow {
   rallyDeadline: string | null;
   finalizedAt: string | null;
   entries: EntryRow[];
+  /** Spots an Injured List stint vacated; activation puts the task back in them. */
+  ilHolds: IlHoldRow[];
   /** What going final did to the roster, so a next-morning suspension can undo it. */
   finalEffects: FinalEffects | null;
+}
+
+export interface IlHoldRow {
+  taskId: string;
+  taskName: string;
+  points: number;
+  required: boolean;
+  role: 'lineup' | 'bench';
+  position: number;
 }
 
 export interface FinalEffects {
@@ -185,7 +196,7 @@ export interface MagicLinkRow {
   usedAt: string | null;
 }
 
-export const MOCK_DB_VERSION = 2;
+export const MOCK_DB_VERSION = 3;
 
 export interface MockDb {
   version: typeof MOCK_DB_VERSION;

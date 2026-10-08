@@ -37,6 +37,12 @@ export type GenericTerm =
   | 'lockedAt'
   | 'final';
 
+function ordinal(n: number): string {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+}
+
 export const GENERIC_TERMS: readonly GenericTerm[] = [
   'season',
   'offseason',
@@ -116,6 +122,8 @@ export interface Vocab {
     title: string;
     thisWeek: string;
     nextWeek: string;
+    openingWeek: string;
+    openingBlurb: string;
     lockedTitle: string;
     lockedBlurb: string;
     planningTitle: string;
@@ -221,6 +229,9 @@ export interface Vocab {
     eligibleOn: (date: string) => string;
     place: string;
     activate: string;
+    heldTitle: string;
+    heldNote: string;
+    heldSpot: (role: 'lineup' | 'bench', position: number) => string;
   };
   emptyStates: {
     preseasonTitle: string;
@@ -305,6 +316,8 @@ export const baseball: Vocab = {
     title: 'Lineup card',
     thisWeek: 'This week',
     nextWeek: 'Next week',
+    openingWeek: 'Opening Week',
+    openingBlurb: 'Opening Week: plan it now. Nothing counts until Opening Day.',
     lockedTitle: 'Week locked — additions only',
     lockedBlurb:
       'The week’s first pitch has passed, so lineups only grow: pinch hit, add to the bench, or make a bench task a must-hit. Runs to win never drops.',
@@ -473,11 +486,14 @@ export const baseball: Vocab = {
   jumbotron: { win: 'W', walkOff: 'Walk-off W', inHand: 'W in hand', finalAtMidnight: 'Final at midnight' },
   il: {
     explainer:
-      'The Injured List sits a task out of future lineups and freezes its streak. It can’t be used on today’s game after first pitch.',
-    minimum: (days) => `Minimum stint: ${days} days, so the IL can’t dodge a single hard day.`,
+      'The Injured List sits a task out and freezes its streak. Its lineup spots are held and runs to win stays put; activating it puts the task back in those spots. Once today’s game or the week has had first pitch, it sits out from tomorrow.',
+    minimum: (days) => `Minimum stint: ${days} game days (Review Week doesn’t count), so the IL can’t dodge a single hard day.`,
     eligibleOn: (date) => `Eligible to return ${date}`,
     place: 'Place on IL',
     activate: 'Activate',
+    heldTitle: 'On the IL',
+    heldNote: 'Back in this spot when activated. Runs to win stays put.',
+    heldSpot: (role, position) => (role === 'bench' ? 'Bench' : `Bats ${ordinal(position)}`),
   },
   emptyStates: {
     preseasonTitle: 'Spring Training',

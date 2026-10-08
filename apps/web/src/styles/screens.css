@@ -541,11 +541,9 @@
 }
 
 .benchlist__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 10px;
-  padding: 8px 0;
+  padding: 12px 0;
   border-top: 1px solid var(--border);
 }
 
@@ -559,6 +557,31 @@
   align-items: center;
   gap: 8px;
   font-weight: 500;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Bench actions sit side by side at equal widths (one action fills the row). */
+.benchlist__actions:not(:empty) {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.benchlist__actions:empty {
+  display: none;
+}
+
+.benchlist__actions .btn {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.bench__add {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
 }
 
 .subslog {
@@ -1737,4 +1760,63 @@ button.cell:hover {
   .cell__live {
     font-size: 0.75rem;
   }
+}
+
+/* Injured List holds: spots a game keeps for a task that's sitting out. */
+.ilholds {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-m);
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-2);
+}
+
+.ilholds__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ilholds__list {
+  display: grid;
+  gap: 8px;
+}
+
+.ilholds__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+
+.ilholds__name {
+  color: var(--text-muted);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ilholds__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.8;
+}
+
+.ilholds__spot {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ilholds__note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }

@@ -24,6 +24,7 @@ import { overlayQueue, type NewQueuedOp } from '../api/offlineQueue';
 import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { errorMessage } from './errors';
 import { useNotify } from './toast';
+import { weekdayShort } from '../lib/format';
 
 export const qk = {
   me: ['me'] as const,
@@ -434,7 +435,8 @@ export function usePlaceOnInjuredList() {
   const api = useApi();
   return useRosterMutation(
     (taskId: string) => api.call('placeOnInjuredList', { params: { taskId } }),
-    ({ task }) => `${task.name} placed on the Injured List.`,
+    ({ task }) =>
+      `${task.name} sits out${task.ilStartedOn ? ` from ${weekdayShort(task.ilStartedOn)}` : ''}. Its lineup spots are held and runs to win stays put.`,
   );
 }
 
@@ -442,7 +444,7 @@ export function useActivateFromInjuredList() {
   const api = useApi();
   return useRosterMutation(
     (taskId: string) => api.call('activateFromInjuredList', { params: { taskId } }),
-    ({ task }) => `${task.name} is back from the IL.`,
+    ({ task }) => `${task.name} is back from the IL and returns to its held spots from tomorrow.`,
   );
 }
 

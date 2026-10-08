@@ -15,3 +15,4 @@ export * from './lineup';
 export * from './checkoff';
 export * from './week';
 export * from './suspension';
+export * from './injured';

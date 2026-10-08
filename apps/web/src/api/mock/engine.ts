@@ -37,6 +37,10 @@ import {
   generateOpponent,
   hashSeed,
   IL_MIN_DAYS,
+  ilMinUntil,
+  ilReturnDate,
+  ilStartDate,
+  restorePosition,
   isIronMan,
   LIMITS,
   lineupEditPolicy,
@@ -76,7 +80,7 @@ import {
   type Weekday,
 } from '@7gs/rules';
 import { ApiError } from '../client';
-import type { EntryRow, GameRow, RallyRollRow, SeasonRow, SeriesRow, StarterRow, TaskRow, UserWorld } from './db';
+import type { EntryRow, GameRow, IlHoldRow, RallyRollRow, SeasonRow, SeriesRow, StarterRow, TaskRow, UserWorld } from './db';
 
 export interface Env {
   ids: () => string;
@@ -227,6 +231,7 @@ function ensureSeries(world: UserWorld, env: Env, seasonNumber: number, number: 
       rallyDeadline: null,
       finalizedAt: null,
       entries: [],
+      ilHolds: [],
       finalEffects: null,
     });
   }
@@ -253,6 +258,21 @@ export function buildGameLineup(world: UserWorld, env: Env, game: GameRow, at: D
     ],
     world.tasks,
   );
+  // Starter slots whose task is on the IL become holds (GAME_DESIGN §7).
+  game.ilHolds = [];
+  for (const [role, slots] of [
+    ['lineup', starter.lineup],
+    ['bench', starter.bench.map((s) => ({ ...s, required: false }))],
+  ] as const) {
+    const playable = [...slots]
+      .sort((a, b) => a.position - b.position)
+      .map((s) => ({ slot: s, task: world.tasks.find((t) => t.id === s.taskId) }))
+      .filter((x) => x.task && (x.task.status === 'active' || x.task.status === 'injured'));
+    playable.forEach(({ slot, task }, i) => {
+      if (task?.status !== 'injured') return;
+      game.ilHolds.push({ taskId: task.id, taskName: task.name, points: task.points, required: slot.required, role, position: i + 1 });
+    });
+  }
   game.entries = snapshot.map((e) => ({
     id: env.ids(),
     ...e,
@@ -390,15 +410,50 @@ function undoFinalEffects(world: UserWorld, game: GameRow): void {
   }
 }
 
+/**
+ * Closes gaps so positions read 1, 2, 3. A subbed-out entry shares its replacement's
+ * position (that's how the box score pairs them), so it moves with it.
+ */
 function renumber(game: GameRow): void {
   for (const role of ['lineup', 'bench'] as const) {
+    const moved = new Map<number, number>();
     game.entries
       .filter((e) => e.role === role)
       .sort((a, b) => a.position - b.position)
       .forEach((e, i) => {
+        if (e.position !== i + 1) moved.set(e.position, i + 1);
         e.position = i + 1;
       });
+    if (role !== 'lineup') continue;
+    for (const out of game.entries.filter((e) => e.role === 'subbed_out')) {
+      out.position = moved.get(out.position) ?? out.position;
+    }
   }
+}
+
+/** Puts an activated task back in a held spot (rules.restorePosition); runs to win untouched. */
+function restoreHold(env: Env, game: GameRow, task: TaskRow, hold: IlHoldRow): void {
+  if (game.entries.some((e) => e.taskId === task.id)) return;
+  const { position, shiftFrom } = restorePosition(game.entries, hold.role, hold.position);
+  for (const e of game.entries) {
+    const sameSpots = hold.role === 'lineup' ? e.role === 'lineup' || e.role === 'subbed_out' : e.role === 'bench';
+    if (sameSpots && e.position >= shiftFrom) e.position += 1;
+  }
+  game.entries.push({
+    id: env.ids(),
+    taskId: task.id,
+    taskName: task.name,
+    points: hold.points,
+    required: hold.role === 'lineup' && hold.required,
+    position,
+    role: hold.role,
+    subbedInAt: null,
+    pinchHitAt: null,
+    carriedOver: false,
+    completedClientAt: null,
+    completedReceivedAt: null,
+    partial: false,
+  });
 }
 
 /**
@@ -711,6 +766,7 @@ export function toGameDto(world: UserWorld, game: GameRow, now: Date): GameDto {
     entries: [...game.entries]
       .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || a.position - b.position)
       .map(toEntryDto),
+    ilHolds: [...game.ilHolds].sort((a, b) => (a.role === b.role ? a.position - b.position : a.role === 'lineup' ? -1 : 1)),
     rally: roll ? toRallyRollDto(roll) : null,
   };
 }
@@ -957,6 +1013,8 @@ export function patchLineup(world: UserWorld, env: Env, gameId: string, patch: L
       });
     }
     game.entries = next;
+    // Re-planned while a task was on the IL: the user's plan stands.
+    game.ilHolds = [];
   }
   if (patch.threshold !== undefined) game.snapshot.threshold = patch.threshold;
   if (patch.minTasks !== undefined) game.snapshot.minTasks = patch.minTasks;
@@ -1202,7 +1260,12 @@ export function listWeeks(world: UserWorld, now: Date): { weeks: WeekSummaryDto[
       const series = world.series.find((s) => s.startDate === startDate);
       return {
         startDate,
-        label: position.phase === 'season' && position.seriesStart === startDate ? 'current' : 'next',
+        label:
+          position.phase === 'preseason'
+            ? 'opening'
+            : position.phase === 'season' && position.seriesStart === startDate
+              ? 'current'
+              : 'next',
         locked: series ? weekLock(world, series.id, now) !== null : false,
       };
     }),
@@ -1407,6 +1470,7 @@ export function retireTask(world: UserWorld, taskId: string, now: Date): TaskDto
   task.carryoverDate = null;
   task.ilStartedOn = null;
   task.ilMinUntil = null;
+  for (const game of world.games) game.ilHolds = game.ilHolds.filter((h) => h.taskId !== taskId);
   removeFromEditableGames(world, taskId, now);
   return toTaskDto(world, task);
 }
@@ -1416,30 +1480,57 @@ export function placeOnInjuredList(world: UserWorld, taskId: string, now: Date):
   if (task.status === 'retired') fail(409, 'NOT_ELIGIBLE', 'Retired tasks can’t go on the IL.', 'RETIRED');
   if (task.status === 'injured') return toTaskDto(world, task);
   const today = todayOf(world, now);
-  const lockedToday = world.games.some(
+  // Today's game keeps it once that game (or its week) has had first pitch.
+  const playsToday = world.games.some(
     (g) =>
       g.playedDate === today &&
-      g.lockedAt &&
       g.status !== 'final' &&
+      (g.lockedAt !== null || weekLock(world, g.seriesId, now) !== null) &&
       g.entries.some((e) => e.taskId === taskId && e.role !== 'subbed_out'),
   );
-  if (lockedToday) fail(409, 'GAME_LOCKED', 'It’s in today’s game and first pitch has passed.');
+  const start = ilStartDate(today, playsToday);
   task.status = 'injured';
-  task.ilStartedOn = today;
-  task.ilMinUntil = addDays(today, IL_MIN_DAYS);
-  removeFromEditableGames(world, taskId, now);
+  task.ilStartedOn = start;
+  task.ilMinUntil = ilMinUntil(world.user.startDate, start);
+  // From the stint's start, its unfinished entries leave every built game, held for its
+  // return. Runs to win never changes: the IL only changes who clears the bar.
+  for (const game of world.games) {
+    if (game.status === 'final' || !game.lineupBuiltAt || compareDates(game.playedDate, start) < 0) continue;
+    const leaving = game.entries.filter((e) => e.taskId === taskId && e.role !== 'subbed_out' && !e.completedClientAt);
+    if (leaving.length === 0) continue;
+    for (const e of leaving) {
+      const role = e.role === 'bench' ? 'bench' : 'lineup';
+      game.ilHolds.push({ taskId, taskName: e.taskName, points: e.points, required: e.required, role, position: e.position });
+    }
+    game.entries = game.entries.filter((e) => !leaving.includes(e));
+    renumber(game);
+  }
   return toTaskDto(world, task);
 }
 
-export function activateFromInjuredList(world: UserWorld, taskId: string, now: Date): TaskDto {
+/**
+ * Activation puts the task back in every spot its stint vacated from tomorrow on (or
+ * everywhere, when cancelling a stint that hasn't started) and drops the rest.
+ */
+export function activateFromInjuredList(world: UserWorld, env: Env, taskId: string, now: Date): TaskDto {
   const task = findTask(world, taskId);
-  if (task.status !== 'injured') fail(409, 'CONFLICT', 'That task isn’t on the Injured List.');
-  if (task.ilMinUntil && compareDates(todayOf(world, now), task.ilMinUntil) < 0) {
-    fail(409, 'IL_MINIMUM', `The Injured List has a ${IL_MIN_DAYS}-day minimum.`);
+  if (task.status !== 'injured' || !task.ilStartedOn) fail(409, 'CONFLICT', 'That task isn’t on the Injured List.', 'NOT_INJURED');
+  const today = todayOf(world, now);
+  const notStartedYet = compareDates(today, task.ilStartedOn) < 0;
+  if (!notStartedYet && task.ilMinUntil && compareDates(today, task.ilMinUntil) < 0) {
+    fail(409, 'IL_MINIMUM', `The Injured List has a ${IL_MIN_DAYS}-day minimum.`, 'MINIMUM_STINT');
   }
+  const from = ilReturnDate(today, task.ilStartedOn);
   task.status = 'active';
   task.ilStartedOn = null;
   task.ilMinUntil = null;
+  for (const game of world.games) {
+    const hold = game.ilHolds.find((h) => h.taskId === taskId);
+    if (!hold) continue;
+    game.ilHolds = game.ilHolds.filter((h) => h.taskId !== taskId);
+    if (game.status === 'final' || !game.lineupBuiltAt || compareDates(game.playedDate, from) < 0) continue;
+    restoreHold(env, game, task, hold);
+  }
   return toTaskDto(world, task);
 }
 

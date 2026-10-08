@@ -158,6 +158,20 @@ Unique: `(series_id, game_number)` and `(user_id, played_date, slot)`.
 | completed_received_at | timestamptz null | Server receipt time. |
 | partial | bool | "Warning track" flag for a missed must-hit. |
 
+### `il_holds`
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| user_id, task_id, game_id | uuid FK | Unique `(game_id, task_id)`. |
+| task_name, points, required, position, role | snapshot | The spot the stint vacated (`role` is `lineup` or `bench`). |
+| created_at | timestamptz | |
+
+Written when an IL stint removes a task from a built game, or when a game is built while
+the task is injured. Activation restores holds in open games from `rules.ilReturnDate`
+on (same position, `rules.restorePosition`; runs to win untouched) and deletes them all.
+`PATCH .../lineup` with `entries` drops that game's holds; retiring a task drops its holds.
+Exposed on `Game.ilHolds`.
+
 ### `rally_tokens`
 | Column | Type | Notes |
 |---|---|---|
@@ -299,7 +313,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | POST | `/v1/games/:id/pinch-hitters` | Body: `{ taskId }`. New must-hit (or promote a bench task); raises runs to win by its points. Until the game is final. |
 | GET | `/v1/games/:id/suspension` | Suspension eligibility and resume dates (empty = no-decision). |
 | POST | `/v1/games/:id/suspension` | Body: `{ resumeDate | null }`. Uses a Rainout allowance. |
-| GET | `/v1/weeks` | Plannable weeks: current, plus next from Friday. |
+| GET | `/v1/weeks` | Plannable weeks: current, plus next from Friday (labels `current`, `next`, or `opening` for Opening Week during Spring Training). |
 | GET | `/v1/weeks/:startDate` | The weekly lineup card; builds the week's lineups. `PATCH .../lineup` is free before the week's first pitch and rejected after (`GAME_LOCKED`, reason `WEEK_LOCKED`). |
 | POST | `/v1/games/:id/bench` | Body: `{ taskId }`. Add any active roster task to the bench until the game is final. |
 | POST | `/v1/games/:id/substitutions` | Body: `{ outEntryId, inEntryId }` (a bench entry on the same game). Post-lock, non-required only. |
