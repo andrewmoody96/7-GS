@@ -17,7 +17,8 @@ import {
   useQueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
-import type { TaskKind } from '@7gs/rules';
+import { addDays, localDateOf, type TaskKind } from '@7gs/rules';
+import { useTimeZone } from './hooks';
 import { useCallback } from 'react';
 import { isApiError, isRetryable } from '../api/client';
 import { overlayQueue, type NewQueuedOp } from '../api/offlineQueue';
@@ -433,10 +434,15 @@ export function useRetireTask() {
 
 export function usePlaceOnInjuredList() {
   const api = useApi();
+  const timeZone = useTimeZone();
   return useRosterMutation(
     (taskId: string) => api.call('placeOnInjuredList', { params: { taskId } }),
-    ({ task }) =>
-      `${task.name} sits out${task.ilStartedOn ? ` from ${weekdayShort(task.ilStartedOn)}` : ''}. Its lineup spots are held and runs to win stays put.`,
+    ({ task }) => {
+      const today = localDateOf(api.now(), timeZone);
+      const from = task.ilStartedOn;
+      const when = !from ? '' : from === today ? ' from today' : from === addDays(today, 1) ? ' from tomorrow' : ` from ${weekdayShort(from)}`;
+      return `${task.name} sits out${when}. Its lineup spots are held and runs to win stays put.`;
+    },
   );
 }
 

@@ -247,11 +247,11 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
                   <li key={e.id} className="daybench__item">
                     <span className="daybench__name">
                       {e.taskName}
-                      <span className="pill pill--runs">{e.points}</span>
+                      <span className="pill pill--runs">{vocab.runs(e.points)}</span>
                       {oneOffs.has(e.taskId) ? <span className="pill pill--oneoff">{vocab.taskKind.one_off}</span> : null}
                     </span>
                     {policy === 'additions_only' ? (
-                      <button type="button" className="btn btn--small btn--quiet" onClick={() => setPinch({ taskId: e.taskId })}>
+                      <button type="button" className="btn btn--small" onClick={() => setPinch({ taskId: e.taskId })}>
                         <IconStar width={16} height={16} /> {vocab.pinchHit.makeMustHit}
                       </button>
                     ) : null}
