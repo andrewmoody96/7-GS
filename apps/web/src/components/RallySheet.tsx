@@ -135,7 +135,8 @@ export function RallySheet({ game, open, onClose, timeZone }: RallySheetProps) {
   };
 
   const q = quote.data;
-  const kicker = `${vocab.gameLabel(game.gameNumber)} · ${weekdayShort(game.playedDate)} · ${vocab.terms.loss} ${gameScore(game)}`;
+  // Reads the game as it stands: an L until the roll hits, then the W it became.
+  const kicker = `${vocab.gameLabel(game.gameNumber)} · ${weekdayShort(game.playedDate)} · ${game.result === 'W' ? vocab.terms.win : vocab.terms.loss} ${gameScore(game)}`;
 
   return (
     <>
