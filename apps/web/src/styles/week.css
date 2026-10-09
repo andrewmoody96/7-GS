@@ -127,16 +127,15 @@
   color: var(--text-muted);
 }
 
-.weekdays {
+/* Phones: the week switch (or note) stacks above the banner. */
+.weekhead {
   display: grid;
   gap: 10px;
 }
 
-@media (min-width: 600px) {
-  .weekdays {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
+.weekdays {
+  display: grid;
+  gap: 10px;
 }
 
 .weekday {
@@ -491,4 +490,256 @@
 /* Season: a 7th stat tile (no decisions) takes the whole last row. */
 .statgrid .stat:last-child:nth-child(3n + 1) {
   grid-column: 1 / -1;
+}
+
+/* ── Desktop: the week as a board ─────────────────────────────────────────────
+   Seven equal-width, equal-height day columns in one row. The board fits the
+   window; a long day (a doubleheader) scrolls inside its own column, and each
+   column's actions sit on the same baseline. Phones keep the stacked list. */
+
+@media (min-width: 768px) {
+  .app__main:has(.screen--board) {
+    max-width: min(1760px, 100%);
+  }
+
+  .weekbanner {
+    padding: 10px 14px;
+    align-items: center;
+  }
+
+  /* Let the board shrink to the window so only the board scrolls sideways. */
+  .screen--board > *,
+  .weekcard,
+  .weekdays {
+    min-width: 0;
+  }
+
+  /* A compact header so the board gets the height. */
+  .screen--board {
+    gap: 10px;
+  }
+
+  .screen--board .screen__head {
+    padding-top: 0;
+  }
+
+  .screen--board .screen__title {
+    font-size: 1.6rem;
+  }
+
+  .screen--board > .segmented {
+    width: fit-content;
+    min-width: 360px;
+  }
+
+  .screen--board > .segmented .segmented__item {
+    padding-inline: 24px;
+  }
+
+  /* The week switch sits beside the banner instead of on its own row. */
+  .weekhead {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .weekhead .weekbanner {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .weekhead__switch {
+    order: 2;
+    flex: none;
+    display: flex;
+    align-items: center;
+    max-width: 320px;
+  }
+
+  .weekhead__switch .segmented {
+    align-self: center;
+  }
+
+  .weekhead__switch .segmented__item {
+    padding-inline: 18px;
+  }
+
+  .weekbanner__fine {
+    display: inline;
+    white-space: nowrap;
+  }
+
+  .weekbanner__blurb {
+    display: inline;
+    margin-right: 10px;
+  }
+
+  .weekdays {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    /* Days keep a readable width; if the window is too narrow for all seven, the board
+       scrolls sideways (snapping to days) rather than squeezing them. */
+    position: relative;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    /* Fills the window below the board's own top edge (set by WeekCard), so the whole
+       week is visible at once; never shorter than a useful board. */
+    height: max(340px, calc(100dvh - var(--board-top, 420px) - var(--nav-h) - var(--safe-bottom) - 16px));
+  }
+
+  .weekday {
+    /* Contains absolutely positioned bits (screen-reader labels) so they scroll with it. */
+    position: relative;
+    flex: 1 0 150px;
+    min-width: 0;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 10px 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    /* A soft shadow at the bottom edge while there's more to scroll ("scroll shadow"):
+       the cover scrolls with the content and hides the shadow once you reach the end. */
+    background:
+      linear-gradient(transparent, var(--surface) 70%) center bottom / 100% 36px no-repeat local,
+      radial-gradient(farthest-side at 50% 100%, rgb(0 0 0 / 0.22), transparent) center bottom / 100% 12px no-repeat scroll,
+      var(--surface);
+  }
+
+  /* The day being edited gets room to work; its neighbours narrow. */
+  .weekday:has(.dayg__editor) {
+    flex-grow: 3;
+    flex-basis: 340px;
+  }
+
+  .weekday__head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0 -10px;
+    padding: 10px 10px 6px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .weekday__dow {
+    font-size: 1rem;
+  }
+
+  .weekday__head .tag {
+    font-size: 0.65rem;
+  }
+
+  /* The last game in a column fills it, so actions line up at the bottom. */
+  .dayg {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dayg:last-child {
+    flex: 1 0 auto;
+  }
+
+  .dayg__actions {
+    margin-top: auto;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .dayg__actions .btn {
+    width: 100%;
+    flex: none;
+    white-space: nowrap;
+  }
+
+  /* Runs to win becomes one compact line under the starter, so names get the width. */
+  .dayg__top {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .dayg__starter {
+    font-size: 0.9rem;
+    line-height: 1.25;
+  }
+
+  .dayg__rtw {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 0 6px;
+    min-width: 0;
+    width: 100%;
+    padding: 3px 8px 4px;
+  }
+
+  .dayg__rtwnum {
+    font-size: 1.15rem;
+  }
+
+  .dayg__rtwlabel {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+  }
+
+  .dayg__raise {
+    margin-top: 0;
+    margin-left: auto;
+  }
+
+  .daylineup__item {
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    column-gap: 6px;
+    padding: 5px 0;
+  }
+
+  .daylineup__name {
+    font-size: 0.84rem;
+    line-height: 1.25;
+  }
+
+  .daybench {
+    padding: 6px 8px;
+  }
+
+  .daybench__item {
+    display: grid;
+    gap: 4px;
+  }
+
+  .daybench__name {
+    font-size: 0.82rem;
+  }
+
+  .daybench__item .btn {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 6px;
+    gap: 4px;
+    font-size: 0.72rem;
+  }
+
+  .daybench__item .btn svg {
+    flex: none;
+  }
+
+  .ilholds {
+    margin-top: 0;
+    padding: 8px 10px;
+  }
+
+  .ilholds__note {
+    display: none;
+  }
+
+  .ilholds__name {
+    font-size: 0.84rem;
+  }
 }

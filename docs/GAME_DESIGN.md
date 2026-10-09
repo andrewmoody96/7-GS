@@ -387,6 +387,13 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 5. **Rally Cap sheet**: shown on a final, eligible L. Odds breakdown and roll.
 6. **Review Week hub**: season review, awards, front-office changes for the next season.
 
+**Weekly lineup card on wider screens** (tablets and desktop, 768px+): the week is a
+board of seven equal-width, equal-height day columns in one row, sized to fit the window
+below the header. A busy day scrolls inside its own column (a soft shadow shows there's
+more), actions line up along the bottom, and the day being edited widens to fit the
+editor. If the window is too narrow for seven readable columns, the board scrolls sideways
+instead of squeezing them. Phones keep the stacked list.
+
 ## 10. Architecture notes
 
 - **Shared rules package** (TypeScript, pure functions): game result, Rally Cap

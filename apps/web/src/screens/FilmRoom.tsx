@@ -47,7 +47,7 @@ export function FilmRoomScreen() {
   const tab = raw === 'roster' || raw === 'rotation' ? raw : 'week';
   const me = useMeQuery();
   return (
-    <div className="screen screen--filmroom">
+    <div className={`screen screen--filmroom${tab === 'week' ? ' screen--board' : ''}`}>
       <header className="screen__head">
         <div>
           <p className="screen__kicker">Front office</p>

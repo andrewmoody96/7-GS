@@ -3,7 +3,7 @@
 
 import type { GameDto, GameSummaryDto, TaskDto, WeekDto, WeekSummaryDto } from '@7gs/contracts';
 import { localDateOf, weekday, weekDates, type LocalDate } from '@7gs/rules';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useNow, useTimeZone } from '../app/hooks';
 import { useAddToBench, usePatchLineup, useTasksQuery, useWeekQuery, useWeeksQuery } from '../app/queries';
@@ -38,9 +38,8 @@ export function WeekCardView() {
   const selected = list.find((w) => w.startDate === requested) ?? list.find((w) => w.label === 'current') ?? list[0]!;
   const today = localDateOf(now, timeZone);
 
-  return (
-    <section aria-label={vocab.week.title} className="weekcard">
-      {list.length > 1 ? (
+  const switcher =
+    list.length > 1 ? (
         <div className="segmented segmented--small" role="tablist" aria-label="Week">
           {list.map((w) => (
             <WeekTab
@@ -51,12 +50,15 @@ export function WeekCardView() {
             />
           ))}
         </div>
-      ) : selected.label === 'opening' ? (
-        <p className="fine weekcard__opens">{vocab.week.openingBlurb}</p>
-      ) : weekday(today) < 5 && selected.label === 'current' ? (
-        <p className="fine weekcard__opens">{vocab.week.nextOpensFriday}</p>
-      ) : null}
-      <WeekView key={selected.startDate} startDate={selected.startDate} today={today} timeZone={timeZone} />
+    ) : selected.label === 'opening' ? (
+      <p className="fine weekcard__opens">{vocab.week.openingBlurb}</p>
+    ) : weekday(today) < 5 && selected.label === 'current' ? (
+      <p className="fine weekcard__opens">{vocab.week.nextOpensFriday}</p>
+    ) : null;
+
+  return (
+    <section aria-label={vocab.week.title} className="weekcard">
+      <WeekView key={selected.startDate} startDate={selected.startDate} today={today} timeZone={timeZone} switcher={switcher} />
     </section>
   );
 }
@@ -81,15 +83,71 @@ function firstPitchLine(week: WeekDto): string | null {
     : `${weekdayShort(first.playedDate)}’s first check-off`;
 }
 
-function WeekView({ startDate, today, timeZone }: { startDate: LocalDate; today: LocalDate; timeZone: string }) {
+/**
+ * On desktop the week is a board that fills the window below its own top edge, so all
+ * seven days are visible without scrolling the page (see .weekdays in week.css).
+ */
+function useFitBoardToWindow(ref: RefObject<HTMLElement | null>, ready: boolean): void {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof window === 'undefined' || !window.matchMedia) return;
+    const wide = window.matchMedia('(min-width: 768px)');
+    const update = () => {
+      if (!wide.matches) return;
+      const top = Math.round(el.getBoundingClientRect().top + window.scrollY);
+      if (el.style.getPropertyValue('--board-top') !== `${top}px`) el.style.setProperty('--board-top', `${top}px`);
+    };
+    update();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    if (el.parentElement) observer?.observe(el.parentElement);
+    window.addEventListener('resize', update);
+    wide.addEventListener?.('change', update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', update);
+      wide.removeEventListener?.('change', update);
+    };
+  }, [ref, ready]);
+}
+
+function WeekView({
+  startDate,
+  today,
+  timeZone,
+  switcher,
+}: {
+  startDate: LocalDate;
+  today: LocalDate;
+  timeZone: string;
+  /** This week / Next week (or a note): above the banner on phones, beside it on desktop. */
+  switcher: ReactNode;
+}) {
   const week = useWeekQuery(startDate);
+  const boardRef = useRef<HTMLOListElement>(null);
+  useFitBoardToWindow(boardRef, week.isSuccess);
   const tasks = useTasksQuery();
-  if (week.isPending) return <Loading label="Building the week’s lineups" />;
-  if (week.isError) return <ErrorPanel error={week.error} onRetry={() => void week.refetch()} />;
+  if (week.isPending) {
+    return (
+      <>
+        {switcher}
+        <Loading label="Building the week’s lineups" />
+      </>
+    );
+  }
+  if (week.isError) {
+    return (
+      <>
+        {switcher}
+        <ErrorPanel error={week.error} onRetry={() => void week.refetch()} />
+      </>
+    );
+  }
   const w = week.data;
   const roster = tasks.data ?? [];
   return (
     <>
+      <div className="weekhead">
+      {switcher ? <div className="weekhead__switch">{switcher}</div> : null}
       <div className={`weekbanner weekbanner--${w.locked ? 'locked' : 'open'}`} role="status">
         <span className="weekbanner__icon" aria-hidden="true">
           {w.locked ? <IconLock /> : <IconEdit />}
@@ -111,7 +169,8 @@ function WeekView({ startDate, today, timeZone }: { startDate: LocalDate; today:
           ) : null}
         </div>
       </div>
-      <ol className="weekdays">
+      </div>
+      <ol className="weekdays" ref={boardRef}>
         {weekDates(w.startDate).map((date) => (
           <DayColumn
             key={date}
@@ -212,7 +271,9 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
       <GameStatusLine game={game} />
 
       {editing ? (
-        <LineupEditor game={game} tasks={roster} saving={patchLineup.isPending} onSave={save} onCancel={() => setEditing(false)} />
+        <div className="dayg__editor">
+          <LineupEditor game={game} tasks={roster} saving={patchLineup.isPending} onSave={save} onCancel={() => setEditing(false)} />
+        </div>
       ) : (
         <>
           {lineup.length === 0 ? <p className="empty-line">Empty lineup.</p> : null}
