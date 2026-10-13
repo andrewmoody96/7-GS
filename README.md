@@ -5,6 +5,7 @@ completing the tasks in that day's lineup. Wins and losses roll up into a season
 
 - Game rules: [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)
 - Data model and API: [`docs/DATA_MODEL_AND_API.md`](docs/DATA_MODEL_AND_API.md)
+- Putting it online (GitHub Pages demo, Heroku for real): [`docs/DEPLOY.md`](docs/DEPLOY.md)
 
 ## Repository layout
 
@@ -54,9 +55,16 @@ Use **two terminal windows, both in the repository root**:
 | `pnpm --filter @7gs/api seed:demo` (once, loads sample data) | `pnpm --filter @7gs/web dev:http` |
 | `pnpm dev:api` (leave it running) | |
 
-Open http://localhost:5173 and sign in as `demo@7gs.local`. There is no email service
-yet, so the sign-in screen shows a **Sign in now** button instead of sending a link.
+Open http://localhost:5173 and sign in as `demo@7gs.local`. Locally there is no email
+service, so the sign-in screen shows a **Sign in now** button instead of sending a link.
 Data is stored in `apps/api/.data/`. Stop either one with `Ctrl+C`.
+
+### Putting it online
+
+- **GitHub Pages** hosts the demo (no server, demo data per browser).
+- **Heroku** runs the real app: accounts, Postgres, and games that go final at midnight.
+
+Both are set up already. The steps are in [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ### Checks
 

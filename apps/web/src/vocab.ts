@@ -432,6 +432,7 @@ export const baseball: Vocab = {
     IL_MINIMUM: 'The Injured List has a 3-day minimum.',
     OUT_OF_SEASON: 'Not available outside the season.',
     STALE_CHECKOFF: 'That check-off arrived after midnight and didn’t count.',
+    RATE_LIMITED: 'Too many tries. Wait a few minutes and try again.',
   },
   situation: {
     clinch: { tag: 'Clinch game', blurb: 'One win takes the series.' },

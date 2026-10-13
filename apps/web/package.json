@@ -8,6 +8,7 @@
     "dev": "vite",
     "dev:http": "vite --mode http",
     "build": "vite build",
+    "build:http": "vite build --mode http",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,0 +1,53 @@
+# The demo on GitHub Pages: the PWA with its in-browser mock backend (demo data in
+# localStorage, no server). The full app with accounts runs on Heroku (docs/DEPLOY.md).
+#
+# One-time setup: repo Settings → Pages → Build and deployment → Source: GitHub Actions.
+
+name: Deploy demo to GitHub Pages
+
+on:
+  push:
+    branches: [main, claude/7-game-series-brainstorm-8ydzpv]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the demo for https://<owner>.github.io/<repo>/
+        run: pnpm --filter @7gs/web build
+        env:
+          VITE_API_MODE: mock
+          VITE_BASE: /${{ github.event.repository.name }}/
+      # Pages has no rewrites: unknown paths (deep links like /season) get 404.html,
+      # which is the app shell, so the router takes over.
+      - run: cp apps/web/dist/index.html apps/web/dist/404.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

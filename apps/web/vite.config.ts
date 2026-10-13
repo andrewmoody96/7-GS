@@ -3,15 +3,22 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 const API_TARGET = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8787';
+/** Where the app is hosted: `/` (dev, Heroku) or a sub-path such as `/7-GS/` (GitHub Pages). */
+const BASE = normalizeBase(process.env.VITE_BASE ?? '/');
+
+function normalizeBase(base: string): string {
+  return `/${base.replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
+}
 
 export default defineConfig({
+  base: BASE,
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
       manifest: {
-        id: '/',
+        id: BASE,
         name: '7-Game Series',
         short_name: '7GS',
         description: 'Every week is a best-of-7 playoff series. Win the day by finishing your lineup.',
@@ -19,13 +26,13 @@ export default defineConfig({
         background_color: '#0c1f16',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        start_url: BASE,
+        scope: BASE,
         categories: ['productivity', 'lifestyle', 'health'],
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: `${BASE}icons/icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: `${BASE}icons/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: `${BASE}icons/icon-maskable-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -36,7 +43,7 @@ export default defineConfig({
           '**/*-latin-wght-normal-*.woff2',
           '**/*-latin-ext-wght-normal-*.woff2',
         ],
-        navigateFallback: '/index.html',
+        navigateFallback: `${BASE}index.html`,
         navigateFallbackDenylist: [/^\/v1\//],
         runtimeCaching: [
           {

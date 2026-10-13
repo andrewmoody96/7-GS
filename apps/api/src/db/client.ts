@@ -32,7 +32,7 @@ export const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../drizzle', import.m
 export type DatabaseOptions =
   | { kind: 'memory' }
   | { kind: 'pglite'; dataDir: string }
-  | { kind: 'postgres'; url: string };
+  | { kind: 'postgres'; url: string; ssl: boolean };
 
 export interface DatabaseHandle {
   db: Db;
@@ -43,7 +43,12 @@ export interface DatabaseHandle {
 
 export async function createDatabase(options: DatabaseOptions): Promise<DatabaseHandle> {
   if (options.kind === 'postgres') {
-    const client = postgres(options.url, { max: 10, onnotice: () => {} });
+    const client = postgres(options.url, {
+      max: 10,
+      onnotice: () => {},
+      // Heroku Postgres requires TLS but its certificates don't chain to a public CA.
+      ...(options.ssl ? { ssl: { rejectUnauthorized: false } } : {}),
+    });
     const db = drizzlePostgres({ client, schema });
     return {
       db,
@@ -65,10 +70,16 @@ export async function createDatabase(options: DatabaseOptions): Promise<Database
   };
 }
 
-/** Pick the database from the environment: DATABASE_URL, else PGlite in `dataDir`. */
-export function databaseOptionsFromEnv(env: NodeJS.ProcessEnv, dataDir: string): DatabaseOptions {
+/**
+ * Pick the database from the environment: DATABASE_URL, else PGlite in `dataDir`.
+ * TLS is on in production unless DATABASE_SSL=false (or the URL sets sslmode itself).
+ */
+export function databaseOptionsFromEnv(env: NodeJS.ProcessEnv, dataDir: string, production = false): DatabaseOptions {
   const url = env.DATABASE_URL?.trim();
-  return url ? { kind: 'postgres', url } : { kind: 'pglite', dataDir };
+  if (!url) return { kind: 'pglite', dataDir };
+  const setting = env.DATABASE_SSL?.trim();
+  const ssl = /[?&]sslmode=/.test(url) ? false : setting ? setting === 'true' : production;
+  return { kind: 'postgres', url, ssl };
 }
 
 const ALL_TABLES = [

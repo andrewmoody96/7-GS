@@ -279,7 +279,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 ### Auth
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/v1/auth/magic-link` | Body: `{ email }`. Without an email provider (dev), the response includes `devToken`. |
+| POST | `/v1/auth/magic-link` | Body: `{ email }`. Emails a link to `APP_URL/sign-in?token=…` (Resend or Postmark). Without an email provider (dev, or `ALLOW_DEV_LOGIN=true`) the response includes `devToken` instead. In production, 5 per address and 20 per client per 15 minutes (`429 RATE_LIMITED`). |
 | POST | `/v1/auth/verify` | Body: `{ token, timezone }`. Creates the account on first sign-in and sets an httpOnly session cookie. |
 | POST | `/v1/auth/logout` | Ends the session. |
 
@@ -340,7 +340,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 { "error": { "code": "GAME_LOCKED", "message": "First pitch has passed; must-hits are locked." } }
 ```
 Codes include: `GAME_LOCKED`, `GAME_FINAL`, `NOT_ELIGIBLE`, `NO_ALLOWANCE`,
-`INVALID_MAKEUP_DATE`, `IL_MINIMUM`, `OUT_OF_SEASON`, `STALE_CHECKOFF`.
+`INVALID_MAKEUP_DATE`, `IL_MINIMUM`, `OUT_OF_SEASON`, `STALE_CHECKOFF`, `RATE_LIMITED`.
 
 ## 9. Offline & sync (frontend ↔ backend contract)
 

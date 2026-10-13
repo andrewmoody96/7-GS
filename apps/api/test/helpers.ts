@@ -36,7 +36,7 @@ export function useTestDb(): { readonly db: Db } {
   let handle: DatabaseHandle | undefined;
   beforeAll(async () => {
     const url = process.env.TEST_DATABASE_URL;
-    handle = await createDatabase(url ? { kind: 'postgres', url } : { kind: 'memory' });
+    handle = await createDatabase(url ? { kind: 'postgres', url, ssl: false } : { kind: 'memory' });
     await handle.migrate();
   });
   afterAll(async () => {
@@ -85,6 +85,8 @@ export class TestApp {
   constructor(
     readonly db: Db,
     start: Date | string,
+    /** Swap in a mailer or production config. */
+    overrides: Partial<Pick<Deps, 'config' | 'mailer'>> = {},
   ) {
     this.clock = new ManualClock(start);
     this.deps = {
@@ -98,6 +100,7 @@ export class TestApp {
         if (roll === undefined) throw new Error('Test did not queue a dice roll');
         return roll;
       },
+      ...overrides,
     };
     this.app = createApp(this.deps);
   }

@@ -11,11 +11,21 @@ export interface AppConfig {
   validateResponses: boolean;
   /** Log one line per request (the dev server). */
   logRequests?: boolean;
+  /** Public origin for links in emails, e.g. https://my-app.herokuapp.com. */
+  appUrl?: string | null;
+  /** Serve the built web app from this directory (production: one origin for app + API). */
+  webRoot?: string | null;
+  /** Redirect plain-HTTP requests (x-forwarded-proto) to HTTPS. */
+  forceHttps?: boolean;
+  /** With no mailer, hand the magic-link token back as `devToken` (development). */
+  allowDevLogin?: boolean;
+  /** Throttle magic-link requests per address and per client. */
+  limitMagicLinks?: boolean;
 }
 
-/** Sends magic links. None is configured yet, so links come back as `devToken`. */
+/** Sends magic links (see mailer.ts). Without one, links come back as `devToken`. */
 export interface Mailer {
-  sendMagicLink(email: string, token: string): Promise<void>;
+  sendMagicLink(email: string, link: string): Promise<void>;
 }
 
 export interface Deps {
@@ -31,6 +41,7 @@ export interface Deps {
 export const defaultConfig: AppConfig = {
   cookieSecure: false,
   validateResponses: true,
+  allowDevLogin: true,
 };
 
 /** crypto.randomInt(1, 101): an integer from 1 to 100 from the OS CSPRNG. */

@@ -44,7 +44,9 @@ export function SignInScreen() {
   }, [params, verify]);
 
   const signedIn = me.data && !(isApiError(me.error) && me.error.code === 'UNAUTHORIZED');
-  if (signedIn && !params.get('token')) return <Navigate to="/" replace />;
+  // Already signed in: go home. (Not right after verifying: onSuccess picks the
+  // destination, the roster for a brand-new account.)
+  if (signedIn && !params.get('token') && verify.isIdle) return <Navigate to="/" replace />;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

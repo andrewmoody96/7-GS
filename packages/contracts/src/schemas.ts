@@ -422,6 +422,7 @@ export const ERROR_CODES = [
   'IL_MINIMUM',
   'OUT_OF_SEASON',
   'STALE_CHECKOFF',
+  'RATE_LIMITED',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

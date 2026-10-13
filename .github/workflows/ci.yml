@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/7-game-series-brainstorm-8ydzpv]
   pull_request:
 
 jobs:

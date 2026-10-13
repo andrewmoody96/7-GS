@@ -42,7 +42,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <main className="screen">
       <ErrorPanel error={me.error} onRetry={() => void me.refetch()} />
-      {api.mode === 'http' ? (
+      {api.mode === 'http' && import.meta.env.DEV ? (
         <p className="fine center">
           Running against the real API. Is it up on :8787? For demo data, run with <code>VITE_API_MODE=mock</code>.
         </p>

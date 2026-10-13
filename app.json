@@ -1,0 +1,26 @@
+{
+  "name": "7-Game Series",
+  "description": "Every week is a best-of-7 playoff series. Win the day by finishing your lineup.",
+  "repository": "https://github.com/andrewmoody96/7-GS",
+  "keywords": ["pwa", "habits", "hono", "react"],
+  "buildpacks": [{ "url": "heroku/nodejs" }],
+  "formation": { "web": { "quantity": 1, "size": "basic" } },
+  "addons": [{ "plan": "heroku-postgresql:essential-0" }],
+  "env": {
+    "NODE_ENV": { "value": "production" },
+    "APP_URL": {
+      "description": "This app's public origin, used in sign-in emails, e.g. https://my-7gs.herokuapp.com",
+      "required": true
+    },
+    "EMAIL_FROM": {
+      "description": "Sender for sign-in emails, e.g. 7-Game Series <play@yourdomain.com> (a domain verified with your email provider).",
+      "required": false
+    },
+    "RESEND_API_KEY": { "description": "Resend API key (or use POSTMARK_API_TOKEN instead).", "required": false },
+    "POSTMARK_API_TOKEN": { "description": "Postmark server token (or use RESEND_API_KEY instead).", "required": false },
+    "ALLOW_DEV_LOGIN": {
+      "description": "true = skip email and show a 'Sign in now' button. Private trials only: anyone can sign in as any address.",
+      "required": false
+    }
+  }
+}

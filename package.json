@@ -3,13 +3,16 @@
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "dev:api": "pnpm --filter @7gs/api dev",
-    "dev:web": "pnpm --filter @7gs/web dev"
+    "dev:web": "pnpm --filter @7gs/web dev",
+    "build": "pnpm --filter @7gs/web build:http",
+    "start": "pnpm --filter @7gs/api start",
+    "heroku-cleanup": "pnpm install --prod --frozen-lockfile --offline --config.confirmModulesPurge=false"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
