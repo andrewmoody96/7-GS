@@ -42,6 +42,15 @@ function emailFromEnv(env: NodeJS.ProcessEnv, problems: string[]): EmailConfig |
   return resend ? { provider: 'resend', apiKey: resend, from } : { provider: 'postmark', apiKey: postmark!, from };
 }
 
+/** `ALLOWED_EMAILS="me@x.com, @family.com"` → ['me@x.com', '@family.com']; unset or blank → null. */
+export function parseAllowedEmails(value: string | undefined): string[] | null {
+  const entries = (value ?? '')
+    .split(/[,\s]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return entries.length > 0 ? entries : null;
+}
+
 /**
  * Read the environment. Development needs nothing; production (NODE_ENV=production)
  * refuses to start rather than run with a throwaway database or open sign-in.
@@ -78,6 +87,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     problems.push(`SERVE_WEB is on but ${webRoot}/index.html is missing: build the web app first (pnpm run build).`);
   }
 
+  const allowedEmails = parseAllowedEmails(env.ALLOWED_EMAILS);
+  if (allowedEmails?.some((entry) => !/^[^@\s]*@[^@\s]+\.[^@\s]+$/.test(entry))) {
+    problems.push('ALLOWED_EMAILS must be comma-separated addresses or @domains, e.g. "me@example.com, @family.com".');
+  }
+
   if (problems.length > 0) throw new ConfigError(problems);
 
   return {
@@ -93,6 +107,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
       forceHttps: flag(env.FORCE_HTTPS, production),
       allowDevLogin,
       limitMagicLinks: flag(env.LIMIT_MAGIC_LINKS, production),
+      allowedEmails,
     },
     email,
     finalizerIntervalMs: Number(env.FINALIZER_INTERVAL_MS ?? 15 * 60_000),

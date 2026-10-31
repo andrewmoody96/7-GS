@@ -279,7 +279,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 ### Auth
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/v1/auth/magic-link` | Body: `{ email }`. Emails a link to `APP_URL/sign-in?token=…` (Resend or Postmark). Without an email provider (dev, or `ALLOW_DEV_LOGIN=true`) the response includes `devToken` instead. In production, 5 per address and 20 per client per 15 minutes (`429 RATE_LIMITED`). |
+| POST | `/v1/auth/magic-link` | Body: `{ email }`. Emails a link to `APP_URL/sign-in?token=…` (Resend or Postmark). Without an email provider (dev, or `ALLOW_DEV_LOGIN=true`) the response includes `devToken` instead. With `ALLOWED_EMAILS` set, other addresses get `403 NOT_ELIGIBLE` (reason `NOT_INVITED`), and existing sessions of addresses no longer on the list get `401`. In production, 5 per address and 20 per client per 15 minutes (`429 RATE_LIMITED`). |
 | POST | `/v1/auth/verify` | Body: `{ token, timezone }`. Creates the account on first sign-in and sets an httpOnly session cookie. |
 | POST | `/v1/auth/logout` | Ends the session. |
 
@@ -288,6 +288,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 |---|---|---|
 | GET | `/v1/me` | Profile, timezone, current season/series summary, allowances. |
 | PATCH | `/v1/me` | Display name, timezone, default lock time. |
+| DELETE | `/v1/me` | Body: `{ confirmEmail }` (must match the account's email, else `400 VALIDATION_FAILED`). Deletes the user, everything they own (FK cascades) and their login links; clears the cookie. |
 | GET | `/v1/calendar` | Spring Training / season / offseason boundaries. |
 
 ### Roster & starters

@@ -11,6 +11,7 @@ export type CalendarDto = z.infer<typeof S.Calendar>;
 export type AllowancesDto = z.infer<typeof S.Allowances>;
 export type MeDto = z.infer<typeof S.Me>;
 export type MePatchDto = z.infer<typeof S.MePatch>;
+export type DeleteAccountDto = z.infer<typeof S.DeleteAccount>;
 export type SessionDto = z.infer<typeof S.Session>;
 export type TaskDto = z.infer<typeof S.Task>;
 export type TaskCreateDto = z.input<typeof S.TaskCreate>;

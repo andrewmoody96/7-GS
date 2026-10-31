@@ -86,6 +86,18 @@ heroku config:set ALLOW_DEV_LOGIN=true
 
 `EMAIL_FROM` must use a domain (or sender address) you've verified with the provider.
 
+Decide who can get in. Without an invite list, anyone with the URL can create an account:
+
+```sh
+# Just these people (addresses), and/or everyone at a domain (@domain):
+heroku config:set ALLOWED_EMAILS="you@example.com, friend@example.com, @yourfamily.com"
+```
+
+Anyone else who tries sees "This 7-Game Series is invite-only…" and no email is sent.
+To add someone, set the list again with their address (the dyno restarts in a few
+seconds). If you take someone off, they're signed out the next time the app talks to
+the server. Their data stays; put them back and it's all still there.
+
 Deploy the branch:
 
 ```sh
@@ -126,9 +138,17 @@ With `NODE_ENV=production` set, the server also does the following automatically
 | `RESEND_API_KEY` / `POSTMARK_API_TOKEN` | — | Use one. |
 | `EMAIL_FROM` | — | Required with either provider. |
 | `ALLOW_DEV_LOGIN` | `false` in prod | `true` shows the "Sign in now" shortcut. |
+| `ALLOWED_EMAILS` | unset (open) | Invite list: comma-separated addresses and/or `@domains`. |
 | `FINALIZER_INTERVAL_MS` | `900000` | How often games are settled. |
 | `FORCE_HTTPS`, `COOKIE_SECURE`, `LIMIT_MAGIC_LINKS` | `true` in prod | Escape hatches; leave them alone on Heroku. |
 | `LOG_REQUESTS` | `true` | One log line per request. |
+
+### Deleting accounts
+
+Players delete their own account from **Season → Clubhouse → Delete account**. They
+type their email to confirm. That removes every season, series, game, task and
+allowance, and signs them out on every device. Nothing is kept. They can sign up again
+later with the same email, but they start from scratch.
 
 ### Dyno notes
 

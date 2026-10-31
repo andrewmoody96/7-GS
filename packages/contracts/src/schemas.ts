@@ -437,3 +437,6 @@ export const ApiError = z.object({
 });
 
 export const Ok = z.object({ ok: z.literal(true) });
+
+/** Deleting an account: the user types their email to confirm. */
+export const DeleteAccount = z.object({ confirmEmail: z.string().trim().min(1) });

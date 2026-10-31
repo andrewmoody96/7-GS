@@ -100,7 +100,15 @@ describe('loadConfig', () => {
       forceHttps: true,
       allowDevLogin: false,
       limitMagicLinks: true,
+      allowedEmails: null,
     });
+  });
+
+  it('reads the invite list and rejects malformed entries', () => {
+    expect(loadConfig({ ALLOWED_EMAILS: 'Me@Example.com, @family.org' }).app.allowedEmails).toEqual(['me@example.com', '@family.org']);
+    expect(problemsOf(() => loadConfig({ ALLOWED_EMAILS: 'me@example.com, family' }))).toEqual([
+      expect.stringMatching(/ALLOWED_EMAILS must be/),
+    ]);
   });
 
   it('leaves TLS to the URL when it sets sslmode, or to DATABASE_SSL', () => {

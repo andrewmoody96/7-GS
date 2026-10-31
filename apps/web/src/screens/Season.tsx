@@ -5,8 +5,11 @@ import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi, useCheckoffQueue } from '../app/context';
 import { forgetCachedMe, useCurrentSeasonQuery, useMeQuery, useUpdateMe, useUpdateSeasonGoal } from '../app/queries';
+import { errorMessage } from '../app/errors';
 import { getThemePref, setThemePref, type ThemePref } from '../app/theme';
+import { useNotify } from '../app/toast';
 import { Stepper } from '../components/Controls';
+import { Sheet } from '../components/Sheet';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { Tile } from '../components/Tile';
 import { formatRange, formatTimeOfDay, formatWinPct, signed } from '../lib/format';
@@ -214,21 +217,21 @@ function Clubhouse({ me }: { me: MeDto }) {
   const [theme, setTheme] = useState<ThemePref>(getThemePref);
   const nameId = useId();
   const themeId = useId();
-  const logout = useMutation({
-    mutationFn: () => api.call('logout'),
-    onSettled: async () => {
-      queue.clear();
-      forgetCachedMe();
-      qc.clear();
-      try {
-        // Don't leave this account's cached API responses on the device.
-        if (typeof caches !== 'undefined') await caches.delete('7gs-api');
-      } catch {
-        // Cache Storage unavailable (insecure context or tests).
-      }
-      navigate('/sign-in', { replace: true });
-    },
-  });
+  const [deleting, setDeleting] = useState(false);
+  // Signing out and deleting both leave nothing of this account on the device.
+  const leave = async () => {
+    queue.clear();
+    forgetCachedMe();
+    qc.clear();
+    try {
+      // Don't leave this account's cached API responses on the device.
+      if (typeof caches !== 'undefined') await caches.delete('7gs-api');
+    } catch {
+      // Cache Storage unavailable (insecure context or tests).
+    }
+    navigate('/sign-in', { replace: true });
+  };
+  const logout = useMutation({ mutationFn: () => api.call('logout'), onSettled: leave });
 
   return (
     <section className="card clubhouse" aria-labelledby="clubhouse-title">
@@ -288,9 +291,98 @@ function Clubhouse({ me }: { me: MeDto }) {
           ))}
         </div>
       </div>
-      <button type="button" className="btn btn--quiet btn--danger-text" onClick={() => logout.mutate()} disabled={logout.isPending}>
-        Sign out
-      </button>
+      <div className="clubhouse__exit">
+        <button type="button" className="btn btn--quiet btn--danger-text" onClick={() => logout.mutate()} disabled={logout.isPending}>
+          Sign out
+        </button>
+        <button type="button" className="clubhouse__delete" onClick={() => setDeleting(true)}>
+          Delete account
+        </button>
+      </div>
+      <DeleteAccountSheet open={deleting} email={me.email} onClose={() => setDeleting(false)} onDeleted={leave} />
     </section>
+  );
+}
+
+function DeleteAccountSheet({
+  open,
+  email,
+  onClose,
+  onDeleted,
+}: {
+  open: boolean;
+  email: string;
+  onClose: () => void;
+  onDeleted: () => Promise<void>;
+}) {
+  const api = useApi();
+  const notify = useNotify();
+  const [typed, setTyped] = useState('');
+  const confirmId = useId();
+  const matches = typed.trim().toLowerCase() === email;
+  const remove = useMutation({
+    mutationFn: () => api.call('deleteMe', { body: { confirmEmail: typed.trim() } }),
+    onSuccess: async () => {
+      await onDeleted();
+      notify('Your account and all its data were deleted.', 'success');
+    },
+  });
+  const close = () => {
+    if (remove.isPending) return;
+    setTyped('');
+    remove.reset();
+    onClose();
+  };
+
+  return (
+    <Sheet
+      open={open}
+      onClose={close}
+      kicker="Clubhouse"
+      title="Delete your account?"
+      footer={
+        <div className="actions">
+          <button type="button" className="btn btn--quiet" onClick={close} disabled={remove.isPending}>
+            Keep my account
+          </button>
+          <button
+            type="button"
+            className="btn btn--danger"
+            onClick={() => remove.mutate()}
+            disabled={!matches || remove.isPending}
+          >
+            {remove.isPending ? 'Deleting…' : 'Delete forever'}
+          </button>
+        </div>
+      }
+    >
+      <p>
+        This permanently deletes every season, series and game, your roster and rotation, and your Rally Caps and
+        Rainouts. It signs you out on every device. <strong>It can’t be undone.</strong>
+      </p>
+      <p className="fine">You can sign up again later with the same email, but you’ll start from scratch.</p>
+      <form
+        className="field"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (matches && !remove.isPending) remove.mutate();
+        }}
+      >
+        <label className="field__label" htmlFor={confirmId}>
+          Type <span className="deleteacct__email">{email}</span> to confirm
+        </label>
+        <input
+          id={confirmId}
+          className="input"
+          type="email"
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+        />
+      </form>
+      {remove.isError ? <p className="notice notice--error">{errorMessage(remove.error)}</p> : null}
+    </Sheet>
   );
 }

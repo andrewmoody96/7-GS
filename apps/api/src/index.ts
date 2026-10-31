@@ -59,6 +59,7 @@ const server = serve({ fetch: createApp(deps).fetch, port: config.port }, (info)
   log.info(`7-Game Series listening on port ${info.port}`, {
     web: config.app.webRoot ? 'served' : 'not served (dev: run the Vite server)',
     email: config.email?.provider ?? 'none (devToken)',
+    signups: config.app.allowedEmails ? `invite list (${config.app.allowedEmails.length})` : 'open',
   });
 });
 

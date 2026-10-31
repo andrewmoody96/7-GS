@@ -21,6 +21,11 @@ export interface AppConfig {
   allowDevLogin?: boolean;
   /** Throttle magic-link requests per address and per client. */
   limitMagicLinks?: boolean;
+  /**
+   * Invite list: who may sign in, as addresses (`pat@example.com`) or whole domains
+   * (`@example.com`), lowercased. Null or absent: anyone.
+   */
+  allowedEmails?: string[] | null;
 }
 
 /** Sends magic links (see mailer.ts). Without one, links come back as `devToken`. */

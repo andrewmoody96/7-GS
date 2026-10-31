@@ -217,6 +217,17 @@ export class MockBackend {
       if (patch.defaultLockTime !== undefined) w.user.defaultLockTime = patch.defaultLockTime;
       return engine.toMeDto(w, now);
     },
+    deleteMe: ({ world, body }) => {
+      const w = world();
+      const { confirmEmail } = body as { confirmEmail: string };
+      if (confirmEmail.trim().toLowerCase() !== w.user.email) {
+        throw new ApiError(400, 'VALIDATION_FAILED', 'That email doesn’t match this account.');
+      }
+      this.db.worlds = this.db.worlds.filter((x) => x !== w);
+      this.db.magicLinks = this.db.magicLinks.filter((l) => l.email !== w.user.email);
+      this.db.sessionUserId = null;
+      return { ok: true };
+    },
     getCalendar: ({ world, now }) => engine.toCalendarDto(world(), now),
 
     // ── Roster ──

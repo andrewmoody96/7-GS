@@ -1677,6 +1677,37 @@ button.cell:hover {
   justify-self: start;
 }
 
+.clubhouse__exit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Deliberately quiet: a destructive action you should have to look for. */
+.clubhouse__delete {
+  border: 0;
+  background: none;
+  padding: 10px 4px;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.clubhouse__delete:hover {
+  color: var(--loss);
+}
+
+.deleteacct__email {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font-body);
+  color: var(--text);
+}
+
 /* ── Sign-in ─────────────────────────────────────────────────────────────── */
 
 .signin {

@@ -17,6 +17,22 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+/** Whether the invite list (if any) lets this address in. */
+export function isEmailAllowed(allowed: readonly string[] | null | undefined, email: string): boolean {
+  if (!allowed || allowed.length === 0) return true;
+  const address = normalizeEmail(email);
+  const domain = address.slice(address.lastIndexOf('@'));
+  return allowed.includes(address) || allowed.includes(domain);
+}
+
+/** Delete the user and, by cascade, everything they own (sessions included). */
+export async function deleteAccount(db: Db, user: UserRow): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(loginTokens).where(eq(loginTokens.email, user.email));
+    await tx.delete(users).where(eq(users.id, user.id));
+  });
+}
+
 export async function createLoginToken(db: Db, email: string, now: Date): Promise<string> {
   const token = randomSecret();
   await db.insert(loginTokens).values({

@@ -64,6 +64,17 @@ describe('mock backend seeds', () => {
     if (season) await api.call('getSeason', { params: { seasonId: season.id } });
   });
 
+  it('deletes the signed-in account after the email is typed to confirm', async () => {
+    const { api } = setup();
+    const me = await api.call('getMe');
+    await expectApiError(api.call('deleteMe', { body: { confirmEmail: 'nope@example.com' } }), 'VALIDATION_FAILED');
+    expect(await api.call('deleteMe', { body: { confirmEmail: me.email.toUpperCase() } })).toEqual({ ok: true });
+    await expectApiError(api.call('getMe'), 'UNAUTHORIZED');
+    const link = await api.call('requestMagicLink', { body: { email: me.email } });
+    const again = await api.call('verifyMagicLink', { body: { token: link.devToken!, timezone: TZ } });
+    expect(again.isNewUser).toBe(true);
+  });
+
   it('pins each scenario to its weekday near the real date', () => {
     expect(scenarioDates('midseason', '2026-10-02').demoToday).toBe('2026-10-02');
     expect(scenarioDates('midseason', '2026-10-05').demoToday).toBe('2026-10-02');

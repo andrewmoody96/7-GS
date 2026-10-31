@@ -6,7 +6,7 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { UserRow } from '../db/schema';
 import type { Deps } from '../deps';
 import { unauthorized } from '../errors';
-import { resolveSession, SESSION_TTL_MS } from '../services/auth';
+import { isEmailAllowed, resolveSession, SESSION_TTL_MS } from '../services/auth';
 
 export const SESSION_COOKIE = '7gs_session';
 
@@ -46,6 +46,10 @@ export async function authenticate(c: Context, deps: Deps, now: Date): Promise<A
   if (!found) throw unauthorized();
   const session = await resolveSession(deps.db, found.token, now);
   if (!session) throw unauthorized('Your session has expired. Sign in again.');
+  // Taking someone off the invite list ends their access on their next request.
+  if (!isEmailAllowed(deps.config.allowedEmails, session.user.email)) {
+    throw unauthorized('This account isn’t on the invite list anymore.');
+  }
   // Sliding expiry: re-issue the cookie with a fresh Max-Age when the session moved.
   if (session.refreshed && found.via === 'cookie') setSessionCookie(c, found.token, deps);
   return { user: session.user, token: found.token, via: found.via };

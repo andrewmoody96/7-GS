@@ -5,7 +5,7 @@ import { clientAddress, RateLimiter } from '../http/rateLimit';
 import { route, type AnyRoute } from '../http/router';
 import { clearSessionCookie, setSessionCookie } from '../http/session';
 import { describeError } from '../logger';
-import { createLoginToken, deleteSession, normalizeEmail, verifyLoginToken } from '../services/auth';
+import { createLoginToken, deleteSession, isEmailAllowed, normalizeEmail, verifyLoginToken } from '../services/auth';
 import { inUserTx } from '../services/today';
 import { meView } from '../services/users';
 
@@ -30,6 +30,15 @@ export function authRoutes(deps: Deps): AnyRoute[] {
         if (!perClient.take(client, now) || !perEmail.take(email, now)) {
           throw new ApiException(429, 'RATE_LIMITED', 'Too many sign-in links requested. Wait a few minutes and try again.');
         }
+      }
+      if (!isEmailAllowed(deps.config.allowedEmails, email)) {
+        deps.log.info('Sign-in refused: not on the invite list', { email });
+        throw new ApiException(
+          403,
+          'NOT_ELIGIBLE',
+          'This 7-Game Series is invite-only, and that email isn’t on the list. Ask whoever runs it to add you.',
+          'NOT_INVITED',
+        );
       }
       if (!deps.mailer && deps.config.allowDevLogin === false) {
         throw new ApiException(503, 'CONFLICT', 'Sign-in email isn’t set up on this server yet.', 'NO_MAILER');
