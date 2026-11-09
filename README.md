@@ -7,6 +7,16 @@ completing the tasks in that day's lineup. Wins and losses roll up into a season
 - Data model and API: [`docs/DATA_MODEL_AND_API.md`](docs/DATA_MODEL_AND_API.md)
 - Putting it online (GitHub Pages demo, Heroku for real): [`docs/DEPLOY.md`](docs/DEPLOY.md)
 
+## Branches
+
+| Branch | Role |
+|---|---|
+| `claude/7-game-series-brainstorm-8ydzpv` | **Dev.** New work lands here first. CI runs on every push. |
+| `main` | **Production** (the default branch). Heroku and the GitHub Pages demo deploy from it. |
+
+To ship: open a pull request from the dev branch into `main`. Merge it once CI is green,
+and Heroku and Pages pick it up from there. Don't commit straight to `main`.
+
 ## Repository layout
 
 | Path | Owner | What it is |
@@ -34,8 +44,9 @@ and `package.json`.
    ```sh
    git clone https://github.com/andrewmoody96/7-GS.git
    cd 7-GS
-   git checkout claude/7-game-series-brainstorm-8ydzpv
    ```
+   That gives you `main`, the production code. To work on the latest changes, switch to the dev
+   branch: `git checkout claude/7-game-series-brainstorm-8ydzpv`
 4. Install dependencies: `pnpm install`
 
 ### Demo mode (just the app, with built-in sample data)

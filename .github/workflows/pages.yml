@@ -2,12 +2,14 @@
 # localStorage, no server). The full app with accounts runs on Heroku (docs/DEPLOY.md).
 #
 # One-time setup: repo Settings → Pages → Build and deployment → Source: GitHub Actions.
+# Deploys from main (production) only; work on the dev branch reaches the demo when it is
+# merged into main.
 
 name: Deploy demo to GitHub Pages
 
 on:
   push:
-    branches: [main, claude/7-game-series-brainstorm-8ydzpv]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
