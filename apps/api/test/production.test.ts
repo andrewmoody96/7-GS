@@ -202,6 +202,21 @@ describe('email sign-in', () => {
     expect(t.log.lines.some((l) => l.message === 'Magic link email failed')).toBe(true);
   });
 
+  it('keeps quick sign-in working alongside email while dev login is on, even if email fails', async () => {
+    const mailer = recordingMailer();
+    const t = new TestApp(env.db, NOW, { mailer, config: { ...base, appUrl: 'https://seven.example', allowDevLogin: true } });
+    const res = await t.ok('requestMagicLink', { body: { email: 'fan@example.com' } });
+    expect(res).toMatchObject({ sent: true, emailed: true });
+    expect(res.devToken).toBeTruthy();
+    expect(mailer.sent).toHaveLength(1);
+
+    const broken = new TestApp(env.db, NOW, { mailer: recordingMailer(true), config: { ...base, appUrl: 'https://seven.example', allowDevLogin: true } });
+    const fallback = await broken.ok('requestMagicLink', { body: { email: 'fan@example.com' } });
+    expect(fallback).toMatchObject({ sent: true, emailed: false });
+    expect((await broken.ok('verifyMagicLink', { body: { token: fallback.devToken, timezone: CHICAGO } })).me.email).toBe('fan@example.com');
+    expect(broken.log.lines.some((l) => l.message === 'Magic link email failed')).toBe(true);
+  });
+
   it('never hands out a dev token when dev login is off', async () => {
     const t = new TestApp(env.db, NOW, { config: { ...base, allowDevLogin: false } });
     expect(await t.fails('requestMagicLink', { body: { email: 'fan@example.com' } }, 503)).toMatchObject({ reason: 'NO_MAILER' });

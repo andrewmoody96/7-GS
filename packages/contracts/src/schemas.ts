@@ -116,8 +116,10 @@ export const MePatch = z
 export const MagicLinkRequest = z.object({ email: z.email() });
 export const MagicLinkResponse = z.object({
   sent: z.literal(true),
-  /** Only returned when the server runs without an email provider (development). */
+  /** Returned when quick sign-in is on (ALLOW_DEV_LOGIN, or no email provider in development). */
   devToken: z.string().optional(),
+  /** With a devToken: whether the link was also emailed (false = email isn't working). */
+  emailed: z.boolean().optional(),
 });
 export const VerifyRequest = z.object({
   token: z.string().min(16),
