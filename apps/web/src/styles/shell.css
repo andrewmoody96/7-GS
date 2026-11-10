@@ -18,36 +18,6 @@
   z-index: 30;
 }
 
-/* In a browser the page scrolls as usual and this wrapper does nothing. */
-.app__scroll {
-  display: contents;
-}
-
-/* Installed on the Home Screen (class set in main.tsx): the page stays put and only the
-   content scrolls, below a top bar that never moves. iOS frosts whatever scrolls under
-   the status bar, and it was frosting a pinned top bar along with it. */
-.is-installed .app {
-  position: fixed;
-  inset: 0;
-  min-height: 0;
-}
-
-.is-installed .topbar {
-  position: relative;
-  top: auto;
-  flex: none;
-}
-
-.is-installed .app__scroll {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
 .app__main {
   flex: 1;
   width: 100%;
