@@ -384,6 +384,24 @@ describe('mock backend rainouts, Rally Cap and IL', () => {
 
 const HOUR = 60 * 60 * 1000;
 
+describe('mock backend history and career', () => {
+  it('lists every season, a season’s series, and lifetime totals', async () => {
+    const { api } = setup('offseason');
+    const { seasons } = await api.call('listSeasons');
+    expect(seasons[0]!.number).toBeGreaterThanOrEqual(seasons.at(-1)!.number);
+    const played = seasons.find((s) => s.wins + s.losses > 0)!;
+    const { series } = await api.call('listSeasonSeries', { params: { seasonId: played.id } });
+    expect(series.length).toBeGreaterThan(0);
+    expect(series.every((x) => !('games' in x))).toBe(true);
+    const career = await api.call('getCareer');
+    expect(career.wins).toBe(seasons.reduce((n, s) => n + s.wins, 0));
+    expect(career.losses).toBe(seasons.reduce((n, s) => n + s.losses, 0));
+    expect(career.seriesWon + career.seriesLost).toBe(series.filter((x) => x.result !== null).length);
+    expect(career.bestSeason?.number).toBe(played.number);
+    expect(career.longestWinStreak).toBeGreaterThanOrEqual(played.longestWinStreak);
+  });
+});
+
 describe('mock backend editing and deleting tasks mid-week', () => {
   it('keeps a deleted task in the week under way, then lets the delete be undone', async () => {
     const { api } = setup('midseason');

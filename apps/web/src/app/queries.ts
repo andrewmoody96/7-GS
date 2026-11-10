@@ -114,6 +114,36 @@ export function useCurrentSeriesQuery() {
   return useQuery({ queryKey: qk.currentSeries, queryFn: () => api.call('getCurrentSeries') });
 }
 
+export function useSeriesQuery(seriesId: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: qk.series(seriesId ?? 'none'),
+    queryFn: () => api.call('getSeries', { params: { seriesId: seriesId ?? '' } }),
+    enabled: seriesId !== null,
+  });
+}
+
+// ── History and career ──
+
+export function useSeasonsQuery() {
+  const api = useApi();
+  return useQuery({ queryKey: ['seasons'], queryFn: async () => (await api.call('listSeasons')).seasons });
+}
+
+export function useSeasonSeriesQuery(seasonId: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['seasons', seasonId ?? 'none', 'series'],
+    queryFn: async () => (await api.call('listSeasonSeries', { params: { seasonId: seasonId ?? '' } })).series,
+    enabled: seasonId !== null,
+  });
+}
+
+export function useCareerQuery() {
+  const api = useApi();
+  return useQuery({ queryKey: ['career'], queryFn: () => api.call('getCareer') });
+}
+
 export function useTasksQuery() {
   const api = useApi();
   return useQuery({ queryKey: qk.tasks, queryFn: async () => (await api.call('listTasks')).tasks });

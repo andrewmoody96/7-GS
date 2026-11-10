@@ -429,6 +429,33 @@ export const Season = z.object({
 
 export const SeasonPatch = z.object({ winGoal: z.number().int().min(1).max(MAX_WIN_GOAL) });
 
+/** Every season on the calendar so far, newest first. */
+export const SeasonList = z.object({ seasons: z.array(Season) });
+
+/** A series without its games, for history lists. */
+export const SeriesSummary = Series.omit({ games: true });
+export const SeriesList = z.object({ series: z.array(SeriesSummary) });
+
+/** Lifetime totals across every season (GAME_DESIGN §5). */
+export const Career = z.object({
+  /** Seasons with at least one decided game. */
+  seasonsPlayed: Count,
+  wins: Count,
+  losses: Count,
+  /** null before the first decided game. */
+  winPct: z.number().min(0).max(1).nullable(),
+  rallyWins: Count,
+  seriesWon: Count,
+  seriesLost: Count,
+  runDifferential: z.number().int(),
+  /** Win streaks run on across Review Weeks here (they pause, never break). */
+  currentWinStreak: Count,
+  longestWinStreak: Count,
+  bestSeason: z
+    .object({ number: z.number().int().min(1), wins: Count, losses: Count, winPct: z.number().min(0).max(1) })
+    .nullable(),
+});
+
 // ── Task IL ──────────────────────────────────────────────────────────────────
 
 export const InjuredListResponse = z.object({ task: Task });

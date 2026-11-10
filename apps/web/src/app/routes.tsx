@@ -3,11 +3,12 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import type { ApiClient } from '../api/client';
 import type { CheckoffQueue } from '../api/offlineQueue';
-import { SeriesScreen } from '../screens/Series';
+import { PastSeriesScreen, SeriesScreen } from '../screens/Series';
 import { SignInScreen } from '../screens/SignIn';
 import { StarterEditorScreen } from '../screens/StarterEditor';
 import {
   FilmRoomRedirect,
+  HistoryScreen,
   InjuredListScreen,
   LineupsScreen,
   RotationScreen,
@@ -58,6 +59,8 @@ export function AppRoutes() {
         <Route path="team/rotation" element={<RotationScreen />} />
         <Route path="team/rotation/:weekday" element={<StarterEditorScreen />} />
         <Route path="team/il" element={<InjuredListScreen />} />
+        <Route path="team/history" element={<HistoryScreen />} />
+        <Route path="team/history/series/:seriesId" element={<PastSeriesScreen />} />
         <Route path="team/settings" element={<SettingsScreen />} />
         {/* Old links from before Team (Film Room and Season). */}
         <Route path="film-room" element={<FilmRoomRedirect />} />

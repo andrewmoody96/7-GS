@@ -1,7 +1,7 @@
 // Assembling Game / Series / Season DTOs. Games whose lineup isn't built yet show the
 // current starter's values (that's what they will snapshot on their game day).
 
-import type { GameDto, GameSummaryDto, SeasonDto, SeriesDto } from '@7gs/contracts';
+import type { GameDto, GameSummaryDto, SeasonDto, SeriesDto, SeriesSummaryDto } from '@7gs/contracts';
 import { addDays, weekday } from '@7gs/rules';
 import { eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
@@ -103,6 +103,23 @@ export async function gameView(tx: Db, user: UserRow, row: GameRow, now: Date): 
   const [view] = await gameViews(tx, user, [row], now);
   if (!view) throw new Error(`Game ${row.id} view failed`);
   return view;
+}
+
+/** A series without its games (history lists). */
+export function seriesSummaryView(row: SeriesRow, seasonNumber: number): SeriesSummaryDto {
+  const [c1, c2] = row.opponentColors;
+  return {
+    id: row.id,
+    seasonNumber,
+    number: row.number,
+    startDate: row.startDate,
+    endDate: addDays(row.startDate, 6),
+    opponent: { seed: row.opponentSeed, name: row.opponentName, colors: [c1 ?? '#000000', c2 ?? '#FFFFFF'] },
+    wins: row.wins,
+    losses: row.losses,
+    result: row.result,
+    ironMan: row.closedAt ? row.ironMan : null,
+  };
 }
 
 export async function seriesView(tx: Db, user: UserRow, row: SeriesRow, now: Date): Promise<SeriesDto> {

@@ -5,6 +5,7 @@
 
 import type {
   AllowancesDto,
+  CareerDto,
   CalendarDto,
   ErrorCode,
   GameDto,
@@ -17,6 +18,7 @@ import type {
   RallyRollDto,
   SeasonDto,
   SeriesDto,
+  SeriesSummaryDto,
   StarterDto,
   StarterPutDto,
   SuspensionQuoteDto,
@@ -33,6 +35,7 @@ import {
   currentWinStreak,
   diffDays,
   evaluateGame,
+  bestSeason,
   finalizeAfter,
   gamesInSeason,
   generateOpponent,
@@ -883,6 +886,49 @@ export function toSeasonDto(world: UserWorld, season: SeasonRow, now: Date): Sea
     runDifferential: record.runDifferential,
     currentWinStreak: currentWinStreak(results),
     longestWinStreak: longestWinStreak(results),
+  };
+}
+
+// ── History and career ───────────────────────────────────────────────────────
+
+export function listSeasons(world: UserWorld, now: Date): SeasonDto[] {
+  return [...world.seasons].sort((a, b) => b.number - a.number).map((s) => toSeasonDto(world, s, now));
+}
+
+export function listSeasonSeries(world: UserWorld, seasonId: string): SeriesSummaryDto[] {
+  const season = world.seasons.find((s) => s.id === seasonId) ?? fail(404, 'NOT_FOUND', 'Season not found.');
+  return world.series
+    .filter((s) => s.seasonNumber === season.number)
+    .sort((a, b) => a.number - b.number)
+    .map((s) => {
+      const { games: _games, ...summary } = toSeriesDto(world, s);
+      return summary;
+    });
+}
+
+export function career(world: UserWorld, now: Date): CareerDto {
+  const rows = world.seasons.map((s) => toSeasonDto(world, s, now));
+  const sum = (pick: (s: SeasonDto) => number) => rows.reduce((n, s) => n + pick(s), 0);
+  const wins = sum((s) => s.wins);
+  const losses = sum((s) => s.losses);
+  // Streaks run on across Review Weeks: they pause there, never break.
+  const results = world.games
+    .filter((g) => g.status === 'final')
+    .sort(chronological)
+    .flatMap((g) => (g.result ? [g.result] : []));
+  const best = bestSeason(rows);
+  return {
+    seasonsPlayed: rows.filter((s) => s.wins + s.losses > 0).length,
+    wins,
+    losses,
+    winPct: wins + losses === 0 ? null : Math.round((wins / (wins + losses)) * 1000) / 1000,
+    rallyWins: sum((s) => s.rallyWins),
+    seriesWon: sum((s) => s.seriesWon),
+    seriesLost: sum((s) => s.seriesLost),
+    runDifferential: sum((s) => s.runDifferential),
+    currentWinStreak: currentWinStreak(results),
+    longestWinStreak: longestWinStreak(results),
+    bestSeason: best ? { number: best.number, wins: best.wins, losses: best.losses, winPct: best.winPct } : null,
   };
 }
 

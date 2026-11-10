@@ -411,6 +411,26 @@ describe('seasons and Review Week', () => {
     expect(today.games).toHaveLength(1);
     expect(await t.ok('getCurrentSeason', { token })).toMatchObject({ number: 2, status: 'active', wins: 0, losses: 0, winGoal: 55 });
     expect(await t.ok('getSeason', { token, params: { seasonId: reviewed!.id } })).toMatchObject({ status: 'complete' });
+
+    // History: both seasons, newest first; season 1's twelve series; lifetime totals.
+    const { seasons: history } = await t.ok('listSeasons', { token });
+    expect(history.map((h) => [h.number, h.status])).toEqual([
+      [2, 'active'],
+      [1, 'complete'],
+    ]);
+    const { series: past } = await t.ok('listSeasonSeries', { token, params: { seasonId: reviewed!.id } });
+    expect(past.map((x) => x.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    expect(past.every((x) => x.result === 'lost' && x.losses === 7)).toBe(true);
+    expect(await t.ok('getCareer', { token })).toMatchObject({
+      seasonsPlayed: 1,
+      wins: 0,
+      losses: 84,
+      winPct: 0,
+      seriesWon: 0,
+      seriesLost: 12,
+      longestWinStreak: 0,
+      bestSeason: { number: 1, wins: 0, losses: 84 },
+    });
     expect(await t.fails('updateSeason', { token, params: { seasonId: season2!.id }, body: { winGoal: 50 } }, 409)).toMatchObject({
       code: 'OUT_OF_SEASON',
     });

@@ -148,6 +148,12 @@ export const endpoints = {
   getCurrentSeason: endpoint({ method: 'GET', path: '/v1/seasons/current', response: S.Season.nullable() }),
   getSeason: endpoint({ method: 'GET', path: '/v1/seasons/:seasonId', response: S.Season }),
   updateSeason: endpoint({ method: 'PATCH', path: '/v1/seasons/:seasonId', body: S.SeasonPatch, response: S.Season }),
+  /** Every season so far, newest first (history). */
+  listSeasons: endpoint({ method: 'GET', path: '/v1/seasons', response: S.SeasonList }),
+  /** A season's series in order, without their games (history). */
+  listSeasonSeries: endpoint({ method: 'GET', path: '/v1/seasons/:seasonId/series', response: S.SeriesList }),
+  /** Lifetime totals across every season. */
+  getCareer: endpoint({ method: 'GET', path: '/v1/career', response: S.Career }),
 } as const;
 
 export type Endpoints = typeof endpoints;
