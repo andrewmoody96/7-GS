@@ -96,6 +96,38 @@ describe('Today: pinch hitters', () => {
   });
 });
 
+describe('Film Room: adding to a later day', () => {
+  it('offers the must-hit choice for a later day, and adds a regular task when it’s off', async () => {
+    const user = userEvent.setup();
+    const { api } = renderWithApp(<FilmRoomScreen />, '/film-room');
+    // Friday demo: Saturday is a later day in a week that has already started.
+    const saturday = await screen.findByRole('listitem', { name: /^Sat / });
+    await user.click(within(saturday).getAllByRole('button', { name: /^Add a task$/ })[0]!);
+    const dialog = await screen.findByRole('dialog');
+    const toggle = within(dialog).getByRole('switch', { name: 'Make it a must-hit' });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(within(dialog).getByText(/skipping it won’t sink the day/)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByLabelText(/Inbox zero/));
+    await user.click(within(dialog).getByRole('button', { name: 'Add to lineup' }));
+    await waitFor(async () => {
+      const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });
+      const games = week.games.filter((g) => g.playedDate > '2026-10-02');
+      const added = games.flatMap((g) => g.entries).find((e) => e.taskName === 'Inbox zero' && e.pinchHitAt !== null);
+      expect(added).toMatchObject({ required: false, role: 'lineup' });
+    });
+  });
+
+  it('gives no choice when adding to today', async () => {
+    const user = userEvent.setup();
+    renderWithApp(<TodayScreen />);
+    await user.click(await screen.findByRole('button', { name: /^Add a task$/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByRole('switch', { name: 'Make it a must-hit' })).toBeNull();
+  });
+});
+
 describe('Film Room: the weekly lineup card', () => {
   it('shows this week locked (additions only) and next week open for planning', async () => {
     const user = userEvent.setup();

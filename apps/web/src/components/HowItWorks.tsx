@@ -90,8 +90,8 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
           </p>
           <ul>
             <li>
-              <strong>{vocab.pinchHit.action}</strong> puts it in the lineup as a {must} (a “pinch hitter”). Runs to win goes up
-              by its runs.
+              <strong>{vocab.pinchHit.action}</strong> puts it in the lineup, and runs to win goes up by its runs. Added to
+              today, it’s a {must} (a “pinch hitter”). Added to a later day, you choose whether it’s a {must}.
             </li>
             <li>
               <strong>{vocab.week.addToBench}</strong> makes it an optional extra. It can sub in for a task that isn’t a {must}.

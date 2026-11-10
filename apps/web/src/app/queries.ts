@@ -317,11 +317,14 @@ export function useSubstitute() {
   );
 }
 
-/** A new must-hit (or a promoted bench task); runs to win rises by its runs. */
+/**
+ * Add a task to a game (or promote a bench task); runs to win rises by its runs. A
+ * must-hit unless `required` is false, which the server only allows for a later day.
+ */
 export function useAddPinchHitter() {
   const api = useApi();
-  return useGameMutation((v: { gameId: string; taskId: string }) =>
-    api.call('addPinchHitter', { params: { gameId: v.gameId }, body: { taskId: v.taskId } }),
+  return useGameMutation((v: { gameId: string; taskId: string; required?: boolean }) =>
+    api.call('addPinchHitter', { params: { gameId: v.gameId }, body: { taskId: v.taskId, required: v.required ?? true } }),
   );
 }
 

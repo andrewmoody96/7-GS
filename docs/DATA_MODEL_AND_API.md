@@ -312,7 +312,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | POST | `/v1/games/:id/entries/:entryId/complete` | Body: `{ clientAt, partial? }`. Idempotent. |
 | DELETE | `/v1/games/:id/entries/:entryId/complete` | Undo a check-off (before midnight only). |
 | PATCH | `/v1/games/:id/entries/:entryId` | Body: `{ partial }`. Mark a must-hit as partly done ("warning track"). |
-| POST | `/v1/games/:id/pinch-hitters` | Body: `{ taskId }`. New must-hit (or promote a bench task); raises runs to win by its points. Until the game is final. |
+| POST | `/v1/games/:id/pinch-hitters` | Body: `{ taskId, required? }`. New must-hit (or promote a bench task); raises runs to win by its points. Until the game is final. `required: false` adds it as a regular lineup task with the same raise, for a later day only (`409 NOT_ELIGIBLE`, reason `TODAY_MUST_HIT` for today's game; `409 CONFLICT`, reason `ALREADY_IN_LINEUP` if it's already batting). |
 | GET | `/v1/games/:id/suspension` | Suspension eligibility and resume dates (empty = no-decision). |
 | POST | `/v1/games/:id/suspension` | Body: `{ resumeDate | null }`. Uses a Rainout allowance. |
 | GET | `/v1/weeks` | Plannable weeks: current, plus next from Friday (labels `current`, `next`, or `opening` for Opening Week during Spring Training). |

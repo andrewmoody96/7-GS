@@ -329,7 +329,13 @@ export const Week = z.object({
 });
 
 /** A new must-hit added after the week locks, or a bench task promoted to must-hit. */
-export const PinchHitter = z.object({ taskId: Id });
+/**
+ * Add a task to a game once planning is over. `required` (default true) makes it a
+ * must-hit. `required: false` adds it as a regular lineup task and is only allowed for a
+ * later day: a task added to today is always a must-hit. Either way runs to win rises by
+ * the task's runs.
+ */
+export const PinchHitter = z.object({ taskId: Id, required: z.boolean().optional() });
 
 export const LineupPatch = z
   .object({

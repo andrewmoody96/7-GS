@@ -385,6 +385,27 @@ describe('mock backend rainouts, Rally Cap and IL', () => {
 const HOUR = 60 * 60 * 1000;
 
 describe('mock backend pinch hitters and one-offs', () => {
+  it('adds a regular task to a later day (same raise), but never to today', async () => {
+    const { api } = setup('midseason');
+    const today = (await api.call('getToday')).games[0]!;
+    const yoga = await api.call('createTask', { body: { name: 'Yoga', points: 2 } });
+    await expectApiError(
+      api.call('addPinchHitter', { params: { gameId: today.id }, body: { taskId: yoga.id, required: false } }),
+      'NOT_ELIGIBLE',
+      'TODAY_MUST_HIT',
+    );
+    const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });
+    const later = week.games.find((g) => g.playedDate > today.playedDate && g.status !== 'final')!;
+    const after = await api.call('addPinchHitter', { params: { gameId: later.id }, body: { taskId: yoga.id, required: false } });
+    expect(after.threshold).toBe(later.threshold + 2);
+    expect(after.entries.find((e) => e.taskId === yoga.id)).toMatchObject({ required: false, role: 'lineup' });
+    await expectApiError(
+      api.call('addPinchHitter', { params: { gameId: later.id }, body: { taskId: yoga.id, required: false } }),
+      'CONFLICT',
+      'ALREADY_IN_LINEUP',
+    );
+  });
+
   it('raises runs to win by exactly the pinch hitter’s runs, mid-game', async () => {
     const { api } = setup('midseason');
     const game = (await api.call('getToday')).games[0]!;

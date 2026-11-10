@@ -319,8 +319,19 @@ export async function substitute(
  * any later built day, until the game is final. A new task joins at the end of the
  * batting order; a bench or non-required lineup entry is promoted. Runs to win rises by
  * exactly its points, before or after the week's first pitch.
+ *
+ * `required: false` adds it as a regular lineup task instead (same raise, not a
+ * must-hit). That choice exists only for a later day: a task added to today's game is
+ * always a must-hit.
  */
-export async function pinchHit(tx: Db, user: UserRow, gameId: string, taskId: string, now: Date): Promise<GameRow> {
+export async function pinchHit(
+  tx: Db,
+  user: UserRow,
+  gameId: string,
+  taskId: string,
+  now: Date,
+  required = true,
+): Promise<GameRow> {
   let game = await loadUserGame(tx, user.id, gameId, { forUpdate: true });
   if (game.status === 'final') throw conflict('GAME_FINAL', 'This game is already final.');
   assertBuilt(game);
@@ -340,9 +351,17 @@ export async function pinchHit(tx: Db, user: UserRow, gameId: string, taskId: st
   if (existing?.role === 'subbed_out') {
     throw conflict('CONFLICT', 'A task that was subbed out cannot come back in this game.', 'SUBBED_OUT');
   }
+  if (!required) {
+    if (game.playedDate <= localDateOf(now, user.timezone)) {
+      throw conflict('NOT_ELIGIBLE', 'A task added to today’s game is always a must-hit.', 'TODAY_MUST_HIT');
+    }
+    if (existing?.role === 'lineup') {
+      throw conflict('CONFLICT', 'That task is already in this lineup.', 'ALREADY_IN_LINEUP');
+    }
+  }
   const raises = existing?.role !== 'lineup';
   if (raises && pinchHitThreshold(game.threshold ?? 1, existing?.points ?? task.points) > LIMITS.thresholdMax) {
     throw conflict('CONFLICT', `Runs to win can't go above ${LIMITS.thresholdMax}.`, 'THRESHOLD_MAX');
   }
-  return (await addPinchHit(tx, game, task, now)).game;
+  return (await addPinchHit(tx, game, task, now, { required })).game;
 }

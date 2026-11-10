@@ -108,6 +108,8 @@ export interface Vocab {
     ironMan: string;
     pinchHitter: string;
     pinchHitterShort: string;
+    /** A regular (non-must-hit) task added after the week started. */
+    addedLate: string;
     carriedOver: string;
     suspended: string;
     noDecision: string;
@@ -145,6 +147,11 @@ export interface Vocab {
     fromRoster: string;
     none: string;
     done: (name: string, threshold: number) => string;
+    doneOptional: (name: string, threshold: number) => string;
+    explainerLater: string;
+    mustHitSwitch: string;
+    mustHitOn: string;
+    mustHitOff: string;
   };
   suspension: {
     action: string;
@@ -317,6 +324,7 @@ export const baseball: Vocab = {
     ironMan: 'Iron Man',
     pinchHitter: 'Pinch hitter',
     pinchHitterShort: 'PH',
+    addedLate: 'Added',
     carriedOver: 'Carried over',
     suspended: 'Suspended',
     noDecision: 'No decision',
@@ -356,6 +364,12 @@ export const baseball: Vocab = {
     fromRoster: 'From your tasks',
     none: 'Every active task is already in this lineup.',
     done: (name, threshold) => `${name} added as a pinch hitter. Runs to win is ${threshold}.`,
+    doneOptional: (name, threshold) => `${name} added to the lineup. Runs to win is ${threshold}.`,
+    explainerLater:
+      'This day hasn’t started, so you choose: a must-hit, or a regular task you can skip without losing the day. Either way runs to win goes up by exactly its runs, so the day gets no easier.',
+    mustHitSwitch: 'Make it a must-hit',
+    mustHitOn: 'Miss it and you lose that day.',
+    mustHitOff: 'A regular task: it scores runs when you do it, and skipping it won’t sink the day by itself.',
   },
   suspension: {
     action: 'Suspend game',

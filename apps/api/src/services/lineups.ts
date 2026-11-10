@@ -225,15 +225,21 @@ export type PinchHitOutcome = 'added' | 'promoted' | 'required' | 'already_requi
  * runs to win stays put and the cushion is unchanged. An entry
  * that is already a must-hit is left as it is (only marked `carriedOver` when asked), so
  * a task is never in a game twice. Callers check the game is still open.
+ *
+ * With `required: false` the task joins (or comes off the bench) as a regular lineup
+ * task instead: not a must-hit, but runs to win still rises by its points, so the day
+ * gets no easier. Callers only allow that for a later day, and never for a task that is
+ * already batting.
  */
 export async function addPinchHit(
   tx: Db,
   game: GameRow,
   task: Pick<TaskRow, 'id' | 'name' | 'points'>,
   now: Date,
-  options: { carriedOver?: boolean } = {},
+  options: { carriedOver?: boolean; required?: boolean } = {},
 ): Promise<{ game: GameRow; outcome: PinchHitOutcome }> {
   const carriedOver = options.carriedOver ?? false;
+  const required = options.required ?? true;
   const entries = await loadEntries(tx, [game.id]);
   const existing = entries.find((e) => e.taskId === task.id);
   if (existing && existing.role === 'lineup' && existing.required) {
@@ -254,7 +260,7 @@ export async function addPinchHit(
       taskId: task.id,
       taskName: task.name,
       points,
-      required: true,
+      required,
       position: nextPosition,
       role: 'lineup',
       pinchHitAt: now,
@@ -272,7 +278,7 @@ export async function addPinchHit(
       .update(lineupEntries)
       .set({
         role: 'lineup',
-        required: true,
+        required,
         position: nextPosition,
         partial: false,
         pinchHitAt: now,

@@ -1,12 +1,12 @@
 import type { GameDto, TaskDto } from '@7gs/contracts';
 import { LIMITS } from '@7gs/rules';
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { useAddPinchHitter, useCreateTask, useTasksQuery } from '../app/queries';
+import { useAddPinchHitter, useCreateTask, useMeQuery, useTasksQuery } from '../app/queries';
 import { useNotify } from '../app/toast';
 import { weekdayLong } from '../lib/format';
 import { benchOf, pinchHitMath } from '../lib/game';
 import { vocab } from '../vocab';
-import { Stepper } from './Controls';
+import { Stepper, Switch } from './Controls';
 import { IconArrowRight, IconPlus } from './icons';
 import { Sheet } from './Sheet';
 
@@ -129,10 +129,15 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
   const tasks = useTasksQuery();
   const add = useAddPinchHitter();
   const notify = useNotify();
+  const me = useMeQuery();
   const [taskId, setTaskId] = useState<string | null>(initialTaskId);
+  const [mustHit, setMustHit] = useState(true);
 
   useEffect(() => {
-    if (open) setTaskId(initialTaskId);
+    if (open) {
+      setTaskId(initialTaskId);
+      setMustHit(true);
+    }
   }, [open, initialTaskId]);
 
   const candidates = pinchHitCandidates(game, tasks.data ?? []);
@@ -140,6 +145,10 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
   const bench = candidates.filter((c) => c.onBench);
   const roster = candidates.filter((c) => !c.onBench);
   const promoting = initialTaskId !== null && selected?.onBench === true && selected.taskId === initialTaskId;
+  // A task added to today is always a must-hit; for a later day it's the user's choice.
+  const laterDay = me.data ? game.playedDate > me.data.today : false;
+  const canChoose = laterDay && !promoting;
+  const required = canChoose ? mustHit : true;
 
   const group = (title: string, list: Candidate[]) =>
     list.length === 0 ? null : (
@@ -182,10 +191,11 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
             onClick={() => {
               if (!selected) return;
               add.mutate(
-                { gameId: game.id, taskId: selected.taskId },
+                { gameId: game.id, taskId: selected.taskId, required },
                 {
                   onSuccess: (updated) => {
-                    notify(vocab.pinchHit.done(selected.name, updated.threshold), 'success');
+                    const message = required ? vocab.pinchHit.done : vocab.pinchHit.doneOptional;
+                    notify(message(selected.name, updated.threshold), 'success');
                     onClose();
                   },
                 },
@@ -197,7 +207,13 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
         </div>
       }
     >
-      <p className="lede">{vocab.pinchHit.explainer}</p>
+      <p className="lede">{canChoose ? vocab.pinchHit.explainerLater : vocab.pinchHit.explainer}</p>
+      {canChoose ? (
+        <div className="field musthit-choice">
+          <Switch label={vocab.pinchHit.mustHitSwitch} checked={mustHit} onChange={setMustHit} />
+          <p className="field__hint">{mustHit ? vocab.pinchHit.mustHitOn : vocab.pinchHit.mustHitOff}</p>
+        </div>
+      ) : null}
       {selected ? (
         <PinchHitMath threshold={game.threshold} points={selected.points} />
       ) : (

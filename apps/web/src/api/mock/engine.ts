@@ -467,7 +467,15 @@ function restoreHold(env: Env, game: GameRow, task: TaskRow, hold: IlHoldRow): v
  * Makes `task` a must-hit in `game` and raises runs to win by exactly its runs
  * (rules.pinchHitThreshold). A bench task is promoted; a new task bats last.
  */
-function addPinchHit(world: UserWorld, env: Env, game: GameRow, task: TaskRow, at: Date, carriedOver: boolean): void {
+function addPinchHit(
+  world: UserWorld,
+  env: Env,
+  game: GameRow,
+  task: TaskRow,
+  at: Date,
+  carriedOver: boolean,
+  required = true,
+): void {
   const snapshot = game.snapshot ?? fail(409, 'NOT_ELIGIBLE', 'Open the week’s lineup card first.', 'NOT_BUILT');
   const existing = game.entries.find((e) => e.taskId === task.id && e.role !== 'subbed_out');
   if (existing?.role === 'lineup' && existing.required) {
@@ -486,7 +494,7 @@ function addPinchHit(world: UserWorld, env: Env, game: GameRow, task: TaskRow, a
     // Promote from the bench.
     existing.position = lastPosition + 1;
     existing.role = 'lineup';
-    existing.required = true;
+    existing.required = required;
     existing.points = task.points;
     existing.pinchHitAt = iso(at);
     existing.carriedOver = existing.carriedOver || carriedOver;
@@ -496,7 +504,7 @@ function addPinchHit(world: UserWorld, env: Env, game: GameRow, task: TaskRow, a
       taskId: task.id,
       taskName: task.name,
       points: task.points,
-      required: true,
+      required,
       position: lastPosition + 1,
       role: 'lineup',
       subbedInAt: null,
@@ -1240,7 +1248,7 @@ export function suspendGame(world: UserWorld, env: Env, gameId: string, resumeDa
 // ── Pinch hitters ────────────────────────────────────────────────────────────
 
 /** POST /games/:id/pinch-hitters: a new must-hit (or a promoted bench task) until the game is final. */
-export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: string, now: Date): GameDto {
+export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: string, now: Date, required = true): GameDto {
   const game = findGame(world, gameId);
   assertNotFinal(game);
   assertBeforeMidnight(world, game, now);
@@ -1256,10 +1264,17 @@ export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: 
   if (existing?.role === 'subbed_out') {
     fail(409, 'CONFLICT', 'A task that was subbed out cannot come back in this game.', 'SUBBED_OUT');
   }
+  if (!required) {
+    // A regular (non-must-hit) add is only for a later day.
+    if (compareDates(game.playedDate, todayOf(world, now)) <= 0) {
+      fail(409, 'NOT_ELIGIBLE', 'A task added to today’s game is always a must-hit.', 'TODAY_MUST_HIT');
+    }
+    if (existing?.role === 'lineup') fail(409, 'CONFLICT', 'That task is already in this lineup.', 'ALREADY_IN_LINEUP');
+  }
   if (existing?.role !== 'lineup' && pinchHitThreshold(game.snapshot.threshold, task.points) > LIMITS.thresholdMax) {
     fail(409, 'CONFLICT', 'Runs to win would go past the limit.', 'THRESHOLD_MAX');
   }
-  addPinchHit(world, env, game, task, now, false);
+  addPinchHit(world, env, game, task, now, false, required);
   return toGameDto(world, game, now);
 }
 

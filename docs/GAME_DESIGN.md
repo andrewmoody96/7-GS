@@ -42,6 +42,7 @@ you'd do. (Playoffs at the end of a season are planned, not built: see §11.)
 | 15 | Rally Cap window | **DECIDED** — Until 11:59 a.m. the day after the game. |
 | 16 | Weekly lineups | **DECIDED** — Each week is planned on a lineup card. Free edits until the week's first pitch; after that, lineups only grow (§4a). |
 | 17 | Pinch hitters | **DECIDED** — A must-hit added after the week locks raises that day's runs to win by exactly its runs (§4a). |
+| 23 | Adding to a later day | **DECIDED** — Added to today, a task is always a must-hit. Added to a later day, the user chooses; either way runs to win rises by its runs (§4a). |
 | 18 | Non-required work | **DECIDED** — Lives on the bench. Promoting a bench task to must-hit makes it a pinch hitter. |
 | 19 | One-off tasks | **DECIDED** — Retire when completed. A missed one-off must-hit moves to the next game day automatically (§4a). |
 | 20 | Next week's card | **DECIDED** — Opens on Friday. |
@@ -145,6 +146,12 @@ Like a fantasy lineup, each series is planned as a week.
     day's runs to win rises by exactly the task's runs, so the cushion between runs to
     win and available runs stays the same. On the scoreboard the opponent "answers back"
     with the same number of runs.
+  - **Regular task, later days only:** when adding to tomorrow or any later day, the user
+    chooses whether the task is a must-hit. Left off, it joins the lineup as a regular
+    task: it scores runs when done and skipping it doesn't lose the day by itself. Runs to
+    win still rises by exactly its runs, so the day gets no easier (padding a day with
+    small optional tasks can't lower the bar). A task added to **today** is always a
+    must-hit; today's "maybe" belongs on the bench.
   - **Bench:** add any task to a day's bench. Bench work is optional; it only counts once
     subbed in for a non-must-hit.
   - **Promote:** turning a bench task into a must-hit makes it a pinch hitter (same rule:
@@ -439,6 +446,4 @@ instead of squeezing them. Phones keep the stacked list.
 - **Playoffs.** The idea: rack up wins in the regular season and try to get through a
   playoff at the end of each quarter. Not designed or built yet; seasons are 12 regular
   series for now. Open: how you qualify, how many rounds, and what losing a round means.
-- **Adding a non-required task mid-week.** Today an added task is a must-hit (pinch
-  hitter) or goes to the bench. A third option, optional but still raising runs to win,
-  is undecided.
+

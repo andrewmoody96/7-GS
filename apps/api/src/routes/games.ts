@@ -99,7 +99,7 @@ export function gameRoutes(deps: Deps): AnyRoute[] {
 
     route('addPinchHitter', ({ auth, params, body, now }) =>
       inUserTx(db, auth.user, now, async (tx, user) =>
-        gameView(tx, user, await pinchHit(tx, user, params.gameId, body.taskId, now), now),
+        gameView(tx, user, await pinchHit(tx, user, params.gameId, body.taskId, now, body.required ?? true), now),
       ),
     ),
 
