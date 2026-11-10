@@ -410,8 +410,13 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 1. **Today**: scoreboard (runs vs. threshold), lineup with one-tap check-offs,
    must-hit indicators. Shows both games on a doubleheader day.
 2. **Series**: 7-game strip, series score, broadcast-style status chyron.
-3. **Film Room**: weekly setup of the fixed rotation, tasks, IL, and Rainouts.
-4. **Season**: standings, pace vs. goal, streaks, box score history.
+3. **Team**: the season at a glance (record, stats, pace and win goal, Rally Caps and
+   Rainouts), then four sections: **This week's lineups** (the weekly lineup card),
+   **Rotation** (weekday starters), **Injured List** and **Settings** (team name, theme,
+   sign out, account). Replaces the old Film Room and Season tabs.
+4. **Add task** (a window, not a page): the raised **+** in the tab bar opens it from
+   any screen. Add a task and optionally put it straight into today or a later day this
+   week (same rules as §4a). The full task list lives here too, for editing and retiring.
 5. **Rally Cap sheet**: shown on a final, eligible L. Odds breakdown and roll.
 6. **Review Week hub**: season review, awards, front-office changes for the next season.
 7. **How it works**: a five-step guide (add tasks → plan the week → win the day → once the

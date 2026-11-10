@@ -3,6 +3,7 @@ import { addDays, type CalendarPosition, type GameEvaluation } from '@7gs/rules'
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../app/context';
+import { useTasksModal } from '../app/tasksModal';
 import { deviceTimeZone, onceKey, useNow } from '../app/hooks';
 import {
   useCurrentSeasonQuery,
@@ -467,6 +468,7 @@ function StartChoice({ position }: { position: Extract<CalendarPosition, { phase
 }
 
 function SpringTraining({ position }: { position: Extract<CalendarPosition, { phase: 'preseason' }> }) {
+  const tasksModal = useTasksModal();
   return (
     <div className="screen screen--offday">
       <h1 className="sr-only">{vocab.tabs.today}</h1>
@@ -482,21 +484,21 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
       <p className="lede">{vocab.emptyStates.preseasonBody(formatDateLong(position.openingDay), position.daysUntilOpeningDay)}</p>
       <StartChoice position={position} />
       <nav className="todo" aria-label="Get ready">
-        <Link to="/film-room?tab=tasks" className="todo__item">
+        <button type="button" className="todo__item" onClick={tasksModal.open}>
           <span>
             <strong>Add your {vocab.terms.roster.toLowerCase()}</strong>
-            <small>The habits and to-dos you want to get done.</small>
+            <small>The habits and to-dos you want to get done. Tap + Add task any time.</small>
           </span>
           <IconChevronRight />
-        </Link>
-        <Link to="/film-room?tab=rotation" className="todo__item">
+        </button>
+        <Link to="/team/rotation" className="todo__item">
           <span>
             <strong>Build the rotation</strong>
             <small>One {vocab.term.dayTemplate.toLowerCase()} per weekday: lineup, {vocab.term.required.toLowerCase()}s, runs to win.</small>
           </span>
           <IconChevronRight />
         </Link>
-        <Link to="/season" className="todo__item">
+        <Link to="/team" className="todo__item">
           <span>
             <strong>Set a {vocab.terms.winGoal.toLowerCase()}</strong>
             <small>How many of the season’s games you aim to win. Set it before Series 1 starts.</small>
@@ -530,17 +532,17 @@ function ReviewWeek({ position }: { position: Extract<CalendarPosition, { phase:
       </section>
       <p className="lede">{vocab.emptyStates.offseasonBody(formatDateLong(position.nextSeasonStart))}</p>
       <nav className="todo" aria-label="Review Week">
-        <Link to="/season" className="todo__item">
+        <Link to="/team" className="todo__item">
           <span>
             <strong>Season review</strong>
             <small>Final record, streaks and pace against your goal.</small>
           </span>
           <IconChevronRight />
         </Link>
-        <Link to="/film-room" className="todo__item">
+        <Link to="/team/rotation" className="todo__item">
           <span>
-            <strong>Front office</strong>
-            <small>Add or retire tasks, rebuild starters.</small>
+            <strong>Reset the rotation</strong>
+            <small>Rebuild your weekday starters for next season.</small>
           </span>
           <IconChevronRight />
         </Link>

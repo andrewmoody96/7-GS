@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { vocab } from '../vocab';
 import { Sheet } from './Sheet';
 
@@ -58,18 +57,18 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
         <li>
           <h3>Add your tasks</h3>
           <p>
-            Habits and to-dos go in <Link to="/film-room?tab=tasks" onClick={onClose}>Film Room → {vocab.terms.roster}</Link>. Each
-            task is worth 1 run unless you make it worth more.
+            Tap <strong>+ {vocab.tabs.addTask}</strong> at the bottom of any screen. Each task is worth 1 run unless you make it
+            worth more. You can put it straight into today or a later day.
           </p>
         </li>
         <li>
           <h3>Plan your week</h3>
           <p>
-            The <strong>Rotation</strong> is your default plan for each weekday. It fills in future weeks.
+            <strong>Team → Rotation</strong> is your default plan for each weekday. It fills in future weeks.
           </p>
           <p>
-            The <strong>{vocab.week.title}</strong> is the actual week: seven days, each with its own lineup of tasks. Change
-            this week there. Next week’s card opens on Friday.
+            <strong>Team → This week’s lineups</strong> is the actual week: seven days, each with its own lineup of tasks.
+            Change this week there. Next week’s card opens on Friday.
           </p>
         </li>
         <li>
@@ -86,7 +85,7 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
             a {must} or lower runs to win.
           </p>
           <p>
-            You <strong>can still add tasks</strong> to today or any later day, from Today or the {vocab.week.title}:
+            You <strong>can still add tasks</strong> to today or any later day, with + {vocab.tabs.addTask} or from the lineups:
           </p>
           <ul>
             <li>

@@ -4,17 +4,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi, useCheckoffQueue } from '../app/context';
-import { forgetCachedMe, useCurrentSeasonQuery, useMeQuery, useUpdateMe, useUpdateSeasonGoal } from '../app/queries';
+import { forgetCachedMe, useUpdateMe, useUpdateSeasonGoal } from '../app/queries';
 import { errorMessage } from '../app/errors';
 import { getThemePref, setThemePref, type ThemePref } from '../app/theme';
 import { useNotify } from '../app/toast';
 import { Stepper } from '../components/Controls';
 import { Sheet } from '../components/Sheet';
-import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { Tile } from '../components/Tile';
-import { formatRange, formatTimeOfDay, formatWinPct, signed } from '../lib/format';
+import { formatTimeOfDay, formatWinPct, signed } from '../lib/format';
 import { vocab } from '../vocab';
-import { AllowanceChips } from './FilmRoom';
 
 const STATUS_LABEL: Record<SeasonDto['status'], string> = {
   upcoming: vocab.term.preseason,
@@ -23,45 +21,18 @@ const STATUS_LABEL: Record<SeasonDto['status'], string> = {
   complete: 'Complete',
 };
 
-export function SeasonScreen() {
-  const season = useCurrentSeasonQuery();
-  const me = useMeQuery();
-  if (season.isPending) return <Loading label="Loading the season" />;
-  if (season.isError) return <ErrorPanel error={season.error} onRetry={() => void season.refetch()} />;
-  const s = season.data;
-  // Season 1 has extra games when the user started before Opening Day.
-  const total = s && me.data ? gamesInSeason(me.data, s.number) : GAMES_PER_SEASON;
-  const pos = me.data?.position;
-  const headStart = pos?.phase === 'season' && pos.seriesNumber === HEAD_START_SERIES;
-  return (
-    <div className="screen screen--season">
-      {s ? (
-        <>
-          <header className="screen__head">
-            <div>
-              <p className="screen__kicker">
-                {STATUS_LABEL[s.status]} · {formatRange(s.startDate, s.playEndDate)}
-              </p>
-              <h1 className="screen__title">
-                {vocab.term.season} {s.number}
-              </h1>
-            </div>
-          </header>
-          <Standings season={s} total={total} />
-          <Pace season={s} total={total} />
-          <GoalCard season={s} total={total} phase={pos?.phase ?? 'season'} headStart={headStart} />
-        </>
-      ) : (
-        <EmptyState title={vocab.term.season}>
-          <p>No season on the calendar yet.</p>
-        </EmptyState>
-      )}
-      {me.data ? <Clubhouse me={me.data} /> : null}
-    </div>
-  );
+export const SEASON_STATUS_LABEL = STATUS_LABEL;
+
+/** The season's game count (more in Season 1 after a Head Start) and whether a Head Start is on. */
+export function seasonTotals(me: MeDto | undefined, season: SeasonDto): { total: number; headStart: boolean } {
+  const pos = me?.position;
+  return {
+    total: me ? gamesInSeason(me, season.number) : GAMES_PER_SEASON,
+    headStart: pos?.phase === 'season' && pos.seriesNumber === HEAD_START_SERIES,
+  };
 }
 
-function Standings({ season: s, total }: { season: SeasonDto; total: number }) {
+export function Standings({ season: s, total }: { season: SeasonDto; total: number }) {
   const played = s.wins + s.losses;
   const winPct = played === 0 ? null : Math.round((s.wins / played) * 1000) / 1000;
   const stats: [string, string][] = [
@@ -108,7 +79,7 @@ function Standings({ season: s, total }: { season: SeasonDto; total: number }) {
   );
 }
 
-function Pace({ season: s, total }: { season: SeasonDto; total: number }) {
+export function Pace({ season: s, total }: { season: SeasonDto; total: number }) {
   if (s.winGoal === null) {
     return (
       <section className="card pace">
@@ -171,7 +142,7 @@ function Pace({ season: s, total }: { season: SeasonDto; total: number }) {
   );
 }
 
-function GoalCard({
+export function GoalCard({
   season: s,
   total,
   phase,
@@ -226,7 +197,7 @@ function GoalCard({
   );
 }
 
-function Clubhouse({ me }: { me: MeDto }) {
+export function Clubhouse({ me }: { me: MeDto }) {
   const api = useApi();
   const queue = useCheckoffQueue();
   const qc = useQueryClient();
@@ -256,11 +227,10 @@ function Clubhouse({ me }: { me: MeDto }) {
     <section className="card clubhouse" aria-labelledby="clubhouse-title">
       <header className="card__head">
         <h2 id="clubhouse-title" className="card__title">
-          Clubhouse
+          Team & account
         </h2>
         <p className="card__sub">{me.email}</p>
       </header>
-      <AllowanceChips allowances={me.allowances} />
       <form
         className="field clubhouse__name"
         onSubmit={(e) => {
@@ -357,7 +327,7 @@ function DeleteAccountSheet({
     <Sheet
       open={open}
       onClose={close}
-      kicker="Clubhouse"
+      kicker="Settings"
       title="Delete your account?"
       footer={
         <div className="actions">

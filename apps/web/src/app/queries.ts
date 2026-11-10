@@ -25,7 +25,7 @@ import { overlayQueue, type NewQueuedOp } from '../api/offlineQueue';
 import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { errorMessage } from './errors';
 import { useNotify } from './toast';
-import { weekdayShort } from '../lib/format';
+import { weekdayLong, weekdayShort } from '../lib/format';
 import { vocab } from '../vocab';
 
 export const qk = {
@@ -485,6 +485,56 @@ export function useUpdateSeasonGoal() {
       notify(`Goal set: ${season.winGoal} wins.`, 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
+export interface NewTaskBody {
+  name: string;
+  points: number;
+  kind: TaskKind;
+}
+
+/**
+ * The Add task window: create a task and, optionally, put it in one game straight away.
+ * While the week is still being planned that's an ordinary lineup edit (runs to win
+ * stays put). Once the week has started it's an addition: runs to win rises by the
+ * task's runs, and a task added to today is always a must-hit (the server enforces it).
+ */
+export function useAddTask() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: async (v: { body: NewTaskBody; schedule: { game: GameDto; required: boolean } | null }) => {
+      const task = await api.call('createTask', { body: v.body });
+      if (!v.schedule) return { task, game: null };
+      const { game, required } = v.schedule;
+      if (game.editPolicy === 'free') {
+        const kept = game.entries.filter((e) => e.role === 'lineup' || e.role === 'bench');
+        const batting = kept.filter((e) => e.role === 'lineup').length;
+        const entries = [
+          ...kept.map((e) => ({ taskId: e.taskId, position: e.position, required: e.required, role: e.role as 'lineup' | 'bench' })),
+          { taskId: task.id, position: batting + 1, required, role: 'lineup' as const },
+        ];
+        return { task, game: await api.call('patchLineup', { params: { gameId: game.id }, body: { entries } }) };
+      }
+      return { task, game: await api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: task.id, required } }) };
+    },
+    onSuccess: ({ task, game }) => {
+      invalidateGameDay(qc);
+      invalidate(qc, qk.tasks, qk.starters);
+      notify(
+        game
+          ? `${task.name} added to ${weekdayLong(game.playedDate)}. Runs to win is ${game.threshold}.`
+          : `Task added: ${task.name}.`,
+        'success',
+      );
+    },
+    onError: (error) => {
+      // The task may exist even if scheduling it failed.
+      invalidate(qc, qk.tasks);
+      notify(errorMessage(error), 'error');
+    },
   });
 }
 
