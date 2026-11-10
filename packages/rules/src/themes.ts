@@ -50,7 +50,8 @@ export const THEME_TERMS: Record<Theme, ThemeTerms> = {
     name: 'Hockey',
     required: 'must-score',
     requiredPlural: 'must-scores',
-    points: (n) => plural(n, 'goal', 'goals'),
+    // A task is a shot; the scoreboard turns shots into goals (displayScore).
+    points: (n) => plural(n, 'shot', 'shots'),
     comebackToken: 'Coach’s challenge',
     comebackAction: 'Use a coach’s challenge',
   },
@@ -78,6 +79,9 @@ export interface DisplayScore {
  *   the target lands near 100. The opponent sits a few points short of that (3–9, fixed
  *   per game by `seed`), keeps level while you're tied, and beats you by that margin
  *   when you lose.
+ * - hockey: goals stay hockey-sized. The target is worth at most 4 goals (a target of 3
+ *   is 3 goals; a target of 8 is 4, so every second task scores). The opponent sits one
+ *   goal short of that, so most games end by a goal.
  */
 export function displayScore(
   theme: Theme,
@@ -85,6 +89,7 @@ export function displayScore(
   threshold: number,
   seed: number,
 ): DisplayScore {
+  if (theme === 'hockey') return hockeyScore(line, threshold);
   if (theme !== 'basketball') return line;
   const target = Math.max(1, threshold);
   const value = Math.max(1, Math.round(100 / target));
@@ -96,6 +101,19 @@ export function displayScore(
   if (line.them === line.us) them = us;
   else if (line.them > line.us) them = Math.max(short, us + margin);
   else them = Math.max(short, line.them * value);
+  return { us, them };
+}
+
+function hockeyScore(line: DisplayScore, threshold: number): DisplayScore {
+  const target = Math.max(1, threshold);
+  const goalsAtTarget = Math.min(target, 4);
+  const goals = (runs: number) => Math.floor((runs * goalsAtTarget) / target);
+  const us = goals(line.us);
+  const short = goalsAtTarget - 1;
+  let them: number;
+  if (line.them === line.us) them = us;
+  else if (line.them > line.us) them = Math.max(short, us + 1);
+  else them = Math.max(short, Math.min(goals(line.them), us - 1));
   return { us, them };
 }
 

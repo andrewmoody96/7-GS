@@ -748,9 +748,161 @@ export const basketball: Vocab = overlay(baseball, {
 });
 
 /**
- * Each sport's wording. Hockey uses baseball's until its own is written.
+ * Hockey: a task is a shot, the scoreboard shows goals (rules `displayScore`, about 3–5
+ * at the target) and shots on goal.
  */
-const VOCABS: Record<Theme, Vocab> = { baseball, basketball, hockey: baseball };
+export const hockey: Vocab = overlay(baseball, {
+  flavor: {
+    rotation: 'Lines',
+    lineupOrder: 'Line order',
+    secondGame: 'second game',
+    welcome: 'Welcome to the rink',
+    signingIn: 'Lacing up…',
+    serverDown: 'The rink’s systems are down. Try again in a minute.',
+    light: 'Matinee',
+    dark: 'Night game',
+  },
+  term: {
+    preseason: 'Training camp',
+    doubleheader: 'Back-to-back',
+    dayTemplate: 'Line',
+    required: 'Must-score',
+    points: 'Shots',
+    paused: 'Injured reserve',
+    postponed: 'Postponement',
+    comebackToken: 'Coach’s challenge',
+    lockedAt: 'Puck drop',
+  },
+  terms: {
+    starters: 'Lines',
+    pausedShort: 'IR',
+    comebackTokens: 'Challenges',
+    rainouts: 'Postponements',
+    tasksDone: 'Shots on goal',
+    runsShort: 'G',
+    hitsShort: 'SOG',
+    valueShort: 'SH',
+    partial: 'Off the post',
+    threshold: 'Shots to win',
+    minTasks: 'Minimum shots',
+    lockTime: 'Puck drop time',
+    runDifferential: 'Goal diff',
+    rallyWins: 'Challenge wins',
+    pinchHitter: 'Extra skater',
+    pinchHitterShort: 'XS',
+  },
+  week: {
+    lockedBlurb:
+      'This week has started. You can still add tasks to today or any later day, but you can’t remove tasks or lower shots to win. A task you add is a must-score (an extra skater), and that day’s shots to win goes up by its shots. For an optional extra, add it to the bench instead.',
+    planningBlurb: (puckDrop) =>
+      `Anything goes until the week’s first puck drop${puckDrop ? ` (${puckDrop})` : ''}: add or remove tasks, reorder, set must-scores and shots to win, and place one-offs on a day.`,
+    oneOffHint: 'One-offs retire once done. A missed one-off must-score moves to the next game day as an extra skater.',
+  },
+  pinchHit: {
+    makeMustHit: 'Make must-score',
+    explainer:
+      'The week has started, so a task you add now comes over the boards as an extra skater: it’s a must-score, and shots to win goes up by exactly its shots. Your cushion stays the same. For an optional extra, add it to the bench instead.',
+    raise: (n) => `+${n} extra skater`,
+    thresholdLine: (threshold, raise) => `Shots to win ${threshold}${raise > 0 ? ` · +${raise} extra skater` : ''}`,
+    done: (name, threshold) => `${name} comes over the boards as an extra skater. Shots to win is ${threshold}.`,
+    doneOptional: (name, threshold) => `${name} added to the lineup. Shots to win is ${threshold}.`,
+    explainerLater:
+      'This day hasn’t started, so you choose: a must-score, or a regular task you can skip without losing the day. Either way shots to win goes up by exactly its shots, so the day gets no easier.',
+    mustHitSwitch: 'Make it a must-score',
+    mustHitOff: 'A regular task: it counts when you do it, and skipping it won’t sink the day by itself.',
+  },
+  suspension: {
+    explainer:
+      'Something came up mid-day, or you couldn’t open the app until this morning. It isn’t a loss. Progress is kept and the game resumes later in the week as a back-to-back, with the same must-scores and shots to win.',
+    resumeLede: 'Pick the day it resumes. That day becomes a back-to-back.',
+    cost: (n) => `Uses 1 of your ${n} postponements this month (postponements and suspensions share the allowance).`,
+    done: (day) => (day ? `Suspended. It resumes ${day} as a back-to-back.` : 'Suspended. It ends as a no-decision.'),
+    reason: {
+      FUTURE_GAME: 'That game hasn’t started. Plan around it with a postponement.',
+      RALLY_ROLLED: 'The coach’s challenge was already used on this game.',
+      NO_ALLOWANCE: 'No postponements left this month, so this one is played out.',
+    },
+  },
+  runs: (n) => plural(n, 'shot', 'shots'),
+  hits: (n) => plural(n, 'shot', 'shots'),
+  resultDetail: {
+    forfeit: 'Forfeit · 1 must-score missed',
+    no_appeal: 'No appeal · 2+ must-scores missed',
+    rally: 'Challenge W',
+  },
+  resultDetailShort: { rally: 'Challenge' },
+  phase: { preseason: 'Training camp' },
+  taskStatus: { injured: 'Injured reserve' },
+  starterWarning: {
+    EMPTY_LINEUP: 'The lineup is empty, so this line can never win.',
+    MIN_TASKS_UNREACHABLE: 'The minimum shots is more than the tasks in the lineup.',
+  },
+  rainoutReason: {
+    GAME_LOCKED: 'The puck has dropped. This one has to be played.',
+    MAKEUP_GAME: 'A makeup game can’t be postponed again.',
+    NO_ALLOWANCE: 'No postponements left this month.',
+  },
+  rallyReason: {
+    OUT_OF_SEASON: 'Challenges aren’t used in training camp or Review Week.',
+    GAME_WON: 'You won this one. No challenge needed.',
+    TOO_MANY_MISSED: 'Two or more must-scores missed: no appeal.',
+    WINDOW_CLOSED: 'The challenge window closed at 11:59 a.m. the next day.',
+    ALREADY_ROLLED: 'The challenge was already reviewed for this game.',
+    SERIES_LIMIT: 'One challenge per series, and this series has used it.',
+    NO_TOKEN: 'No challenges left this month.',
+  },
+  error: {
+    GAME_LOCKED: 'The puck has dropped. The lineup is locked.',
+    IL_MINIMUM: 'Injured reserve has a 3-day minimum.',
+  },
+  projection: {
+    moreRuns: (n) => `${n} more ${n === 1 ? 'shot' : 'shots'}`,
+    mustHits: (n) => plural(n, 'must-score', 'must-scores'),
+    moreHits: (n) => `${n} more ${n === 1 ? 'shot' : 'shots'}`,
+    noAppeal: 'Two must-scores down: no challenge if this stands.',
+  },
+  chyron: { doubleheaderToday: 'Back-to-back today' },
+  lock: {
+    firstPitchAt: (time) => `Puck drop ${time}`,
+    firstPitchOnCheckoff: 'Puck drop at your first check-off',
+    firstCheckoffLocks: 'Your first check-off drops the puck and locks the lineup.',
+    lockNow: 'Drop the puck',
+  },
+  rally: {
+    title: 'Coach’s challenge',
+    available: 'Coach’s challenge available',
+    roll: 'Challenge the call',
+    hit: 'Call overturned',
+    miss: 'Call stands',
+    missedMustHit: 'Missed must-score',
+    warningTrack: 'Off the post',
+    runCushion: 'Shot cushion',
+    tokenNote: (n) => `${plural(n, 'challenge', 'challenges')} left this month · one per series`,
+  },
+  jumbotron: { walkOff: 'OT winner' },
+  il: {
+    explainer:
+      'Injured reserve sits a task out and freezes its streak. Its lineup spots are held and shots to win stays put; activating it puts the task back in those spots. Once today’s puck has dropped (or the week’s), it sits out from tomorrow.',
+    minimum: (days) => `Minimum stint: ${days} game days (Review Week doesn’t count), so injured reserve can’t dodge a single hard day.`,
+    place: 'Place on IR',
+    activate: 'Activate from IR',
+    heldTitle: 'On injured reserve',
+    heldNote: 'Back in this spot when activated. Shots to win stays put.',
+    heldSpot: (role, position) => (role === 'bench' ? 'Bench' : `Shift ${position}`),
+  },
+  emptyStates: {
+    preseasonTitle: 'Training camp',
+    preseasonBody: (openingDay, days) =>
+      `Opening Night is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your lines under Team. Nothing counts yet, and you can add or change tasks any time after Opening Night too. A season is 12 weeks, then a Review Week.`,
+    offseasonBody: (nextSeason) =>
+      `No games this week. Review the season, make front-office moves, and get ready for Opening Night ${nextSeason}.`,
+  },
+});
+
+/**
+ * Each sport's wording.
+ */
+const VOCABS: Record<Theme, Vocab> = { baseball, basketball, hockey };
 
 /**
  * The active theme's words. A live object: applyTheme swaps its contents, and the app

@@ -17,6 +17,7 @@ export function getThemePref(): ThemePref {
 const BAR_COLORS: Record<string, { light: string; dark: string }> = {
   baseball: { light: '#ece5d3', dark: '#08110c' },
   basketball: { light: '#efe2c8', dark: '#0c0e13' },
+  hockey: { light: '#e9eff4', dark: '#070b10' },
 };
 
 export function applyThemePref(pref: ThemePref): void {

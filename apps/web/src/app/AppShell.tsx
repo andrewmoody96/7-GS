@@ -6,7 +6,7 @@ import { isApiError } from '../api/client';
 import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
 import { hasSeenHowItWorks, HowItWorksSheet, markHowItWorksSeen } from '../components/HowItWorks';
 import { useWelcomeStep, WelcomeSetup } from '../components/WelcomeSetup';
-import { IconBasketball, IconHelp, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
+import { IconBasketball, IconHelp, IconHockey, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
 import { Sheet } from '../components/Sheet';
 import { ErrorPanel } from '../components/States';
 import { formatDate, formatDayTime } from '../lib/format';
@@ -18,11 +18,11 @@ import { useNotify } from './toast';
 import { useNow } from './hooks';
 import { TasksModalProvider, useTasksModal } from './tasksModal';
 
-/** The Today tab's icon follows the sport: home plate, or a basketball. */
+/** The Today tab's icon follows the sport: home plate, a basketball, or a stick and puck. */
 const TODAY_ICONS: Record<Theme, typeof IconToday> = {
   baseball: IconToday,
   basketball: IconBasketball,
-  hockey: IconToday,
+  hockey: IconHockey,
 };
 
 // A function, not a constant: the labels and the Today icon follow the account's theme.
