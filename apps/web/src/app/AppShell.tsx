@@ -6,21 +6,29 @@ import { isApiError } from '../api/client';
 import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
 import { hasSeenHowItWorks, HowItWorksSheet, markHowItWorksSeen } from '../components/HowItWorks';
 import { useWelcomeStep, WelcomeSetup } from '../components/WelcomeSetup';
-import { IconHelp, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
+import { IconBasketball, IconHelp, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
 import { Sheet } from '../components/Sheet';
 import { ErrorPanel } from '../components/States';
 import { formatDate, formatDayTime } from '../lib/format';
-import { applyTheme, vocab } from '../vocab';
+import type { Theme } from '@7gs/rules';
+import { activeTheme, applyTheme, vocab } from '../vocab';
 import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { forgetCachedMe, invalidateGameDay, useMeQuery } from './queries';
 import { useNotify } from './toast';
 import { useNow } from './hooks';
 import { TasksModalProvider, useTasksModal } from './tasksModal';
 
-// A function, not a constant: the labels follow the account's theme.
+/** The Today tab's icon follows the sport: home plate, or a basketball. */
+const TODAY_ICONS: Record<Theme, typeof IconToday> = {
+  baseball: IconToday,
+  basketball: IconBasketball,
+  hockey: IconToday,
+};
+
+// A function, not a constant: the labels and the Today icon follow the account's theme.
 const tabs = () =>
   [
-    { to: '/', label: vocab.tabs.today, Icon: IconToday, end: true },
+    { to: '/', label: vocab.tabs.today, Icon: TODAY_ICONS[activeTheme()], end: true },
     { to: '/series', label: vocab.tabs.series, Icon: IconSeries, end: false },
     { to: '/team', label: vocab.tabs.team, Icon: IconSeason, end: false },
   ] as const;
