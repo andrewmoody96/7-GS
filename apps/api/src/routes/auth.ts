@@ -5,7 +5,7 @@ import { clientAddress, RateLimiter } from '../http/rateLimit';
 import { route, type AnyRoute } from '../http/router';
 import { clearSessionCookie, setSessionCookie } from '../http/session';
 import { describeError } from '../logger';
-import { createLoginToken, deleteSession, isEmailAllowed, normalizeEmail, verifyLoginToken } from '../services/auth';
+import { createLoginToken, deleteSession, isEmailAllowed, normalizeEmail, verifyLoginCode, verifyLoginToken } from '../services/auth';
 import { inUserTx } from '../services/today';
 import { meView } from '../services/users';
 
@@ -43,13 +43,13 @@ export function authRoutes(deps: Deps): AnyRoute[] {
       if (!deps.mailer && deps.config.allowDevLogin === false) {
         throw new ApiException(503, 'CONFLICT', 'Sign-in email isn’t set up on this server yet.', 'NO_MAILER');
       }
-      const token = await createLoginToken(deps.db, email, now);
+      const { token, code } = await createLoginToken(deps.db, email, now);
       if (deps.mailer) {
         // With ALLOW_DEV_LOGIN on, email is a bonus: "Sign in now" keeps working even if
         // the email fails, so a misconfigured provider never locks everyone out.
         const devLogin = deps.config.allowDevLogin === true;
         try {
-          await deps.mailer.sendMagicLink(email, signInLink(c, deps, token));
+          await deps.mailer.sendMagicLink(email, signInLink(c, deps, token), code);
         } catch (error) {
           deps.log.error('Magic link email failed', { email, error: describeError(error) });
           if (devLogin) return { sent: true as const, devToken: token, emailed: false };
@@ -60,6 +60,13 @@ export function authRoutes(deps: Deps): AnyRoute[] {
       // No email provider configured (development): hand the token back and log it.
       deps.log.info('Magic link issued (no email provider configured)', { email, devToken: token });
       return { sent: true as const, devToken: token };
+    }),
+
+    route('verifyLoginCode', async ({ c, body, now }) => {
+      const { user, isNewUser, sessionToken } = await verifyLoginCode(deps.db, body.email, body.code, body.timezone, now);
+      setSessionCookie(c, sessionToken, deps);
+      const me = await inUserTx(deps.db, user, now, (tx, u) => meView(tx, u, now), { scope: 'account' });
+      return { me, isNewUser };
     }),
 
     route('verifyMagicLink', async ({ c, body, now }) => {

@@ -1981,3 +1981,35 @@ button.cell:hover {
   gap: 10px;
   margin-top: 6px;
 }
+
+/* ── Sign-in code ────────────────────────────────────────────────────────── */
+
+.codeentry {
+  display: grid;
+  gap: 12px;
+}
+
+.codeentry p {
+  margin: 0;
+}
+
+.input--code {
+  height: 64px;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.45em;
+  text-align: center;
+  /* Keep the digits centered despite the trailing letter-spacing. */
+  padding-left: 0.45em;
+}
+
+.input--code::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.input--code.is-invalid {
+  border-color: var(--danger, #b3261e);
+}

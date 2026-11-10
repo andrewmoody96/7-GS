@@ -127,6 +127,12 @@ export const VerifyRequest = z.object({
   timezone: TimeZone,
 });
 export const Session = z.object({ me: Me, isNewUser: z.boolean() });
+/** The 6-digit code from the sign-in email, for when the link would open the wrong app. */
+export const VerifyCodeRequest = z.object({
+  email: z.email(),
+  code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code from the email.'),
+  timezone: TimeZone,
+});
 
 // ── Roster ───────────────────────────────────────────────────────────────────
 

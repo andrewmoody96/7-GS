@@ -35,6 +35,14 @@ export const endpoints = {
     response: S.Session,
     auth: false,
   }),
+  /** Sign in with the 6-digit code from the email (single use, 15 minutes, 5 tries). */
+  verifyLoginCode: endpoint({
+    method: 'POST',
+    path: '/v1/auth/code',
+    body: S.VerifyCodeRequest,
+    response: S.Session,
+    auth: false,
+  }),
   logout: endpoint({ method: 'POST', path: '/v1/auth/logout', response: S.Ok }),
 
   // Profile & calendar

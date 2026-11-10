@@ -178,6 +178,10 @@ export class MockBackend {
       });
       return { sent: true, devToken: token };
     },
+    // The demo never emails anything, so there's no code to enter.
+    verifyLoginCode: () => {
+      throw new ApiError(401, 'UNAUTHORIZED', 'The demo doesn’t send codes. Use Sign in now.');
+    },
     verifyMagicLink: ({ body, now }) => {
       const { token, timezone } = body as { token: string; timezone: string };
       const link = this.db.magicLinks.find((l) => l.token === token);

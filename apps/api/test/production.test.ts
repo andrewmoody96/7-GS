@@ -145,16 +145,18 @@ describe('createMailer', () => {
   it('posts to Resend and Postmark with the link in both bodies', async () => {
     const link = 'https://seven.example/sign-in?token=abc&x=1';
     const resend = fakeFetch();
-    await createMailer({ provider: 'resend', apiKey: 're_k', from: 'a@b.co' }, resend.fn).sendMagicLink('p@q.co', link);
+    await createMailer({ provider: 'resend', apiKey: 're_k', from: 'a@b.co' }, resend.fn).sendMagicLink('p@q.co', link, '042917');
     expect(resend.calls[0]?.url).toBe('https://api.resend.com/emails');
     expect(resend.calls[0]?.init.headers).toMatchObject({ authorization: 'Bearer re_k' });
     const rBody = JSON.parse(String(resend.calls[0]?.init.body));
-    expect(rBody).toMatchObject({ from: 'a@b.co', to: ['p@q.co'], subject: 'Your 7-Game Series sign-in link' });
+    expect(rBody).toMatchObject({ from: 'a@b.co', to: ['p@q.co'], subject: '042917 is your 7-Game Series sign-in code' });
     expect(rBody.text).toContain(link);
+    expect(rBody.text).toContain('042917');
+    expect(rBody.html).toContain('042917');
     expect(rBody.html).toContain('href="https://seven.example/sign-in?token=abc&amp;x=1"');
 
     const postmark = fakeFetch();
-    await createMailer({ provider: 'postmark', apiKey: 'pm', from: 'a@b.co' }, postmark.fn).sendMagicLink('p@q.co', link);
+    await createMailer({ provider: 'postmark', apiKey: 'pm', from: 'a@b.co' }, postmark.fn).sendMagicLink('p@q.co', link, '042917');
     expect(postmark.calls[0]?.url).toBe('https://api.postmarkapp.com/email');
     expect(postmark.calls[0]?.init.headers).toMatchObject({ 'x-postmark-server-token': 'pm' });
     expect(JSON.parse(String(postmark.calls[0]?.init.body))).toMatchObject({ From: 'a@b.co', To: 'p@q.co' });
@@ -163,19 +165,19 @@ describe('createMailer', () => {
   it('throws when the provider rejects the email', async () => {
     const { fn } = fakeFetch(422);
     await expect(
-      createMailer({ provider: 'resend', apiKey: 'k', from: 'a@b.co' }, fn).sendMagicLink('p@q.co', 'https://x'),
+      createMailer({ provider: 'resend', apiKey: 'k', from: 'a@b.co' }, fn).sendMagicLink('p@q.co', 'https://x', '000000'),
     ).rejects.toThrow(/resend rejected the email \(422\): bad sender/);
   });
 });
 
 describe('email sign-in', () => {
-  function recordingMailer(fail = false): Mailer & { sent: { email: string; link: string }[] } {
-    const sent: { email: string; link: string }[] = [];
+  function recordingMailer(fail = false): Mailer & { sent: { email: string; link: string; code: string }[] } {
+    const sent: { email: string; link: string; code: string }[] = [];
     return {
       sent,
-      async sendMagicLink(email, link) {
+      async sendMagicLink(email, link, code) {
         if (fail) throw new Error('provider down');
-        sent.push({ email, link });
+        sent.push({ email, link, code });
       },
       async sendMessage() {},
     };
@@ -214,6 +216,49 @@ describe('email sign-in', () => {
     expect(fallback).toMatchObject({ sent: true, emailed: false });
     expect((await broken.ok('verifyMagicLink', { body: { token: fallback.devToken, timezone: CHICAGO } })).me.email).toBe('fan@example.com');
     expect(broken.log.lines.some((l) => l.message === 'Magic link email failed')).toBe(true);
+  });
+
+  it('signs in with the emailed 6-digit code, once, and spends it after 5 wrong tries', async () => {
+    const mailer = recordingMailer();
+    const config = { ...base, appUrl: 'https://seven.example', allowDevLogin: false };
+    const t = new TestApp(env.db, NOW, { mailer, config });
+    await t.ok('requestMagicLink', { body: { email: 'Fan@Example.com' } });
+    const code = mailer.sent[0]!.code;
+    expect(code).toMatch(/^\d{6}$/);
+    const wrong = code === '000000' ? '111111' : '000000';
+
+    expect(await t.fails('verifyLoginCode', { body: { email: 'fan@example.com', code: wrong, timezone: CHICAGO } }, 401)).toMatchObject({
+      message: 'That code isn’t right. 4 tries left.',
+    });
+    const session = await t.ok('verifyLoginCode', { body: { email: 'FAN@example.com', code, timezone: CHICAGO } });
+    expect(session.me.email).toBe('fan@example.com');
+    // Single use: the code and the link are the same sign-in.
+    await t.fails('verifyLoginCode', { body: { email: 'fan@example.com', code, timezone: CHICAGO } }, 401);
+    const token = new URL(mailer.sent[0]!.link).searchParams.get('token');
+    await t.fails('verifyMagicLink', { body: { token, timezone: CHICAGO } }, 401);
+
+    // Five wrong guesses spend a fresh code, even if the sixth guess is right.
+    await t.ok('requestMagicLink', { body: { email: 'fan@example.com' } });
+    const next = mailer.sent[1]!.code;
+    const miss = next === '000000' ? '111111' : '000000';
+    for (let i = 0; i < 5; i++) {
+      await t.fails('verifyLoginCode', { body: { email: 'fan@example.com', code: miss, timezone: CHICAGO } }, 401);
+    }
+    expect(await t.fails('verifyLoginCode', { body: { email: 'fan@example.com', code: next, timezone: CHICAGO } }, 401)).toMatchObject({
+      message: 'That code has expired or been used up. Ask for a new email.',
+    });
+  });
+
+  it('only accepts the newest email’s code, and not after 15 minutes', async () => {
+    const mailer = recordingMailer();
+    const t = new TestApp(env.db, NOW, { mailer, config: { ...base, appUrl: 'https://seven.example', allowDevLogin: false } });
+    await t.ok('requestMagicLink', { body: { email: 'fan@example.com' } });
+    t.clock.advance(60_000);
+    await t.ok('requestMagicLink', { body: { email: 'fan@example.com' } });
+    const [older, newer] = [mailer.sent[0]!.code, mailer.sent[1]!.code];
+    if (older !== newer) await t.fails('verifyLoginCode', { body: { email: 'fan@example.com', code: older, timezone: CHICAGO } }, 401);
+    t.clock.advance(15 * 60_000);
+    await t.fails('verifyLoginCode', { body: { email: 'fan@example.com', code: newer, timezone: CHICAGO } }, 401);
   });
 
   it('never hands out a dev token when dev login is off', async () => {

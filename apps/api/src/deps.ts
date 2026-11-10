@@ -37,7 +37,8 @@ export interface EmailMessage {
 }
 
 export interface Mailer {
-  sendMagicLink(email: string, link: string): Promise<void>;
+  /** The sign-in email: a link plus the same sign-in's 6-digit code. */
+  sendMagicLink(email: string, link: string, code: string): Promise<void>;
   /** Any other email (reminders). */
   sendMessage(email: string, message: EmailMessage): Promise<void>;
 }
