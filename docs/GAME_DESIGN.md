@@ -448,6 +448,23 @@ below the header. A busy day scrolls inside its own column (a soft shadow shows 
 more), actions line up along the bottom, and the day being edited widens to fit the
 editor. If the window is too narrow for seven readable columns, the board scrolls sideways
 instead of squeezing them. Phones keep the stacked list.
+### Reminders
+
+Optional nudges, as notifications on each device a person turns them on for (and by email
+if they choose). Each is skipped when there's nothing to say, and sent at most once:
+
+- **Evening check-in** at a chosen time (default 8 p.m.), only while today's game isn't won:
+  "2 more runs and 1 must-hit to win today."
+- **Last call** from 10:30 p.m., only while a must-hit is open, naming it.
+- **Rally Cap available** the morning after an appealable loss, while a Rally Cap is held.
+- **Plan next week** Friday when the card opens, and Sunday evening if it's still unopened.
+
+### History and career
+
+Team → History: a career card (lifetime record, win %, series record, longest win streak,
+Rally wins, run differential, best season) and every season so far. Each season lists its
+series; a series opens the same view as the Series tab, with box scores.
+
 ## 10. Architecture notes
 
 - **Shared rules package** (TypeScript, pure functions): game result, Rally Cap

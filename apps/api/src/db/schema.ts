@@ -86,6 +86,13 @@ export const users = pgTable('users', {
   /** Last local date fully settled by the finalizer. Starts the day before sign-up. */
   finalizedThrough: localDate('finalized_through').notNull(),
   createdAt: instant('created_at').notNull(),
+  // Reminders (services/reminders.ts). Push goes to every subscribed device; email is opt-in.
+  remindEvening: boolean('remind_evening').notNull().default(true),
+  remindEveningAt: timeOfDay('remind_evening_at').notNull().default('20:00'),
+  remindLastCall: boolean('remind_last_call').notNull().default(true),
+  remindRally: boolean('remind_rally').notNull().default(true),
+  remindPlan: boolean('remind_plan').notNull().default(true),
+  remindEmail: boolean('remind_email').notNull().default(false),
 });
 
 export const loginTokens = pgTable('login_tokens', {
@@ -488,6 +495,46 @@ export const rainoutAllowances = pgTable(
     check('rainout_allowances_used_ck', sql`(${t.usedGameId} IS NULL) = (${t.usedAt} IS NULL)`),
   ],
 );
+
+// ── Reminders ────────────────────────────────────────────────────────────────
+
+/** Server-wide settings, e.g. the Web Push key pair generated on first use. */
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
+
+/** A browser or Home Screen app that accepted notifications (Web Push). */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull().unique(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    createdAt: instant('created_at').notNull(),
+  },
+  (t) => [index('push_subscriptions_user_idx').on(t.userId)],
+);
+
+/** One row per reminder sent, so each goes out at most once (kind + key, e.g. a date). */
+export const reminderSends = pgTable(
+  'reminder_sends',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    key: text('key').notNull(),
+    sentAt: instant('sent_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.kind, t.key] })],
+);
+
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
 export type UserRow = typeof users.$inferSelect;
 export type SeasonRow = typeof seasons.$inferSelect;

@@ -15,6 +15,7 @@ import {
 } from '../app/queries';
 import { useTasksModal } from '../app/tasksModal';
 import { IconChevronRight, IconWarning } from '../components/icons';
+import { RemindersCard } from '../components/RemindersCard';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { AllowanceChips, IlExplainer, TaskGroup, TaskSheet } from '../components/TaskViews';
 import { formatRange, formatTimeOfDay, formatWinPct, signed } from '../lib/format';
@@ -155,7 +156,12 @@ export function InjuredListScreen() {
 
 export function SettingsScreen() {
   const me = useMeQuery();
-  return <SubPage title={TEAM_SECTIONS.settings}>{me.data ? <Clubhouse me={me.data} /> : <Loading label="Loading settings" />}</SubPage>;
+  return (
+    <SubPage title={TEAM_SECTIONS.settings}>
+      <RemindersCard />
+      {me.data ? <Clubhouse me={me.data} /> : <Loading label="Loading settings" />}
+    </SubPage>
+  );
 }
 
 // ── History and career ───────────────────────────────────────────────────────

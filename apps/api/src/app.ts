@@ -11,6 +11,7 @@ import { authRoutes } from './routes/auth';
 import { gameRoutes } from './routes/games';
 import { profileRoutes } from './routes/profile';
 import { rosterRoutes } from './routes/roster';
+import { reminderRoutes } from './routes/reminders';
 import { seasonRoutes } from './routes/seasons';
 import { weekRoutes } from './routes/weeks';
 
@@ -41,6 +42,7 @@ export function createApp(deps: Deps): Hono {
     ...rosterRoutes(deps),
     ...gameRoutes(deps),
     ...seasonRoutes(deps),
+    ...reminderRoutes(deps),
     ...weekRoutes(deps),
   ]);
 

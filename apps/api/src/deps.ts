@@ -2,6 +2,7 @@ import { randomInt } from 'node:crypto';
 import type { Clock } from './clock';
 import type { Db } from './db/client';
 import type { Logger } from './logger';
+import type { Pusher } from './push';
 import type { RollDice } from './services/rally';
 
 export interface AppConfig {
@@ -29,8 +30,16 @@ export interface AppConfig {
 }
 
 /** Sends magic links (see mailer.ts). Without one, links come back as `devToken`. */
+export interface EmailMessage {
+  subject: string;
+  text: string;
+  html: string;
+}
+
 export interface Mailer {
   sendMagicLink(email: string, link: string): Promise<void>;
+  /** Any other email (reminders). */
+  sendMessage(email: string, message: EmailMessage): Promise<void>;
 }
 
 export interface Deps {
@@ -39,6 +48,8 @@ export interface Deps {
   log: Logger;
   config: AppConfig;
   mailer: Mailer | null;
+  /** Web Push for reminders (push.ts). */
+  pusher: Pusher;
   /** Percentile dice for Rally Caps (CSPRNG in production). */
   rollDice: RollDice;
 }

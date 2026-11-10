@@ -36,6 +36,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Reminders: push and notification-click handlers (public/push-sw.js).
+        importScripts: ['push-sw.js'],
         // App shell: everything the build emits (the plugin adds the manifest itself),
         // plus the Latin font subsets.
         globPatterns: [

@@ -83,6 +83,9 @@ export function databaseOptionsFromEnv(env: NodeJS.ProcessEnv, dataDir: string, 
 }
 
 const ALL_TABLES = [
+  'reminder_sends',
+  'push_subscriptions',
+  'app_settings',
   'rally_rolls',
   'rally_tokens',
   'rainout_allowances',

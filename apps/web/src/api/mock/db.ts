@@ -1,6 +1,7 @@
 // Storage shapes for the in-browser mock backend. They mirror the tables in
 // docs/DATA_MODEL_AND_API.md §3 (camelCased), keeping only what the mock needs.
 
+import type { ReminderPrefsDto } from '@7gs/contracts';
 import type {
   GameResult,
   GameStatus,
@@ -189,6 +190,8 @@ export interface UserWorld {
   rallyRolls: RallyRollRow[];
   /** Last local date the daily job ran for. */
   syncedThrough: LocalDate | null;
+  /** Reminder choices (the demo never sends any); absent in older saved worlds. */
+  reminders?: ReminderPrefsDto;
 }
 
 export { SCENARIOS, type ScenarioName } from './scenarios';

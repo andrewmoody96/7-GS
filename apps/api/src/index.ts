@@ -9,6 +9,8 @@ import { createDatabase } from './db/client';
 import { cryptoDice, type Deps } from './deps';
 import { consoleLogger } from './logger';
 import { createMailer } from './mailer';
+import { createWebPusher } from './push';
+import { runReminders } from './services/reminders';
 import { runFinalizer } from './services/finalizer';
 
 const log = consoleLogger;
@@ -34,8 +36,16 @@ const deps: Deps = {
   log,
   config: config.app,
   mailer: config.email ? createMailer(config.email) : null,
+  // Push keys come from VAPID_* when set, else are generated once and kept in the database.
+  pusher: createWebPusher(database.db, config.app.appUrl ?? 'mailto:reminders@localhost', {
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY,
+  }),
   rollDice: cryptoDice,
 };
+
+// Create (or load) the push key pair now, so the first request doesn't have to.
+void deps.pusher.publicKey().catch((error: unknown) => log.error('Push keys unavailable', { error: String(error) }));
 
 let finalizing: Promise<void> | null = null;
 function finalize(): Promise<void> {
@@ -43,6 +53,11 @@ function finalize(): Promise<void> {
   finalizing ??= runFinalizer(deps, systemClock.now())
     .then((report) => {
       if (report.datesSettled > 0 || report.failures > 0) log.info('Finalizer run', { ...report });
+    })
+    // Reminders ride the same loop, after the day's games are settled.
+    .then(() => runReminders(deps, systemClock.now()))
+    .then((report) => {
+      if (report.sent > 0) log.info('Reminders sent', { ...report });
     })
     .catch((error: unknown) => log.error('Finalizer crashed', { error: String(error) }))
     .finally(() => {

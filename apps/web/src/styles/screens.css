@@ -1938,3 +1938,46 @@ button.cell:hover {
 .seriesrow--lost .seriesrow__score {
   color: var(--text-muted);
 }
+
+/* ── Reminders ───────────────────────────────────────────────────────────── */
+
+.reminders {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.reminders__device {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-m);
+  background: var(--surface-sunken);
+}
+
+.reminders__device p {
+  margin: 0;
+}
+
+.reminders__device--on {
+  border-left: 4px solid var(--accent);
+}
+
+.reminders__kinds {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reminders__kinds .field__hint {
+  margin: 2px 0 0;
+}
+
+.reminders__time {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}

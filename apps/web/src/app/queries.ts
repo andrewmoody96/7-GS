@@ -10,6 +10,7 @@ import type {
   TaskUpdateDto,
   TodayDto,
 } from '@7gs/contracts';
+import type { PushSubscriptionDto, ReminderPrefsDto } from '@7gs/contracts';
 import {
   QueryClient,
   useMutation,
@@ -120,6 +121,50 @@ export function useSeriesQuery(seriesId: string | null) {
     queryKey: qk.series(seriesId ?? 'none'),
     queryFn: () => api.call('getSeries', { params: { seriesId: seriesId ?? '' } }),
     enabled: seriesId !== null,
+  });
+}
+
+// ── Reminders ──
+
+export function useRemindersQuery() {
+  const api = useApi();
+  return useQuery({ queryKey: ['reminders'], queryFn: () => api.call('getReminders') });
+}
+
+export function useUpdateReminders() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: (body: Partial<ReminderPrefsDto>) => api.call('updateReminders', { body }),
+    onSuccess: (settings) => qc.setQueryData(['reminders'], settings),
+    onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
+/** Save or drop this device's subscription on the server. */
+export function useReminderDevice() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { subscribe: PushSubscriptionDto } | { unsubscribe: string }) =>
+      'subscribe' in v
+        ? api.call('subscribePush', { body: v.subscribe })
+        : api.call('unsubscribePush', { body: { endpoint: v.unsubscribe } }),
+    onSuccess: (settings) => qc.setQueryData(['reminders'], settings),
+  });
+}
+
+export function useSendTestReminder() {
+  const api = useApi();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: () => api.call('sendTestReminder'),
+    onSuccess: ({ devices, email }) => {
+      const where = [devices > 0 ? `${devices} ${devices === 1 ? 'device' : 'devices'}` : null, email ? 'your email' : null].filter(Boolean);
+      notify(where.length > 0 ? `Test sent to ${where.join(' and ')}.` : 'Nothing to send to yet: turn reminders on for this device first.', where.length > 0 ? 'success' : 'error');
+    },
+    onError: (error) => notify(errorMessage(error), 'error'),
   });
 }
 

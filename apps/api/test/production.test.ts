@@ -48,7 +48,22 @@ describe('loadConfig', () => {
     const problems = problemsOf(() => loadConfig({ NODE_ENV: 'production', SERVE_WEB: 'false' }));
     expect(problems).toHaveLength(2);
     expect(problems[0]).toMatch(/DATABASE_URL/);
-    expect(problems[1]).toMatch(/RESEND_API_KEY or POSTMARK_API_TOKEN/);
+    expect(problems[1]).toMatch(/GMAIL_USER \+ GMAIL_APP_PASSWORD/);
+  });
+
+  it('sends from a Gmail account with an app password, no domain needed', () => {
+    const base = { NODE_ENV: 'production', SERVE_WEB: 'false', DATABASE_URL: 'postgres://h/db', APP_URL: 'https://x.herokuapp.com' };
+    // Google shows app passwords in groups of four; the spaces don't matter.
+    expect(loadConfig({ ...base, GMAIL_USER: 'me@gmail.com', GMAIL_APP_PASSWORD: 'abcd efgh ijkl mnop' }).email).toEqual({
+      provider: 'gmail',
+      user: 'me@gmail.com',
+      password: 'abcdefghijklmnop',
+      from: '7-Game Series <me@gmail.com>',
+    });
+    expect(
+      loadConfig({ ...base, GMAIL_USER: 'me@gmail.com', GMAIL_APP_PASSWORD: 'x', EMAIL_FROM: 'Moody Ball Club <ignored@else.com>' }).email,
+    ).toMatchObject({ from: 'Moody Ball Club <me@gmail.com>' });
+    expect(problemsOf(() => loadConfig({ ...base, GMAIL_USER: 'me@gmail.com' })).join('\n')).toMatch(/GMAIL_APP_PASSWORD/);
   });
 
   it('requires EMAIL_FROM with a provider, and APP_URL for the links', () => {
@@ -163,6 +178,7 @@ describe('email sign-in', () => {
         if (fail) throw new Error('provider down');
         sent.push({ email, link });
       },
+      async sendMessage() {},
     };
   }
 
