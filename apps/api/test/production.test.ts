@@ -149,7 +149,7 @@ describe('createMailer', () => {
     expect(resend.calls[0]?.url).toBe('https://api.resend.com/emails');
     expect(resend.calls[0]?.init.headers).toMatchObject({ authorization: 'Bearer re_k' });
     const rBody = JSON.parse(String(resend.calls[0]?.init.body));
-    expect(rBody).toMatchObject({ from: 'a@b.co', to: ['p@q.co'], subject: '042917 is your 7-Game Series sign-in code' });
+    expect(rBody).toMatchObject({ from: 'a@b.co', to: ['p@q.co'], subject: '042917 is your 7-Game Series 6-digit code' });
     expect(rBody.text).toContain(link);
     expect(rBody.text).toContain('042917');
     expect(rBody.html).toContain('042917');

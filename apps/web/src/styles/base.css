@@ -712,3 +712,31 @@ code {
     scroll-behavior: auto !important;
   }
 }
+
+.installhint {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.installhint__lede {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.installhint__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.installsteps {
+  list-style: decimal;
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+.installsteps li + li {
+  margin-top: 4px;
+}

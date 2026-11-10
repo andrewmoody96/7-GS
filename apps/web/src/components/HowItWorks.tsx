@@ -1,5 +1,6 @@
 import { THEME_TERMS } from '@7gs/rules';
 import { activeTheme, vocab } from '../vocab';
+import { InstallSteps } from './InstallHint';
 import { Sheet } from './Sheet';
 
 const SEEN_KEY = '7gs.howItWorksSeen';
@@ -132,6 +133,19 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
           <strong>{vocab.term.comebackToken}</strong>: a chance to flip a loss into a win the next morning.
         </li>
       </ul>
+      <h3 className="howto__sub">Put it on your Home Screen</h3>
+      <p>
+        On a phone, add 7-Game Series to your Home Screen. It opens full screen like any other app and stays signed in. On
+        iPhone, it’s also the only way to get reminders.
+      </p>
+      <p className="howto__platform">iPhone (Safari)</p>
+      <InstallSteps platform="ios" />
+      <p className="howto__platform">Android (Chrome)</p>
+      <InstallSteps platform="android" />
+      <p className="fine">
+        On a computer, Chrome and Edge show an install button in the address bar. The Home Screen app keeps its own sign-in, so
+        sign in there once with the 6-digit code from your email.
+      </p>
       <p className="fine">Open this any time with the ? button at the top of the screen.</p>
     </Sheet>
   );

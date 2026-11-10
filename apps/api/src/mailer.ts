@@ -38,26 +38,34 @@ type Fetch = typeof fetch;
  * ("From Mail") in the Home Screen app, where the link would open Safari instead.
  */
 export function magicLinkEmail(link: string, code: string): { subject: string; text: string; html: string } {
-  const subject = `${code} is your 7-Game Series sign-in code`;
+  const subject = `${code} is your 7-Game Series 6-digit code`;
   const text = [
-    `Your sign-in code is ${code}`,
+    'Using the app? Enter this 6-digit code:',
     '',
-    'Enter it in the app (on iPhone, use this in the Home Screen app). Or tap the link to sign in on this device:',
+    `    ${code}`,
+    '',
+    'On iPhone, this is the one to use in the app on your Home Screen.',
+    '',
+    'Using a web browser? Sign in with browser:',
     '',
     link,
     '',
-    "The code and link work once, for 15 minutes. If you didn't ask for this, you can ignore this email.",
+    "Each works once, for 15 minutes. If you didn't ask for this, you can ignore this email.",
   ].join('\n');
   const href = link.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const label = 'margin:0 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#c9c3b2';
   const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0c1f16;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f4efe1">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center">
 <table role="presentation" width="100%" style="max-width:440px;background:#123d2a;border-radius:12px;padding:28px" cellspacing="0" cellpadding="0"><tr><td>
 <p style="margin:0 0 4px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#f2c14e">7-Game Series</p>
-<h1 style="margin:0 0 12px;font-size:22px;color:#f4efe1">Your sign-in code</h1>
-<p style="margin:0 0 20px;font-size:36px;font-weight:700;letter-spacing:.3em;color:#f2c14e">${code}</p>
-<p style="margin:0 0 20px;line-height:1.5">Enter it in the app. On iPhone, use the code in the Home Screen app.</p>
-<p style="margin:0 0 20px;line-height:1.5">Or sign in on this device: <a href="${href}" style="color:#f2c14e">Sign in</a></p>
-<p style="margin:0;font-size:13px;line-height:1.5;color:#c9c3b2">The code and link work once, for 15 minutes. If you didn't ask for this, you can ignore this email.</p>
+<h1 style="margin:0 0 20px;font-size:22px;color:#f4efe1">Sign in</h1>
+<p style="${label}">Using the app</p>
+<p style="margin:0 0 4px;line-height:1.5">Enter this 6-digit code:</p>
+<p style="margin:0 0 4px;font-size:36px;font-weight:700;letter-spacing:.3em;color:#f2c14e">${code}</p>
+<p style="margin:0 0 24px;font-size:13px;line-height:1.5;color:#c9c3b2">On iPhone, this is the one to use in the app on your Home Screen.</p>
+<p style="${label}">Using a web browser</p>
+<p style="margin:0 0 24px"><a href="${href}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#f2c14e;color:#0c1f16;font-weight:700;text-decoration:none">Sign in with browser</a></p>
+<p style="margin:0;font-size:13px;line-height:1.5;color:#c9c3b2">Each works once, for 15 minutes. If you didn't ask for this, you can ignore this email.</p>
 </td></tr></table></td></tr></table></body></html>`;
   return { subject, text, html };
 }
