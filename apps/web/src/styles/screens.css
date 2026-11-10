@@ -617,6 +617,10 @@
 }
 
 .todo__item {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;

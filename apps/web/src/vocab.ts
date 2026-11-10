@@ -170,7 +170,7 @@ export interface Vocab {
     done: (day: string | null) => string;
     reason: Record<SuspensionIneligibleReason, string>;
   };
-  tabs: { today: string; series: string; filmRoom: string; season: string };
+  tabs: { today: string; series: string; team: string; addTask: string };
   /** "1 run", "3 runs". */
   runs: (n: number) => string;
   hits: (n: number) => string;
@@ -397,7 +397,7 @@ export const baseball: Vocab = {
       NO_ALLOWANCE: 'No Rainouts left this month, so this one is played out.',
     },
   },
-  tabs: { today: 'Today', series: 'Series', filmRoom: 'Film Room', season: 'Season' },
+  tabs: { today: 'Today', series: 'Series', team: 'Team', addTask: 'Add task' },
   runs: (n) => plural(n, 'run', 'runs'),
   hits: (n) => plural(n, 'hit', 'hits'),
   gameLabel: (n) => `Game ${n}`,
@@ -541,7 +541,7 @@ export const baseball: Vocab = {
   emptyStates: {
     preseasonTitle: 'Spring Training',
     preseasonBody: (openingDay, days) =>
-      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks and set up your rotation in the Film Room. Nothing counts yet, and you can add or change tasks any time after Opening Day too. A season is 12 weeks, then a Review Week.`,
+      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your rotation under Team. Nothing counts yet, and you can add or change tasks any time after Opening Day too. A season is 12 weeks, then a Review Week.`,
     offseasonTitle: 'Review Week',
     offseasonBody: (nextSeason) =>
       `No games this week. Review the season, make front-office moves, and get ready for Opening Day ${nextSeason}.`,

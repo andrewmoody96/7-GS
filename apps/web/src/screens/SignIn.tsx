@@ -30,7 +30,7 @@ export function SignInScreen() {
     onSuccess: (session) => {
       qc.clear();
       qc.setQueryData(qk.me, session.me);
-      navigate(session.isNewUser ? '/film-room?tab=tasks' : '/', { replace: true });
+      navigate('/', { replace: true });
     },
   });
 
@@ -45,7 +45,7 @@ export function SignInScreen() {
 
   const signedIn = me.data && !(isApiError(me.error) && me.error.code === 'UNAUTHORIZED');
   // Already signed in: go home. (Not right after verifying: onSuccess picks the
-  // destination, the Tasks tab for a brand-new account.)
+  // destination, Today for everyone; a new account sees the How it works guide there.)
   if (signedIn && !params.get('token') && verify.isIdle) return <Navigate to="/" replace />;
 
   const submit = (e: FormEvent) => {

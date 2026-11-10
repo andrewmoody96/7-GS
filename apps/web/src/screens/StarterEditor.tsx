@@ -27,7 +27,7 @@ export function StarterEditorScreen() {
     return (
       <div className="screen">
         <EmptyState title="No such starter">
-          <Link to="/film-room?tab=rotation">Back to the rotation</Link>
+          <Link to="/team/rotation">Back to the rotation</Link>
         </EmptyState>
       </div>
     );
@@ -78,7 +78,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           bench: bench.map((s, i) => ({ taskId: s.taskId, position: i + 1 })),
         },
       },
-      { onSuccess: () => navigate('/film-room?tab=rotation') },
+      { onSuccess: () => navigate('/team/rotation') },
     );
 
   return (
@@ -86,7 +86,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       <header className="screen__head">
         <div>
           <p className="screen__kicker">
-            <Link to="/film-room?tab=rotation">Rotation</Link> / {dayName}
+            <Link to="/team">Team</Link> / <Link to="/team/rotation">Rotation</Link> / {dayName}
           </p>
           <h1 className="screen__title">
             {dayName} {vocab.term.dayTemplate}
@@ -100,7 +100,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           <p className="explainer__title">This is your default {dayName}</p>
           <p>
             It fills in future weeks. A {dayName} that’s already on your {vocab.week.title} doesn’t change. To add a task to this
-            week, go to the <Link to="/film-room">{vocab.week.title}</Link> and use {vocab.pinchHit.action}.
+            week, use <strong>+ Add task</strong> or <Link to="/team/lineups">this week’s lineups</Link>.
           </p>
         </div>
       </aside>
@@ -189,7 +189,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       </section>
 
       <div className="actions actions--sticky">
-        <Link to="/film-room?tab=rotation" className="btn btn--quiet">
+        <Link to="/team/rotation" className="btn btn--quiet">
           Cancel
         </Link>
         <button type="button" className="btn btn--primary" onClick={save} disabled={!name.trim() || put.isPending}>
