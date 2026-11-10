@@ -5,10 +5,12 @@ interface EntryPillsProps {
   entry: Pick<LineupEntryDto, 'required' | 'pinchHitAt' | 'carriedOver' | 'role'>;
   /** The roster task is a one-off (entries don't carry the task's kind). */
   oneOff?: boolean;
+  /** The task was deleted; it stays in this week's lineups and still counts. */
+  leaving?: boolean;
 }
 
 /** Must-hit, pinch hitter (PH), added-late, carried-over and one-off badges for a lineup entry. */
-export function EntryPills({ entry, oneOff }: EntryPillsProps) {
+export function EntryPills({ entry, oneOff, leaving }: EntryPillsProps) {
   return (
     <>
       {entry.required && entry.role === 'lineup' ? <span className="pill pill--must">{vocab.term.required}</span> : null}
@@ -23,6 +25,7 @@ export function EntryPills({ entry, oneOff }: EntryPillsProps) {
       ) : null}
       {entry.carriedOver ? <span className="pill pill--carried">{vocab.terms.carriedOver}</span> : null}
       {oneOff ? <span className="pill pill--oneoff">{vocab.taskKind.one_off}</span> : null}
+      {leaving ? <span className="pill pill--leaving" title="Deleted. Still counts this week.">Leaving</span> : null}
     </>
   );
 }

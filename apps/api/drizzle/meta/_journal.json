@@ -29,6 +29,13 @@
       "when": 1794281170399,
       "tag": "0003_quarterly_head_start",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794286408581,
+      "tag": "0004_task_deleted_at",
+      "breakpoints": true
     }
   ]
 }

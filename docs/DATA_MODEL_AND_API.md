@@ -296,7 +296,9 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | Method | Path | Purpose |
 |---|---|---|
 | GET/POST | `/v1/tasks` | List / create tasks. |
-| PATCH/DELETE | `/v1/tasks/:id` | Edit / retire (soft delete). |
+| PATCH | `/v1/tasks/:id` | Edit. A new name reaches every unfinished lineup; a new point value only days whose week hasn't started. Returns `lockedThrough` and `lockedPoints` (the runs days under way keep). |
+| DELETE | `/v1/tasks/:id` | Delete (status `retired`, `deleted_at` set). Leaves the task list, the rotation (spots kept but hidden) and every day whose week hasn't started; days in a week under way keep it through that week (`lockedThrough`). |
+| POST | `/v1/tasks/:id/restore` | Undo a delete while the task is still in a week under way, rotation spots included. Otherwise `409 NOT_ELIGIBLE`, reason `NOT_QUEUED`. |
 | POST | `/v1/tasks/:id/injured-list` | Place on IL (3-day minimum). |
 | DELETE | `/v1/tasks/:id/injured-list` | Activate (only after `il_min_until`). |
 | GET | `/v1/starters` | All 7 weekday templates. |

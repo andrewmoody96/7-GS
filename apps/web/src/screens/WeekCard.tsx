@@ -17,6 +17,8 @@ import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { formatDayTime, formatMonthDay, formatRange, formatTimeOfDay, gameScore, weekdayShort } from '../lib/format';
 import { benchOf, isNoDecision, lineupOf, pinchHitRaise } from '../lib/game';
 import { vocab } from '../vocab';
+import { useTasksModal } from '../app/tasksModal';
+import { isLeaving } from '../lib/tasks';
 import { IlHolds } from '../components/IlHolds';
 
 export function WeekCardView() {
@@ -230,6 +232,8 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
   const policy = game.editPolicy;
   const raise = pinchHitRaise(game);
   const oneOffs = new Set(roster.filter((t) => t.kind === 'one_off').map((t) => t.id));
+  const leaving = new Set(roster.filter(isLeaving).map((t) => t.id));
+  const tasksModal = useTasksModal();
   const lineup = lineupOf(game);
   const bench = benchOf(game);
   const final = game.status === 'final';
@@ -284,7 +288,9 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
                   {e.completedAt ? <IconCheck width={14} height={14} /> : e.position}
                 </span>
                 <span className="daylineup__name">
-                  {e.taskName}
+                  <button type="button" className="taskname" onClick={() => tasksModal.edit(e.taskId)} aria-label={`Edit ${e.taskName}`}>
+                    {e.taskName}
+                  </button>
                   <span className="sr-only">{e.completedAt ? ', done' : ''}</span>
                 </span>
                 <span className="daylineup__runs">
@@ -292,9 +298,9 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
                   <span className="sr-only"> {e.points === 1 ? 'run' : 'runs'}</span>
                   <span aria-hidden="true"> {vocab.terms.runsShort}</span>
                 </span>
-                {e.required || e.pinchHitAt || e.carriedOver || oneOffs.has(e.taskId) ? (
+                {e.required || e.pinchHitAt || e.carriedOver || oneOffs.has(e.taskId) || leaving.has(e.taskId) ? (
                   <span className="daylineup__pills">
-                    <EntryPills entry={e} oneOff={oneOffs.has(e.taskId)} />
+                    <EntryPills entry={e} oneOff={oneOffs.has(e.taskId)} leaving={leaving.has(e.taskId)} />
                   </span>
                 ) : null}
               </li>

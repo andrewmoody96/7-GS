@@ -53,7 +53,13 @@ export const endpoints = {
   listTasks: endpoint({ method: 'GET', path: '/v1/tasks', response: S.TaskList }),
   createTask: endpoint({ method: 'POST', path: '/v1/tasks', body: S.TaskCreate, response: S.Task }),
   updateTask: endpoint({ method: 'PATCH', path: '/v1/tasks/:taskId', body: S.TaskUpdate, response: S.Task }),
+  /**
+   * Delete a task. It leaves the task list, the rotation and any day whose week hasn't
+   * started; days in a week already under way keep it through that week.
+   */
   retireTask: endpoint({ method: 'DELETE', path: '/v1/tasks/:taskId', response: S.Task }),
+  /** Undo a delete while the task is still in a week under way (`lockedThrough` set). */
+  restoreTask: endpoint({ method: 'POST', path: '/v1/tasks/:taskId/restore', response: S.Task }),
   placeOnInjuredList: endpoint({
     method: 'POST',
     path: '/v1/tasks/:taskId/injured-list',

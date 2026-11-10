@@ -8,6 +8,7 @@ import {
   createTask,
   listTasks,
   placeOnInjuredList,
+  restoreTask,
   retireTask,
   updateTask,
 } from '../services/tasks';
@@ -22,7 +23,7 @@ function parseWeekday(raw: string): number {
 export function rosterRoutes(deps: Deps): AnyRoute[] {
   const { db } = deps;
   return [
-    route('listTasks', async ({ auth }) => ({ tasks: await listTasks(db, auth.user) })),
+    route('listTasks', ({ auth, now }) => userTx(db, auth.user, async (tx, user) => ({ tasks: await listTasks(tx, user, now) }))),
 
     route('createTask', ({ auth, body, now }) => createTask(db, auth.user, body, now), { status: 201 }),
 
@@ -31,6 +32,8 @@ export function rosterRoutes(deps: Deps): AnyRoute[] {
     ),
 
     route('retireTask', ({ auth, params, now }) => userTx(db, auth.user, (tx, user) => retireTask(tx, user, params.taskId, now))),
+
+    route('restoreTask', ({ auth, params, now }) => userTx(db, auth.user, (tx, user) => restoreTask(tx, user, params.taskId, now))),
 
     route('placeOnInjuredList', ({ auth, params, now }) =>
       inUserTx(db, auth.user, now, async (tx, user) => ({ task: await placeOnInjuredList(tx, user, params.taskId, now) })),

@@ -11,10 +11,14 @@ interface LineupProps {
   onPartial: (entry: LineupEntryDto, partial: boolean) => void;
   /** Roster tasks that are one-offs, for the badge. */
   oneOffIds?: ReadonlySet<string>;
+  /** Deleted tasks still in this week's lineups, for the Leaving badge. */
+  leavingIds?: ReadonlySet<string>;
+  /** Tapping a task's name opens its edit window. */
+  onEditTask?: (taskId: string) => void;
 }
 
 /** The batting order with one-tap check-offs. */
-export function Lineup({ game, final, onToggle, onPartial, oneOffIds }: LineupProps) {
+export function Lineup({ game, final, onToggle, onPartial, oneOffIds, leavingIds, onEditTask }: LineupProps) {
   const lineup = lineupOf(game);
   if (lineup.length === 0) {
     return <p className="empty-line">The lineup is empty. Add tasks before first pitch.</p>;
@@ -33,10 +37,18 @@ export function Lineup({ game, final, onToggle, onPartial, oneOffIds }: LineupPr
               {entry.position}
             </span>
             <div className="atbat__body">
-              <p className="atbat__name">{entry.taskName}</p>
+              <p className="atbat__name">
+                {onEditTask ? (
+                  <button type="button" className="taskname" onClick={() => onEditTask(entry.taskId)} aria-label={`Edit ${entry.taskName}`}>
+                    {entry.taskName}
+                  </button>
+                ) : (
+                  entry.taskName
+                )}
+              </p>
               <p className="atbat__meta">
                 <span className="pill pill--runs">{vocab.runs(entry.points)}</span>
-                <EntryPills entry={entry} oneOff={oneOffIds?.has(entry.taskId)} />
+                <EntryPills entry={entry} oneOff={oneOffIds?.has(entry.taskId)} leaving={leavingIds?.has(entry.taskId)} />
                 {entry.subbedInAt ? <span className="pill pill--sub">{vocab.terms.substitution}</span> : null}
                 {entry.partial && !done ? <span className="pill pill--partial">{vocab.terms.partial}</span> : null}
               </p>

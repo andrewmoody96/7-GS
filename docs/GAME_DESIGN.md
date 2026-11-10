@@ -161,6 +161,23 @@ Like a fantasy lineup, each series is planned as a week.
     (A carried-over one-off that was already planned that day works the same way.)
   - Not allowed: removing tasks, turning off must-hits, lowering runs to win.
 
+### Editing and deleting tasks
+
+The same rule applies: a week under way never gets easier. Changes show up right away,
+but days already under way keep what they were planned with.
+
+- **Name and notes** change everywhere at once, including days under way. They're labels.
+- **Worth** changes on the task list, the rotation and any day whose week hasn't started.
+  Days in a week already under way keep the old runs; the task shows "Worth 2 runs from
+  Monday. This week stays 1 run."
+- **Recurring/one-off** changes at once; it doesn't change what a win takes.
+- **Delete** always asks first. The task leaves the task list, the rotation and any day
+  whose week hasn't started. In a week already under way it stays in the lineups it's in
+  through Sunday, marked **Leaving**, and still counts exactly as planned (a must-hit is
+  still a must-hit). Until then **Undo delete** brings it back, rotation spots included.
+  Past box scores always keep it.
+- A task's name in any lineup opens its edit window.
+
 ### Recurring and one-off tasks
 
 - **Recurring** tasks ("Lift weights") stay on the roster.

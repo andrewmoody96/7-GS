@@ -415,3 +415,67 @@ describe('pinch hitters', () => {
     });
   });
 });
+
+describe('editing and deleting tasks mid-week', () => {
+  async function underWay() {
+    const env = await setup();
+    const { t, token } = env;
+    t.at('2026-10-05', '09:00', CHICAGO);
+    const week = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    // First check-off: the week is under way.
+    await t.ok('completeEntry', {
+      token,
+      params: { gameId: week.games[0]!.id, entryId: entry(week.games[0]!, 'Read').id },
+      body: { clientAt: t.clock.now().toISOString() },
+    });
+    return { ...env, week };
+  }
+
+  it('keeps a deleted task in the week under way (still a must-hit), and drops it from next week', async () => {
+    const { t, token, ids, week } = await underWay();
+    const deleted = await t.ok('retireTask', { token, params: { taskId: ids.Gym! } });
+    expect(deleted).toMatchObject({ status: 'retired', lockedThrough: '2026-10-11' });
+    expect(deleted.deletedAt).not.toBeNull();
+
+    const after = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    for (const [i, game] of after.games.entries()) {
+      expect(entry(game, 'Gym')).toMatchObject({ required: true, points: 2 });
+      expect(game.threshold).toBe(week.games[i]!.threshold);
+    }
+    // Gone from the rotation, and from next week's card when it opens on Friday.
+    const { starters } = await t.ok('listStarters', { token });
+    expect(starters.every((s) => s.lineup.every((slot) => slot.taskId !== ids.Gym))).toBe(true);
+    t.at('2026-10-09', '09:00', CHICAGO);
+    const next = await t.ok('getWeek', { token, params: { startDate: '2026-10-12' } });
+    expect(next.games.every((g) => g.entries.every((e) => e.taskName !== 'Gym'))).toBe(true);
+  });
+
+  it('undoes a delete while it’s still in the week, rotation spots included', async () => {
+    const { t, token, ids } = await underWay();
+    await t.ok('retireTask', { token, params: { taskId: ids.Gym! } });
+    const restored = await t.ok('restoreTask', { token, params: { taskId: ids.Gym! } });
+    expect(restored).toMatchObject({ status: 'active', deletedAt: null });
+    const { starters } = await t.ok('listStarters', { token });
+    expect(starters[0]!.lineup.some((slot) => slot.taskId === ids.Gym && slot.required)).toBe(true);
+    // Nothing to undo for a task that isn't deleted.
+    expect(await t.fails('restoreTask', { token, params: { taskId: ids.Gym! } }, 409)).toMatchObject({ reason: 'NOT_QUEUED' });
+  });
+
+  it('deletes a task that isn’t in a week under way at once, with nothing to undo', async () => {
+    const { t, token, ids } = await setup();
+    const deleted = await t.ok('retireTask', { token, params: { taskId: ids.Dishes! } });
+    expect(deleted).toMatchObject({ status: 'retired', lockedThrough: null });
+    expect(await t.fails('restoreTask', { token, params: { taskId: ids.Dishes! } }, 409)).toMatchObject({ reason: 'NOT_QUEUED' });
+  });
+
+  it('keeps the planned runs on days under way when a task’s worth changes', async () => {
+    const { t, token, ids, week } = await underWay();
+    const edited = await t.ok('updateTask', { token, params: { taskId: ids.Gym! }, body: { points: 1 } });
+    expect(edited).toMatchObject({ points: 1, lockedPoints: 2, lockedThrough: '2026-10-11' });
+    const after = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    for (const [i, game] of after.games.entries()) {
+      expect(entry(game, 'Gym').points).toBe(2);
+      expect(game.threshold).toBe(week.games[i]!.threshold);
+    }
+  });
+});

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../app/context';
 import { useTasksModal } from '../app/tasksModal';
+import { isLeaving } from '../lib/tasks';
 import { deviceTimeZone, onceKey, useNow } from '../app/hooks';
 import {
   useCurrentSeasonQuery,
@@ -241,6 +242,8 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
   const [celebrate, setCelebrate] = useState(false);
   const raise = pinchHitRaise(game);
   const oneOffIds = new Set((tasks.data ?? []).filter((t) => t.kind === 'one_off').map((t) => t.id));
+  const leavingIds = new Set((tasks.data ?? []).filter(isLeaving).map((t) => t.id));
+  const tasksModal = useTasksModal();
   const additionsOnly = game.editPolicy === 'additions_only';
 
   // Celebrate the moment the projection flips to W from your own check-off.
@@ -362,6 +365,8 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
             game={game}
             final={final}
             oneOffIds={oneOffIds}
+            leavingIds={leavingIds}
+            onEditTask={tasksModal.edit}
             onToggle={(entry, done) => {
               buzz();
               entryAction.mutate({
