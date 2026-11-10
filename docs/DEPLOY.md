@@ -14,6 +14,10 @@ There are two ways to put the app online. They do different jobs:
 GitHub Pages only serves static files, so it can't run the API, the database or the
 nightly finalizer. That's why the full app goes on Heroku.
 
+**Both deploy from `main`.** Day-to-day work happens on the dev branch,
+`claude/7-game-series-brainstorm-8ydzpv`, where CI checks every push. To release, open a
+pull request from the dev branch into `main` and merge it when CI passes.
+
 ---
 
 ## 1. GitHub Pages (the demo)
@@ -24,12 +28,12 @@ Everything is in `.github/workflows/pages.yml`. The demo is served from
 **One-time setup (on github.com):**
 
 1. Repo **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-2. Repo **Settings → Environments → github-pages**. If deployments are restricted to
-   certain branches, allow the branch you deploy from. The workflow runs on pushes to
-   `main` and to `claude/7-game-series-brainstorm-8ydzpv`.
+2. Repo **Settings → Environments → github-pages**: deployments must be allowed from
+   `main`. The default rule allows only the default branch, which is `main`, so this
+   usually needs no change.
 
-**Deploy:** push to one of those branches, or start **Actions → Deploy demo to GitHub
-Pages → Run workflow**. The URL appears on the run's summary page.
+**Deploy:** merge into `main`, or start **Actions → Deploy demo to GitHub Pages → Run
+workflow** with `main` selected. The URL appears on the run's summary page.
 
 **How it works:** the build sets `VITE_BASE=/7-GS/`. The router, the PWA manifest and
 the service worker all live under that path. `404.html` is a copy of the app shell, so
@@ -98,15 +102,23 @@ To add someone, set the list again with their address (the dyno restarts in a fe
 seconds). If you take someone off, they're signed out the next time the app talks to
 the server. Their data stays; put them back and it's all still there.
 
-Deploy the branch:
+Deploy `main`:
 
 ```sh
-git push heroku claude/7-game-series-brainstorm-8ydzpv:main
+git checkout main && git pull
+git push heroku main
 heroku open
 ```
 
-You can also connect the GitHub repo in the dashboard's **Deploy** tab and turn on
-automatic deploys.
+**Recommended: automatic deploys from `main`.** In the Heroku dashboard, go to the
+**Deploy** tab:
+
+1. **Deployment method → GitHub**, and connect `andrewmoody96/7-GS`.
+2. **Automatic deploys → branch `main`**. Tick **Wait for CI to pass before deploy**.
+3. Click **Enable Automatic Deploys**.
+
+After that, every merge into `main` deploys itself once CI is green. Pushes to the dev
+branch never touch production.
 
 ### What production enforces
 

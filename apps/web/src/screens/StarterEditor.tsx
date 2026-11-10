@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMeQuery, usePutStarter, useStartersQuery, useTasksQuery } from '../app/queries';
 import { Stepper, Switch } from '../components/Controls';
 import { AddFromRoster, SlotList, Warnings, type EditorSlot } from '../components/LineupEditor';
+import { IconInfo } from '../components/icons';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { formatTimeOfDay } from '../lib/format';
 import { vocab } from '../vocab';
@@ -26,7 +27,7 @@ export function StarterEditorScreen() {
     return (
       <div className="screen">
         <EmptyState title="No such starter">
-          <Link to="/film-room?tab=rotation">Back to the rotation</Link>
+          <Link to="/team/rotation">Back to the rotation</Link>
         </EmptyState>
       </div>
     );
@@ -77,7 +78,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           bench: bench.map((s, i) => ({ taskId: s.taskId, position: i + 1 })),
         },
       },
-      { onSuccess: () => navigate('/film-room?tab=rotation') },
+      { onSuccess: () => navigate('/team/rotation') },
     );
 
   return (
@@ -85,13 +86,24 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       <header className="screen__head">
         <div>
           <p className="screen__kicker">
-            <Link to="/film-room?tab=rotation">Rotation</Link> / {dayName}
+            <Link to="/team">Team</Link> / <Link to="/team/rotation">Rotation</Link> / {dayName}
           </p>
           <h1 className="screen__title">
             {dayName} {vocab.term.dayTemplate}
           </h1>
         </div>
       </header>
+
+      <aside className="explainer">
+        <IconInfo />
+        <div>
+          <p className="explainer__title">This is your default {dayName}</p>
+          <p>
+            It fills in future weeks. A {dayName} that’s already on your {vocab.week.title} doesn’t change. To add a task to this
+            week, use <strong>+ Add task</strong> or <Link to="/team/lineups">this week’s lineups</Link>.
+          </p>
+        </div>
+      </aside>
 
       <section className="card form">
         <div className="field">
@@ -162,7 +174,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           moveRoleLabel={`To ${vocab.terms.lineup.toLowerCase()}`}
         />
         <details className="disclosure">
-          <summary>Add from the {vocab.terms.roster.toLowerCase()}</summary>
+          <summary>Add from your {vocab.terms.roster.toLowerCase()}</summary>
           <AddFromRoster
             tasks={tasks}
             used={used}
@@ -177,7 +189,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       </section>
 
       <div className="actions actions--sticky">
-        <Link to="/film-room?tab=rotation" className="btn btn--quiet">
+        <Link to="/team/rotation" className="btn btn--quiet">
           Cancel
         </Link>
         <button type="button" className="btn btn--primary" onClick={save} disabled={!name.trim() || put.isPending}>

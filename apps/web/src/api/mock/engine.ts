@@ -34,8 +34,12 @@ import {
   diffDays,
   evaluateGame,
   finalizeAfter,
+  gamesInSeason,
   generateOpponent,
   hashSeed,
+  HEAD_START_SERIES,
+  headStartFrom,
+  isGameDay,
   IL_MIN_DAYS,
   ilMinUntil,
   ilReturnDate,
@@ -50,6 +54,7 @@ import {
   scoreline,
   suspensionOptions,
   weekLockedAt,
+  weekPosition,
   isRallyHit,
   localDateOf,
   longestWinStreak,
@@ -179,7 +184,7 @@ function seasonNumberOfGame(world: UserWorld, game: GameRow): number {
 function ensureSeason(world: UserWorld, env: Env, number: number): SeasonRow {
   let season = world.seasons.find((s) => s.number === number);
   if (!season) {
-    const w = seasonWindow(world.user.startDate, number);
+    const w = seasonWindow(world.user, number);
     season = {
       id: env.ids(),
       number,
@@ -209,6 +214,8 @@ function ensureSeries(world: UserWorld, env: Env, seasonNumber: number, number: 
   world.series.push(series);
   for (let i = 0; i < SERIES_LENGTH; i++) {
     const date = addDays(startDate, i);
+    // A Head Start week has no games before the day the user started.
+    if (!isGameDay(world.user, date)) continue;
     world.games.push({
       id: env.ids(),
       seriesId: series.id,
@@ -294,7 +301,7 @@ export function buildGameLineup(world: UserWorld, env: Env, game: GameRow, at: D
 }
 
 function runDay(world: UserWorld, env: Env, date: LocalDate): void {
-  const pos = calendarPosition(world.user.startDate, date);
+  const pos = calendarPosition(world.user, date);
   if (pos.phase === 'preseason') {
     ensureSeason(world, env, 1);
     return;
@@ -376,7 +383,7 @@ function applyFinalEffects(world: UserWorld, env: Env, game: GameRow, at: Date):
       effects.retired.push(task.id);
     } else if (entry.required && task.status === 'active') {
       task.carryover = true;
-      task.carryoverDate = nextGameDate(world.user.startDate, game.playedDate);
+      task.carryoverDate = nextGameDate(world.user, game.playedDate);
       effects.carried.push(task.id);
     }
   }
@@ -460,7 +467,15 @@ function restoreHold(env: Env, game: GameRow, task: TaskRow, hold: IlHoldRow): v
  * Makes `task` a must-hit in `game` and raises runs to win by exactly its runs
  * (rules.pinchHitThreshold). A bench task is promoted; a new task bats last.
  */
-function addPinchHit(world: UserWorld, env: Env, game: GameRow, task: TaskRow, at: Date, carriedOver: boolean): void {
+function addPinchHit(
+  world: UserWorld,
+  env: Env,
+  game: GameRow,
+  task: TaskRow,
+  at: Date,
+  carriedOver: boolean,
+  required = true,
+): void {
   const snapshot = game.snapshot ?? fail(409, 'NOT_ELIGIBLE', 'Open the week’s lineup card first.', 'NOT_BUILT');
   const existing = game.entries.find((e) => e.taskId === task.id && e.role !== 'subbed_out');
   if (existing?.role === 'lineup' && existing.required) {
@@ -479,7 +494,7 @@ function addPinchHit(world: UserWorld, env: Env, game: GameRow, task: TaskRow, a
     // Promote from the bench.
     existing.position = lastPosition + 1;
     existing.role = 'lineup';
-    existing.required = true;
+    existing.required = required;
     existing.points = task.points;
     existing.pinchHitAt = iso(at);
     existing.carriedOver = existing.carriedOver || carriedOver;
@@ -489,7 +504,7 @@ function addPinchHit(world: UserWorld, env: Env, game: GameRow, task: TaskRow, a
       taskId: task.id,
       taskName: task.name,
       points: task.points,
-      required: true,
+      required,
       position: lastPosition + 1,
       role: 'lineup',
       subbedInAt: null,
@@ -532,7 +547,7 @@ function placeCarryovers(world: UserWorld, env: Env, at: Date): void {
         task.carryoverDate = date;
         break;
       }
-      date = nextGameDate(world.user.startDate, date);
+      date = nextGameDate(world.user, date);
     }
   }
 }
@@ -554,7 +569,8 @@ function closeSeries(world: UserWorld, env: Env, now: Date): void {
   const today = todayOf(world, now);
   const month = monthKey(today);
   for (const series of world.series) {
-    if (series.closedAt) continue;
+    // The Head Start isn't a series: no Iron Man, no series bonus.
+    if (series.closedAt || series.number === HEAD_START_SERIES) continue;
     const games = gamesOfSeries(world, series.id);
     if (games.length < SERIES_LENGTH || games.some((g) => g.status !== 'final')) continue;
     series.closedAt = games.map((g) => g.finalizedAt ?? '').sort().at(-1) ?? iso(now);
@@ -773,7 +789,10 @@ export function toGameDto(world: UserWorld, game: GameRow, now: Date): GameDto {
 
 export function toSeriesDto(world: UserWorld, series: SeriesRow): SeriesDto {
   const games = gamesOfSeries(world, series.id);
-  const status = seriesStatus(games.map((g) => toSeriesGameState(world, g)));
+  const status = seriesStatus(
+    games.map((g) => toSeriesGameState(world, g)),
+    { unscored: series.number === HEAD_START_SERIES },
+  );
   return {
     id: series.id,
     seasonNumber: series.seasonNumber,
@@ -806,6 +825,7 @@ export function toSeasonDto(world: UserWorld, season: SeasonRow, now: Date): Sea
   let seriesWon = 0;
   let seriesLost = 0;
   for (const series of world.series.filter((s) => s.seasonNumber === season.number)) {
+    if (series.number === HEAD_START_SERIES) continue;
     const result = seriesStatus(gamesOfSeries(world, series.id).map((g) => toSeriesGameState(world, g))).result;
     if (result === 'won') seriesWon++;
     if (result === 'lost') seriesLost++;
@@ -839,13 +859,13 @@ export function toSeasonDto(world: UserWorld, season: SeasonRow, now: Date): Sea
 }
 
 export function currentSeasonRow(world: UserWorld, now: Date): SeasonRow | null {
-  const pos = calendarPosition(world.user.startDate, todayOf(world, now));
+  const pos = calendarPosition(world.user, todayOf(world, now));
   return world.seasons.find((s) => s.number === pos.seasonNumber) ?? null;
 }
 
 export function currentSeriesRow(world: UserWorld, now: Date): SeriesRow | null {
   const today = todayOf(world, now);
-  const pos = calendarPosition(world.user.startDate, today);
+  const pos = calendarPosition(world.user, today);
   if (pos.phase !== 'season') return null;
   return world.series.find((s) => s.seasonNumber === pos.seasonNumber && s.number === pos.seriesNumber) ?? null;
 }
@@ -859,21 +879,22 @@ export function toMeDto(world: UserWorld, now: Date): MeDto {
     displayName: user.displayName,
     timezone: user.timezone,
     startDate: user.startDate,
+    headStartFrom: headStartFrom(user),
     defaultLockTime: user.defaultLockTime,
     today,
-    position: calendarPosition(user.startDate, today),
+    position: calendarPosition(user, today),
     allowances: allowancesOf(world, now),
   };
 }
 
 export function toCalendarDto(world: UserWorld, now: Date): CalendarDto {
   const today = todayOf(world, now);
-  const position = calendarPosition(world.user.startDate, today);
+  const position = calendarPosition(world.user, today);
   return {
     signupDate: world.user.startDate,
     today,
     position,
-    seasons: [seasonWindow(world.user.startDate, position.seasonNumber), seasonWindow(world.user.startDate, position.seasonNumber + 1)],
+    seasons: [seasonWindow(world.user, position.seasonNumber), seasonWindow(world.user, position.seasonNumber + 1)],
   };
 }
 
@@ -882,7 +903,7 @@ export function toTodayDto(world: UserWorld, now: Date): TodayDto {
   const series = currentSeriesRow(world, now);
   return {
     date: today,
-    position: calendarPosition(world.user.startDate, today),
+    position: calendarPosition(world.user, today),
     games: world.games
       .filter((g) => g.playedDate === today)
       .sort((a, b) => a.slot - b.slot)
@@ -1227,7 +1248,7 @@ export function suspendGame(world: UserWorld, env: Env, gameId: string, resumeDa
 // ── Pinch hitters ────────────────────────────────────────────────────────────
 
 /** POST /games/:id/pinch-hitters: a new must-hit (or a promoted bench task) until the game is final. */
-export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: string, now: Date): GameDto {
+export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: string, now: Date, required = true): GameDto {
   const game = findGame(world, gameId);
   assertNotFinal(game);
   assertBeforeMidnight(world, game, now);
@@ -1243,10 +1264,17 @@ export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: 
   if (existing?.role === 'subbed_out') {
     fail(409, 'CONFLICT', 'A task that was subbed out cannot come back in this game.', 'SUBBED_OUT');
   }
+  if (!required) {
+    // A regular (non-must-hit) add is only for a later day.
+    if (compareDates(game.playedDate, todayOf(world, now)) <= 0) {
+      fail(409, 'NOT_ELIGIBLE', 'A task added to today’s game is always a must-hit.', 'TODAY_MUST_HIT');
+    }
+    if (existing?.role === 'lineup') fail(409, 'CONFLICT', 'That task is already in this lineup.', 'ALREADY_IN_LINEUP');
+  }
   if (existing?.role !== 'lineup' && pinchHitThreshold(game.snapshot.threshold, task.points) > LIMITS.thresholdMax) {
     fail(409, 'CONFLICT', 'Runs to win would go past the limit.', 'THRESHOLD_MAX');
   }
-  addPinchHit(world, env, game, task, now, false);
+  addPinchHit(world, env, game, task, now, false, required);
   return toGameDto(world, game, now);
 }
 
@@ -1254,9 +1282,9 @@ export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: 
 
 export function listWeeks(world: UserWorld, now: Date): { weeks: WeekSummaryDto[] } {
   const today = todayOf(world, now);
-  const position = calendarPosition(world.user.startDate, today);
+  const position = calendarPosition(world.user, today);
   return {
-    weeks: plannableWeeks(world.user.startDate, today).map((startDate) => {
+    weeks: plannableWeeks(world.user, today).map((startDate) => {
       const series = world.series.find((s) => s.startDate === startDate);
       return {
         startDate,
@@ -1275,11 +1303,10 @@ export function listWeeks(world: UserWorld, now: Date): { weeks: WeekSummaryDto[
 /** GET /weeks/:startDate: the week's card. Opening it builds every lineup of the week. */
 export function getWeek(world: UserWorld, env: Env, startDate: LocalDate, now: Date): WeekDto {
   const today = todayOf(world, now);
-  if (!plannableWeeks(world.user.startDate, today).includes(startDate)) {
+  if (!plannableWeeks(world.user, today).includes(startDate)) {
     fail(404, 'NOT_FOUND', 'That week’s lineup card isn’t open.');
   }
-  const position = calendarPosition(world.user.startDate, startDate);
-  if (position.phase !== 'season') fail(404, 'NOT_FOUND', 'That week has no games.');
+  const position = weekPosition(world.user, startDate) ?? fail(404, 'NOT_FOUND', 'That week has no games.');
   ensureSeason(world, env, position.seasonNumber);
   const series = ensureSeries(world, env, position.seasonNumber, position.seriesNumber, position.seriesStart);
   for (const game of gamesOfSeries(world, series.id)) {
@@ -1312,7 +1339,7 @@ function seasonWinStreakBefore(world: UserWorld, game: GameRow): number {
 export function rallyQuote(world: UserWorld, gameId: string, now: Date): RallyQuoteDto {
   const game = findGame(world, gameId);
   const today = todayOf(world, now);
-  const inSeason = calendarPosition(world.user.startDate, today).phase === 'season';
+  const inSeason = calendarPosition(world.user, today).phase === 'season';
   const seriesGameIds = new Set(gamesOfSeries(world, game.seriesId).map((g) => g.id));
   const tokensAvailable = availableRallyTokens(world, today).length;
   const eligibility = rallyEligibility({
@@ -1491,7 +1518,7 @@ export function placeOnInjuredList(world: UserWorld, taskId: string, now: Date):
   const start = ilStartDate(today, playsToday);
   task.status = 'injured';
   task.ilStartedOn = start;
-  task.ilMinUntil = ilMinUntil(world.user.startDate, start);
+  task.ilMinUntil = ilMinUntil(world.user, start);
   // From the stint's start, its unfinished entries leave every built game, held for its
   // return. Runs to win never changes: the IL only changes who clears the bar.
   for (const game of world.games) {
@@ -1552,11 +1579,34 @@ export function putStarter(world: UserWorld, day: Weekday, body: StarterPutDto):
 export function updateSeasonGoal(world: UserWorld, seasonId: string, winGoal: number, now: Date): SeasonDto {
   const season = world.seasons.find((s) => s.id === seasonId) ?? fail(404, 'NOT_FOUND', 'Season not found.');
   const dto = toSeasonDto(world, season, now);
-  const phase = calendarPosition(world.user.startDate, todayOf(world, now)).phase;
-  if (phase === 'season') fail(409, 'OUT_OF_SEASON', 'Set the goal in Spring Training or Review Week.');
-  if (dto.status !== 'upcoming') fail(409, 'NOT_ELIGIBLE', 'Only an upcoming season’s goal can be set.', 'NOT_UPCOMING');
+  const total = gamesInSeason(world.user, season.number);
+  if (winGoal > total) fail(400, 'VALIDATION_FAILED', `This season has ${total} games.`);
+  const pos = calendarPosition(world.user, todayOf(world, now));
+  // A Head Start counts as "hasn't started": the goal stays open until Opening Day.
+  const headStart = pos.phase === 'season' && pos.seriesNumber === HEAD_START_SERIES && season.number === pos.seasonNumber;
+  if (!headStart) {
+    if (pos.phase === 'season') fail(409, 'OUT_OF_SEASON', 'Set the goal in Spring Training or Review Week.');
+    if (dto.status !== 'upcoming') fail(409, 'NOT_ELIGIBLE', 'Only an upcoming season’s goal can be set.', 'NOT_UPCOMING');
+  }
   season.winGoal = winGoal;
   return toSeasonDto(world, season, now);
+}
+
+/**
+ * POST /me/head-start: play from today instead of waiting for Opening Day. The days left
+ * this week become real games that count toward Season 1, not scored as a series.
+ */
+export function startHeadStart(world: UserWorld, env: Env, now: Date): MeDto {
+  const today = todayOf(world, now);
+  if (calendarPosition(world.user, today).phase !== 'preseason') {
+    fail(409, 'NOT_ELIGIBLE', 'You can only start early during Spring Training, before Opening Day.', 'NOT_PRESEASON');
+  }
+  world.user.headStartFrom = today;
+  const season = ensureSeason(world, env, 1);
+  season.startDate = seasonWindow(world.user, 1).start;
+  // Today is now a game day: build its game.
+  runDay(world, env, today);
+  return toMeDto(world, now);
 }
 
 export function seasonById(world: UserWorld, seasonId: string): SeasonRow {

@@ -10,6 +10,16 @@ Every week is a best-of-7 playoff series. Every day is a game. You win a game by
 completing the tasks in that day's lineup. Every game and every series rolls up into
 a season record.
 
+**The purpose of the app is to win the season.** Nobody is perfect. We set ourselves up
+for failure with long lists, then punish ourselves for not getting everything done.
+7-Game Series is here to help people set reasonable goals and see the value in what
+they did accomplish in a day, even when it wasn't everything they'd hoped for.
+
+Weekly planning, plus the rule that you can add to your plate but not take things off
+once the week starts, helps users prioritize the must-do's and keep goals in check. Win
+4 of 7 to win the series, and rack up wins toward the season goal by doing what you said
+you'd do. (Playoffs at the end of a season are planned, not built: see §11.)
+
 ## 2. Decisions so far
 
 | # | Topic | Decision |
@@ -23,7 +33,8 @@ a season record.
 | 7 | Skipping days / tasks | **DECIDED** — Only Rainouts (planned, whole day), Suspended games (emergencies) and the Injured List (a task). |
 | 8 | Rainout outcome | **DECIDED** — The game is made up as a doubleheader later in the same series (§7). |
 | 9 | Rainout allowance | **DECIDED** — 2 per month, with a 3rd earnable (§7). |
-| 10 | Seasons | **DECIDED** — Two seasons per year, anchored to the user's start date, with offseason weeks (§5). |
+| 10 | Seasons | **DECIDED** — Quarterly: four seasons per year (12 series + a Review Week each), anchored to the user's start date (§5). |
+| 22 | When a new user starts | **DECIDED** — Their choice: wait for Monday's Opening Day (the default), or start today with a Head Start (§5). |
 | 11 | Day / week boundaries | **DECIDED** — Days run 00:00–23:59 in the user's local time. Weeks (series) run Monday–Sunday. |
 | 12 | Point values | **DECIDED** — Free-form. Every task defaults to 1 run, and the user can set any whole number. |
 | 13 | Offseason length | **DECIDED** — Exactly 1 review week per season. The weeks can't be combined. |
@@ -31,6 +42,7 @@ a season record.
 | 15 | Rally Cap window | **DECIDED** — Until 11:59 a.m. the day after the game. |
 | 16 | Weekly lineups | **DECIDED** — Each week is planned on a lineup card. Free edits until the week's first pitch; after that, lineups only grow (§4a). |
 | 17 | Pinch hitters | **DECIDED** — A must-hit added after the week locks raises that day's runs to win by exactly its runs (§4a). |
+| 23 | Adding to a later day | **DECIDED** — Added to today, a task is always a must-hit. Added to a later day, the user chooses; either way runs to win rises by its runs (§4a). |
 | 18 | Non-required work | **DECIDED** — Lives on the bench. Promoting a bench task to must-hit makes it a pinch hitter. |
 | 19 | One-off tasks | **DECIDED** — Retire when completed. A missed one-off must-hit moves to the next game day automatically (§4a). |
 | 20 | Next week's card | **DECIDED** — Opens on Friday. |
@@ -43,7 +55,8 @@ future sport skins possible.
 
 | UI term | Data term | Meaning |
 |---|---|---|
-| Season | `season` | 25 series of play followed by 1 offseason week (§5). |
+| Season | `season` | A quarter: 12 series of play followed by 1 offseason week (§5). |
+| Head Start | `series.number = 0` | The days between an early start and Opening Day. Games count; not scored as a series (§5). |
 | Offseason (Review Week) | `offseason` | The 1 week at the end of each season. No games, nothing recorded. |
 | Spring Training | `preseason` | The partial week before a user's first Monday. Not counted. |
 | Series | `series` | One Monday–Sunday week, 7 games. |
@@ -51,7 +64,7 @@ future sport skins possible.
 | Doubleheader | `game.slot = 2` | A made-up game played on the same day as another game. |
 | Opponent | `opponent` | Generated team name. Their scoreboard score is one less than your runs to win. |
 | Runs to win | `threshold` | The runs you need for a W, set per starter. |
-| Roster | `task_definition` | All of a user's tasks/habits. |
+| Tasks | `task_definition` | All of a user's tasks/habits. Plain task-app wording on purpose: you **add a task** first, and the baseball layer starts once it's in a lineup. |
 | Starter | `day_template` | Fixed weekday theme: default lineup, must-hits, threshold. |
 | Lineup | `lineup_entry` | Tasks scheduled for a game, in priority (batting) order. |
 | Must-hit | `required = true` | A lineup task that must be completed to win. |
@@ -126,10 +139,19 @@ Like a fantasy lineup, each series is planned as a week.
   must-hits, change runs to win, place one-offs on specific days.
 - **After the week's first pitch** (the earliest lock of any game that week, normally
   Monday's): lineups only grow. **The bar never drops.**
+  - In the app this is the **Add a task** button on Today and on the lineup card (task
+    words first; "pinch hitter" is the flavor). The sheet can also create a brand-new
+    task on the spot.
   - **Pinch hitter:** add a new must-hit to today or any later day, even mid-game. That
     day's runs to win rises by exactly the task's runs, so the cushion between runs to
     win and available runs stays the same. On the scoreboard the opponent "answers back"
     with the same number of runs.
+  - **Regular task, later days only:** when adding to tomorrow or any later day, the user
+    chooses whether the task is a must-hit. Left off, it joins the lineup as a regular
+    task: it scores runs when done and skipping it doesn't lose the day by itself. Runs to
+    win still rises by exactly its runs, so the day gets no easier (padding a day with
+    small optional tasks can't lower the bar). A task added to **today** is always a
+    must-hit; today's "maybe" belongs on the bench.
   - **Bench:** add any task to a day's bench. Bench work is optional; it only counts once
     subbed in for a non-must-hit.
   - **Promote:** turning a bench task into a must-hit makes it a pinch hitter (same rule:
@@ -153,19 +175,25 @@ Like a fantasy lineup, each series is planned as a week.
 
 ### Calendar math
 
-A year is treated as 52 weeks, split into two seasons of 26 weeks each:
+A year is treated as 52 weeks, split into four quarterly seasons of 13 weeks each:
 
 ```
-| Season 1: 25 series (~5 mo 3 wk) | Off: 1 wk | Season 2: 25 series (~5 mo 3 wk) | Off: 1 wk | → repeat
+| S1: 12 series | Off: 1 wk | S2: 12 series | Off: 1 wk | S3: 12 series | Off: 1 wk | S4: 12 series | Off: 1 wk | → repeat
 ```
 
-- **25 weeks of play + 1 offseason week = 26 weeks ≈ 6 months**, so a year holds two
-  seasons and 2 offseason weeks in total.
-- Season 1 begins on the **first Monday on or after the user's start date**.
-- The days between sign-up and that Monday are **Spring Training**. The user can set
-  up the roster and rotation and try check-offs, but nothing is recorded.
-- Season 2 begins the Monday after the first offseason week. Season 3 begins the
-  Monday after the second offseason week, and so on.
+- **12 weeks of play + 1 offseason week = 13 weeks ≈ 3 months**, so a year holds four
+  seasons and 4 offseason weeks in total. A season has 84 games.
+- **Opening Day** of Season 1 is the **first Monday on or after the user's start date**.
+- The days between sign-up and that Monday are the user's choice:
+  - **Wait for Opening Day (default): Spring Training.** The user can add tasks, set up
+    the rotation and plan Opening Week, but nothing is recorded.
+  - **Start today: a Head Start.** From the day they choose through Sunday, every day is
+    a real game that counts toward the Season 1 record (so that season has up to 6 more
+    games, and the win goal can be set that much higher). The partial week is **not
+    scored as a series**: no clinch, no series W/L, no Iron Man or series bonus. Series 1
+    still starts on Monday. The choice is offered on the Today screen all through Spring
+    Training and can't be undone. The win goal stays open until Opening Day.
+- Each later season begins the Monday after the previous season's offseason week.
 - 52 weeks is 364 days, so season start dates drift about one day earlier each
   calendar year. That's acceptable; series always stay Monday-aligned.
 
@@ -199,7 +227,7 @@ Each season tracks:
 - run differential (runs scored minus thresholds),
 - sweeps, comeback series (won after trailing 0–3, 1–3), Rally Cap wins.
 
-**Season goal**: the user sets a target win count (e.g. 120 of 175 games). The app
+**Season goal**: the user sets a target win count (e.g. 50 of 84 games). The app
 shows pace and Games Behind (GB), so every game matters even after a series is decided.
 Season stats reset each season; lifetime ("career") stats keep accumulating.
 
@@ -382,10 +410,20 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 1. **Today**: scoreboard (runs vs. threshold), lineup with one-tap check-offs,
    must-hit indicators. Shows both games on a doubleheader day.
 2. **Series**: 7-game strip, series score, broadcast-style status chyron.
-3. **Film Room**: weekly setup of the fixed rotation, roster, IL, and Rainouts.
-4. **Season**: standings, pace vs. goal, streaks, box score history.
+3. **Team**: the season at a glance (record, stats, pace and win goal, Rally Caps and
+   Rainouts), then four sections: **This week's lineups** (the weekly lineup card),
+   **Rotation** (weekday starters), **Injured List** and **Settings** (team name, theme,
+   sign out, account). Replaces the old Film Room and Season tabs.
+4. **Add task** (a window, not a page): the raised **+** in the tab bar opens it from
+   any screen. Add a task and optionally put it straight into today or a later day this
+   week (same rules as §4a). The full task list lives here too, for editing and retiring.
 5. **Rally Cap sheet**: shown on a final, eligible L. Odds breakdown and roll.
 6. **Review Week hub**: season review, awards, front-office changes for the next season.
+7. **How it works**: a five-step guide (add tasks → plan the week → win the day → once the
+   week starts, add but don't remove → win the week). It opens by itself on a device's
+   first visit and stays behind the **?** button in the top bar. The Rotation and its
+   starter editor say plainly that they shape future weeks, and point to the lineup card
+   for this week.
 
 **Weekly lineup card on wider screens** (tablets and desktop, 768px+): the week is a
 board of seven equal-width, equal-height day columns in one row, sized to fit the window
@@ -393,7 +431,6 @@ below the header. A busy day scrolls inside its own column (a soft shadow shows 
 more), actions line up along the bottom, and the day being edited widens to fit the
 editor. If the window is too narrow for seven readable columns, the board scrolls sideways
 instead of squeezing them. Phones keep the stacked list.
-
 ## 10. Architecture notes
 
 - **Shared rules package** (TypeScript, pure functions): game result, Rally Cap
@@ -411,4 +448,7 @@ instead of squeezing them. Phones keep the stacked list.
 
 ## 11. Open questions
 
-None for game rules. Next step: data model and API contract.
+- **Playoffs.** The idea: rack up wins in the regular season and try to get through a
+  playoff at the end of each quarter. Not designed or built yet; seasons are 12 regular
+  series for now. Open: how you qualify, how many rounds, and what losing a round means.
+

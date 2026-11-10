@@ -150,6 +150,13 @@ export const IconCap = (p: IconProps) => (
   </Icon>
 );
 
+export const IconHelp = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 16.5h.01" />
+  </Icon>
+);
+
 export const IconInfo = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="9" />

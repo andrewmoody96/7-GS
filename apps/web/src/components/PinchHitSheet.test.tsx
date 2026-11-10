@@ -8,8 +8,9 @@ import { CheckoffQueue } from '../api/offlineQueue';
 import { createQueryClient } from '../app/queries';
 import { AppProviders } from '../app/routes';
 import { pinchHitMath } from '../lib/game';
-import { FilmRoomScreen } from '../screens/FilmRoom';
+import { LineupsScreen } from '../screens/Team';
 import { TodayScreen } from '../screens/Today';
+import { TasksSheet } from './TasksSheet';
 
 // Friday 2 October 2026 in Chicago: the midseason demo (week locked, a carried-over one-off).
 const REAL_NOW = Date.parse('2026-10-02T17:00:00Z');
@@ -47,20 +48,39 @@ describe('Today: pinch hitters', () => {
     expect(await screen.findByText('Runs to win 6 · +1 pinch hit')).toBeInTheDocument();
     expect(screen.getByText('Carried over')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /^Pinch hit$/ }));
+    await user.click(screen.getByRole('button', { name: /^Add a task$/ }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/pick a task to see the raise/)).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Send in' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Add to lineup' })).toBeDisabled();
 
     await user.click(within(dialog).getByLabelText(/Meal prep/));
     expect(within(dialog).getByText('Runs to win 6 → 8')).toBeInTheDocument();
     expect(within(dialog).getByText('+2 pinch hit')).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: 'Send in' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Add to lineup' }));
     expect(await screen.findByText('Runs to win 8 · +3 pinch hit')).toBeInTheDocument();
     const today = await api.call('getToday');
     expect(today.games[0]!.threshold).toBe(8);
     expect(today.games[0]!.entries.find((e) => e.taskName === 'Meal prep')).toMatchObject({ required: true, role: 'lineup' });
+  });
+
+  it('creates a brand-new task in the sheet and adds it to today', async () => {
+    const user = userEvent.setup();
+    const { api } = renderWithApp(<TodayScreen />);
+    await user.click(await screen.findByRole('button', { name: /^Add a task$/ }));
+    const dialog = await screen.findByRole('dialog');
+
+    await user.click(within(dialog).getByText('Or create a new task'));
+    await user.type(within(dialog).getByLabelText('New task'), 'Call the dentist');
+    await user.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    // The new task comes back selected, with the raise shown before confirming.
+    expect(await within(dialog).findByText('Runs to win 6 → 7')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Add to lineup' }));
+    await waitFor(async () => {
+      const today = await api.call('getToday');
+      expect(today.games[0]!.entries.find((e) => e.taskName === 'Call the dentist')).toMatchObject({ required: true, role: 'lineup' });
+    });
   });
 
   it('makes a bench task a must-hit with the same confirmation', async () => {
@@ -77,18 +97,97 @@ describe('Today: pinch hitters', () => {
   });
 });
 
-describe('Film Room: the weekly lineup card', () => {
+describe('Lineups: adding to a later day', () => {
+  it('offers the must-hit choice for a later day, and adds a regular task when it’s off', async () => {
+    const user = userEvent.setup();
+    const { api } = renderWithApp(<LineupsScreen />, '/team/lineups');
+    // Friday demo: Saturday is a later day in a week that has already started.
+    const saturday = await screen.findByRole('listitem', { name: /^Sat / });
+    await user.click(within(saturday).getAllByRole('button', { name: /^Add a task$/ })[0]!);
+    const dialog = await screen.findByRole('dialog');
+    const toggle = within(dialog).getByRole('switch', { name: 'Make it a must-hit' });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(within(dialog).getByText(/skipping it won’t sink the day/)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByLabelText(/Inbox zero/));
+    await user.click(within(dialog).getByRole('button', { name: 'Add to lineup' }));
+    await waitFor(async () => {
+      const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });
+      const games = week.games.filter((g) => g.playedDate > '2026-10-02');
+      const added = games.flatMap((g) => g.entries).find((e) => e.taskName === 'Inbox zero' && e.pinchHitAt !== null);
+      expect(added).toMatchObject({ required: false, role: 'lineup' });
+    });
+  });
+
+  it('gives no choice when adding to today', async () => {
+    const user = userEvent.setup();
+    renderWithApp(<TodayScreen />);
+    await user.click(await screen.findByRole('button', { name: /^Add a task$/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByRole('switch', { name: 'Make it a must-hit' })).toBeNull();
+  });
+});
+
+describe('Lineups: the weekly lineup card', () => {
   it('shows this week locked (additions only) and next week open for planning', async () => {
     const user = userEvent.setup();
-    renderWithApp(<FilmRoomScreen />, '/film-room');
-    expect(await screen.findByText('Week locked — additions only')).toBeInTheDocument();
+    renderWithApp(<LineupsScreen />, '/team/lineups');
+    expect(await screen.findByText('Week in progress — add only')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem', { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) / })).toHaveLength(7);
     expect(screen.queryByRole('button', { name: /Edit day/ })).toBeNull();
-    expect(screen.getAllByRole('button', { name: /^Pinch hit$/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /^Add a task$/ }).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('tab', { name: /Next week/ }));
     expect(await screen.findByText('Planning')).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByRole('button', { name: /Edit day/ })).toHaveLength(7));
-    expect(screen.queryByRole('button', { name: /^Pinch hit$/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Add a task$/ })).toBeNull();
+  });
+});
+
+describe('Add task window', () => {
+  it('adds a task to a later day this week, as a regular task when must-hit is off', async () => {
+    const user = userEvent.setup();
+    const { api } = renderWithApp(<TasksSheet open onClose={() => {}} />);
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Task'), 'Book flights');
+    // Friday demo: the week has started. Saturday is a doubleheader; pick its first game.
+    await user.click((await within(dialog).findAllByText(/^Sat/))[0]!);
+    expect(within(dialog).getByText(/so the day gets no easier/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('switch', { name: 'Make it a must-hit' }));
+    await user.click(within(dialog).getByRole('button', { name: /Add task/ }));
+    await waitFor(async () => {
+      const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });
+      const added = week.games.flatMap((g) => g.entries).find((e) => e.taskName === 'Book flights');
+      expect(added).toMatchObject({ required: false, role: 'lineup' });
+    });
+  });
+
+  it('makes a task added to today a must-hit, with no choice', async () => {
+    const user = userEvent.setup();
+    const { api } = renderWithApp(<TasksSheet open onClose={() => {}} />);
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Task'), 'Call the dentist');
+    await user.click(await within(dialog).findByText('Today'));
+    expect(within(dialog).queryByRole('switch', { name: 'Make it a must-hit' })).toBeNull();
+    expect(within(dialog).getByText(/a task added to today is a must-hit/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: /Add task/ }));
+    await waitFor(async () => {
+      const today = (await api.call('getToday')).games[0]!;
+      expect(today.entries.find((e) => e.taskName === 'Call the dentist')).toMatchObject({ required: true, role: 'lineup' });
+    });
+  });
+
+  it('just adds it to the task list when no day is picked', async () => {
+    const user = userEvent.setup();
+    const { api } = renderWithApp(<TasksSheet open onClose={() => {}} />);
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Task'), 'Learn to juggle');
+    await user.click(within(dialog).getByRole('button', { name: /Add task/ }));
+    await waitFor(async () => {
+      expect((await api.call('listTasks')).tasks.some((t) => t.name === 'Learn to juggle')).toBe(true);
+    });
+    const today = (await api.call('getToday')).games[0]!;
+    expect(today.entries.some((e) => e.taskName === 'Learn to juggle')).toBe(false);
   });
 });

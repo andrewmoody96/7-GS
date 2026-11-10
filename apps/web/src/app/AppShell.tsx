@@ -4,7 +4,8 @@ import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { getMockBackend } from '../api';
 import { isApiError } from '../api/client';
 import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
-import { IconFilmRoom, IconSeason, IconSeries, IconToday } from '../components/icons';
+import { hasSeenHowItWorks, HowItWorksSheet, markHowItWorksSeen } from '../components/HowItWorks';
+import { IconHelp, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
 import { Sheet } from '../components/Sheet';
 import { ErrorPanel } from '../components/States';
 import { formatDate, formatDayTime } from '../lib/format';
@@ -13,12 +14,12 @@ import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { forgetCachedMe, invalidateGameDay, useMeQuery } from './queries';
 import { useNotify } from './toast';
 import { useNow } from './hooks';
+import { TasksModalProvider, useTasksModal } from './tasksModal';
 
 const TABS = [
   { to: '/', label: vocab.tabs.today, Icon: IconToday, end: true },
   { to: '/series', label: vocab.tabs.series, Icon: IconSeries, end: false },
-  { to: '/film-room', label: vocab.tabs.filmRoom, Icon: IconFilmRoom, end: false },
-  { to: '/season', label: vocab.tabs.season, Icon: IconSeason, end: false },
+  { to: '/team', label: vocab.tabs.team, Icon: IconSeason, end: false },
 ] as const;
 
 /** Requires a session: unauthenticated users go to sign-in; offline users keep their cached profile. */
@@ -53,11 +54,17 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
 function TopBar() {
   const me = useMeQuery();
+  // The guide opens by itself the first time on a device, then lives behind the ? button.
+  const [helpOpen, setHelpOpen] = useState(() => !hasSeenHowItWorks());
+  const closeHelp = () => {
+    markHowItWorksSeen();
+    setHelpOpen(false);
+  };
   const queued = useQueuedOps();
   const pos = me.data?.position;
   const meta =
     pos?.phase === 'season'
-      ? `S${pos.seasonNumber} · ${vocab.term.series} ${pos.seriesNumber}`
+      ? `S${pos.seasonNumber} · ${vocab.seriesName(pos.seriesNumber)}`
       : pos?.phase === 'preseason'
         ? vocab.term.preseason
         : pos?.phase === 'offseason'
@@ -85,7 +92,11 @@ function TopBar() {
             {meta ? <span className="topbar__phase">{meta}</span> : null}
           </p>
         ) : null}
+        <button type="button" className="icon-btn topbar__help" onClick={() => setHelpOpen(true)} aria-label="How it works">
+          <IconHelp />
+        </button>
       </div>
+      <HowItWorksSheet open={helpOpen} onClose={closeHelp} />
     </header>
   );
 }
@@ -204,7 +215,16 @@ function useOfflineSync() {
 }
 
 export function AppShell() {
+  return (
+    <TasksModalProvider>
+      <Shell />
+    </TasksModalProvider>
+  );
+}
+
+function Shell() {
   useOfflineSync();
+  const tasksModal = useTasksModal();
   return (
     <div className="app">
       <a className="skip" href="#main">
@@ -222,6 +242,12 @@ export function AppShell() {
             <span className="tab__label">{label}</span>
           </NavLink>
         ))}
+        <button type="button" className="tab tab--add" onClick={tasksModal.open}>
+          <span className="tab__add" aria-hidden="true">
+            <IconPlus />
+          </span>
+          <span className="tab__label">{vocab.tabs.addTask}</span>
+        </button>
       </nav>
     </div>
   );

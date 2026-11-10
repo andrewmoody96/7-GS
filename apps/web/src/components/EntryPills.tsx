@@ -7,12 +7,15 @@ interface EntryPillsProps {
   oneOff?: boolean;
 }
 
-/** Must-hit, pinch hitter (PH), carried-over and one-off badges for a lineup entry. */
+/** Must-hit, pinch hitter (PH), added-late, carried-over and one-off badges for a lineup entry. */
 export function EntryPills({ entry, oneOff }: EntryPillsProps) {
   return (
     <>
       {entry.required && entry.role === 'lineup' ? <span className="pill pill--must">{vocab.term.required}</span> : null}
-      {entry.pinchHitAt ? (
+      {entry.pinchHitAt && !entry.required ? (
+        // Added after the week started as a regular task: it raised runs to win, but isn't a pinch hitter.
+        <span className="pill pill--ph">{vocab.terms.addedLate}</span>
+      ) : entry.pinchHitAt ? (
         <span className="pill pill--ph" title={vocab.terms.pinchHitter}>
           <span aria-hidden="true">{vocab.terms.pinchHitterShort}</span>
           <span className="sr-only">{vocab.terms.pinchHitter}</span>

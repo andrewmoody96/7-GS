@@ -362,4 +362,56 @@ describe('pinch hitters', () => {
     // bar. 2 + 1 + 3 + 1 = 7 against 7 wins (7–6 on the scoreboard).
     expect(final).toMatchObject({ status: 'final', result: 'W', resultDetail: 'clean', runs: 7, threshold: 7, editPolicy: 'closed' });
   });
+
+  it('lets a task added to a later day be a regular task, but today’s add is always a must-hit', async () => {
+    const { t, token, ids } = await setup();
+    t.at('2026-10-05', '09:00', CHICAGO);
+    const week = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
+    const [monday, , wednesday] = week.games;
+    // First check-off: the week is under way.
+    await t.ok('completeEntry', {
+      token,
+      params: { gameId: monday!.id, entryId: entry(monday!, 'Read').id },
+      body: { clientAt: t.clock.now().toISOString() },
+    });
+
+    // Today: no choice.
+    expect(
+      await t.fails('addPinchHitter', { token, params: { gameId: monday!.id }, body: { taskId: ids.Dishes!, required: false } }, 409),
+    ).toMatchObject({ code: 'NOT_ELIGIBLE', reason: 'TODAY_MUST_HIT' });
+
+    // Wednesday: a regular task. Runs to win still rises by its 3 runs (3 → 6).
+    const added = await t.ok('addPinchHitter', { token, params: { gameId: wednesday!.id }, body: { taskId: ids.Dishes!, required: false } });
+    expect(added.threshold).toBe(6);
+    expect(entry(added, 'Dishes')).toMatchObject({ role: 'lineup', required: false, points: 3 });
+    expect(entry(added, 'Dishes').pinchHitAt).not.toBeNull();
+
+    // A bench task can come in the same way (6 → 7); one already batting can't be "added".
+    const promoted = await t.ok('addPinchHitter', { token, params: { gameId: wednesday!.id }, body: { taskId: ids.Walk!, required: false } });
+    expect(promoted.threshold).toBe(7);
+    expect(entry(promoted, 'Walk')).toMatchObject({ role: 'lineup', required: false });
+    expect(
+      await t.fails('addPinchHitter', { token, params: { gameId: wednesday!.id }, body: { taskId: ids.Read!, required: false } }, 409),
+    ).toMatchObject({ reason: 'ALREADY_IN_LINEUP' });
+
+    // Wednesday: only Gym gets done. Skipping the regular tasks is "came up short", not a
+    // missed must-hit.
+    t.at('2026-10-07', '10:00', CHICAGO);
+    const today = (await t.ok('getToday', { token })).games[0]!;
+    await t.ok('completeEntry', {
+      token,
+      params: { gameId: today.id, entryId: entry(today, 'Gym').id },
+      body: { clientAt: t.clock.now().toISOString() },
+    });
+    t.at('2026-10-08', '08:00', CHICAGO);
+    await t.finalize();
+    expect(await t.ok('getGame', { token, params: { gameId: today.id } })).toMatchObject({
+      status: 'final',
+      result: 'L',
+      resultDetail: 'short',
+      missedRequired: 0,
+      runs: 2,
+      threshold: 7,
+    });
+  });
 });

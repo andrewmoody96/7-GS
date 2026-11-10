@@ -108,6 +108,8 @@ export interface Vocab {
     ironMan: string;
     pinchHitter: string;
     pinchHitterShort: string;
+    /** A regular (non-must-hit) task added after the week started. */
+    addedLate: string;
     carriedOver: string;
     suspended: string;
     noDecision: string;
@@ -145,6 +147,11 @@ export interface Vocab {
     fromRoster: string;
     none: string;
     done: (name: string, threshold: number) => string;
+    doneOptional: (name: string, threshold: number) => string;
+    explainerLater: string;
+    mustHitSwitch: string;
+    mustHitOn: string;
+    mustHitOff: string;
   };
   suspension: {
     action: string;
@@ -163,12 +170,26 @@ export interface Vocab {
     done: (day: string | null) => string;
     reason: Record<SuspensionIneligibleReason, string>;
   };
-  tabs: { today: string; series: string; filmRoom: string; season: string };
+  tabs: { today: string; series: string; team: string; addTask: string };
   /** "1 run", "3 runs". */
   runs: (n: number) => string;
   hits: (n: number) => string;
   gameLabel: (gameNumber: number) => string;
   seriesLabel: (status: SeriesStatus) => string;
+  /** "Series 3", or the Head Start's name for series 0. */
+  seriesName: (number: number) => string;
+  headStart: {
+    name: string;
+    /** What a Head Start is, in one line. */
+    blurb: string;
+    offerTitle: string;
+    offerBody: (days: number, openingDay: string) => string;
+    action: string;
+    waitNote: (openingDay: string) => string;
+    confirmTitle: string;
+    confirmBody: (days: number, openingDay: string) => string;
+    started: (days: number) => string;
+  };
   resultDetail: Record<ResultDetail, string>;
   /** Compact form for tight spots like the game log ('' when nothing to add). */
   resultDetailShort: Record<ResultDetail, string>;
@@ -245,7 +266,7 @@ export interface Vocab {
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export const baseball: Vocab = {
-  app: { name: '7-Game Series', shortName: '7GS', tagline: 'Every week is a best-of-7.' },
+  app: { name: '7-Game Series', shortName: '7GS', tagline: 'Win the day. Win the week. Win the season.' },
   term: {
     season: 'Season',
     offseason: 'Review Week',
@@ -254,7 +275,7 @@ export const baseball: Vocab = {
     game: 'Game',
     doubleheader: 'Doubleheader',
     opponent: 'Opponent',
-    taskDefinition: 'Roster',
+    taskDefinition: 'Tasks',
     dayTemplate: 'Starter',
     lineupEntry: 'Lineup',
     required: 'Must-hit',
@@ -268,7 +289,7 @@ export const baseball: Vocab = {
   },
   terms: {
     seasons: 'Seasons',
-    roster: 'Roster',
+    roster: 'Tasks',
     task: 'Task',
     tasks: 'Tasks',
     starters: 'Starters',
@@ -303,6 +324,7 @@ export const baseball: Vocab = {
     ironMan: 'Iron Man',
     pinchHitter: 'Pinch hitter',
     pinchHitterShort: 'PH',
+    addedLate: 'Added',
     carriedOver: 'Carried over',
     suspended: 'Suspended',
     noDecision: 'No decision',
@@ -318,9 +340,9 @@ export const baseball: Vocab = {
     nextWeek: 'Next week',
     openingWeek: 'Opening Week',
     openingBlurb: 'Opening Week: plan it now. Nothing counts until Opening Day.',
-    lockedTitle: 'Week locked — additions only',
+    lockedTitle: 'Week in progress — add only',
     lockedBlurb:
-      'The week’s first pitch has passed, so lineups only grow: pinch hit, add to the bench, or make a bench task a must-hit. Runs to win never drops.',
+      'This week has started. You can still add tasks to today or any later day, but you can’t remove tasks or lower runs to win. A task you add is a must-hit (a pinch hitter), and that day’s runs to win goes up by its runs. For an optional extra, add it to the bench instead.',
     planningTitle: 'Planning',
     planningBlurb: (firstPitch) =>
       `Anything goes until the week’s first pitch${firstPitch ? ` (${firstPitch})` : ''}: add or remove tasks, reorder, set must-hits and runs to win, and place one-offs on a day.`,
@@ -330,18 +352,24 @@ export const baseball: Vocab = {
     oneOffHint: 'One-offs retire once done. A missed one-off must-hit moves to the next game day as a pinch hitter.',
   },
   pinchHit: {
-    action: 'Pinch hit',
+    action: 'Add a task',
     makeMustHit: 'Make must-hit',
-    title: 'Send in a pinch hitter',
+    title: 'Add a task to this day',
     explainer:
-      'A pinch hitter is a new must-hit. Runs to win rises by exactly its runs, so your cushion stays the same. The opponent answers back with the same runs.',
+      'The week has started, so a task you add now comes in as a pinch hitter: it’s a must-hit, and runs to win goes up by exactly its runs. Your cushion stays the same. For an optional extra, add it to the bench instead.',
     raise: (runs) => `+${runs} pinch hit`,
     thresholdLine: (threshold, raise) => `Runs to win ${threshold}${raise > 0 ? ` · +${raise} pinch hit` : ''}`,
-    confirm: 'Send in',
+    confirm: 'Add to lineup',
     fromBench: 'On the bench',
-    fromRoster: 'From the roster',
+    fromRoster: 'From your tasks',
     none: 'Every active task is already in this lineup.',
-    done: (name, threshold) => `${name} pinch hits. Runs to win is ${threshold}.`,
+    done: (name, threshold) => `${name} added as a pinch hitter. Runs to win is ${threshold}.`,
+    doneOptional: (name, threshold) => `${name} added to the lineup. Runs to win is ${threshold}.`,
+    explainerLater:
+      'This day hasn’t started, so you choose: a must-hit, or a regular task you can skip without losing the day. Either way runs to win goes up by exactly its runs, so the day gets no easier.',
+    mustHitSwitch: 'Make it a must-hit',
+    mustHitOn: 'Miss it and you lose that day.',
+    mustHitOff: 'A regular task: it scores runs when you do it, and skipping it won’t sink the day by itself.',
   },
   suspension: {
     action: 'Suspend game',
@@ -369,11 +397,25 @@ export const baseball: Vocab = {
       NO_ALLOWANCE: 'No Rainouts left this month, so this one is played out.',
     },
   },
-  tabs: { today: 'Today', series: 'Series', filmRoom: 'Film Room', season: 'Season' },
+  tabs: { today: 'Today', series: 'Series', team: 'Team', addTask: 'Add task' },
   runs: (n) => plural(n, 'run', 'runs'),
   hits: (n) => plural(n, 'hit', 'hits'),
   gameLabel: (n) => `Game ${n}`,
   seriesLabel: (status) => status.label,
+  seriesName: (n) => (n === 0 ? 'Head Start' : `Series ${n}`),
+  headStart: {
+    name: 'Head Start',
+    blurb: 'Head Start: these games count toward your season record. They aren’t scored as a series. Series 1 starts Monday.',
+    offerTitle: 'When do you want to start?',
+    offerBody: (days, openingDay) =>
+      `Start today and the ${days === 1 ? 'day' : `${days} days`} left this week ${days === 1 ? 'is a real game' : 'are real games'} that ${days === 1 ? 'counts' : 'count'} toward your season record. Series 1 still starts ${openingDay}.`,
+    action: 'Start today',
+    waitNote: (openingDay) => `Or do nothing and your season starts ${openingDay}. Until then, nothing counts.`,
+    confirmTitle: 'Start your season today?',
+    confirmBody: (days, openingDay) =>
+      `Today becomes a real game, and so ${days <= 2 ? 'does tomorrow' : 'do the days'} through Sunday${days === 1 ? '' : ` (${days} games in all)`}. Wins and losses go on your season record. This short week isn’t scored as a series: Series 1 starts ${openingDay}. You can’t undo this.`,
+    started: (days) => `You’re playing. ${days === 1 ? 'Today counts' : `${days} games this week count`} toward your season record.`,
+  },
   resultDetail: {
     clean: 'Win',
     short: 'Came up short',
@@ -499,7 +541,7 @@ export const baseball: Vocab = {
   emptyStates: {
     preseasonTitle: 'Spring Training',
     preseasonBody: (openingDay, days) =>
-      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Set up your roster and rotation in the Film Room. Nothing counts yet, and you can add or change tasks any time after Opening Day too.`,
+      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your rotation under Team. Nothing counts yet, and you can add or change tasks any time after Opening Day too. A season is 12 weeks, then a Review Week.`,
     offseasonTitle: 'Review Week',
     offseasonBody: (nextSeason) =>
       `No games this week. Review the season, make front-office moves, and get ready for Opening Day ${nextSeason}.`,

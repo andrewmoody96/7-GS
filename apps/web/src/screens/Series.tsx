@@ -68,7 +68,8 @@ export function SeriesScreen() {
         </div>
         <h1 className="matchup__title">{s.opponent.name}</h1>
         <p className="matchup__meta">
-          {vocab.term.series} {s.number} · {vocab.term.season} {s.seasonNumber} · {formatRange(s.startDate, s.endDate)}
+          {vocab.seriesName(s.number)} · {vocab.term.season} {s.seasonNumber} ·{' '}
+          {formatRange(s.games[0]?.scheduledDate ?? s.startDate, s.endDate)}
         </p>
       </header>
 
@@ -98,7 +99,7 @@ export function SeriesScreen() {
           <h2 id="gamelog-title" className="card__title">
             Game log
           </h2>
-          <p className="card__sub">First to 4 wins the series. All 7 are played.</p>
+          <p className="card__sub">{s.number === 0 ? vocab.headStart.blurb : 'First to 4 wins the series. All 7 are played.'}</p>
         </header>
         <ol className="gamelog">
           {s.games.map((g) => {

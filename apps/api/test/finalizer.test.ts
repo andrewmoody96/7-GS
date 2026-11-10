@@ -219,7 +219,7 @@ describe('finalizer', () => {
       ironManBonusHeld: true,
     });
     const [bonus] = await env.db.select().from(rainoutAllowances).where(eq(rainoutAllowances.source, 'iron_man'));
-    expect(bonus).toMatchObject({ expiresOn: '2027-03-28', earnedMonth: '2026-10', seriesId });
+    expect(bonus).toMatchObject({ expiresOn: '2026-12-27', earnedMonth: '2026-10', seriesId });
     expect(await t.ok('getCurrentSeries', { token })).toMatchObject({ number: 2, startDate: '2026-10-12', wins: 0 });
 
     // Running the finalizer again (now or a bit later) changes nothing.
@@ -359,55 +359,59 @@ describe('seasons and Review Week', () => {
     const userId = first.userId;
     const season1 = await t.ok('getCurrentSeason', { token });
     expect(season1).toMatchObject({ number: 1, status: 'upcoming', startDate: '2026-10-05', winGoal: null });
-    expect((await t.ok('updateSeason', { token, params: { seasonId: season1!.id }, body: { winGoal: 120 } })).winGoal).toBe(120);
-    expect((await t.fails('updateSeason', { token, params: { seasonId: season1!.id }, body: { winGoal: 176 } }, 400)).code).toBe(
+    expect((await t.ok('updateSeason', { token, params: { seasonId: season1!.id }, body: { winGoal: 60 } })).winGoal).toBe(60);
+    expect((await t.fails('updateSeason', { token, params: { seasonId: season1!.id }, body: { winGoal: 91 } }, 400)).code).toBe(
+      'VALIDATION_FAILED',
+    );
+    // 84 games in a season without a Head Start.
+    expect((await t.fails('updateSeason', { token, params: { seasonId: season1!.id }, body: { winGoal: 85 } }, 400)).code).toBe(
       'VALIDATION_FAILED',
     );
 
     t.at('2026-10-05', '09:00', CHICAGO);
-    expect(await t.fails('updateSeason', { token, params: { seasonId: season1!.id }, body: { winGoal: 100 } }, 409)).toMatchObject({
+    expect(await t.fails('updateSeason', { token, params: { seasonId: season1!.id }, body: { winGoal: 50 } }, 409)).toMatchObject({
       code: 'OUT_OF_SEASON',
       reason: 'SEASON_IN_PROGRESS',
     });
 
-    // Review Week: Monday 2027-03-29 (season 1 ended Sunday 2027-03-28). The session
+    // Review Week: Monday 2026-12-28 (season 1 ended Sunday 2026-12-27). The session
     // expired long ago; signing back in settles the whole season on the way.
-    t.at('2027-03-29', '12:00', CHICAGO);
+    t.at('2026-12-28', '12:00', CHICAGO);
     expect(await t.fails('getMe', { token }, 401)).toMatchObject({ code: 'UNAUTHORIZED' });
     const started = performance.now();
     token = (await t.signIn('season@example.com', CHICAGO)).token;
     t.log.info(`settled season 1 in ${Math.round(performance.now() - started)} ms`);
     expect(await t.ok('getToday', { token })).toEqual({
-      date: '2027-03-29',
-      position: { phase: 'offseason', seasonNumber: 1, nextSeasonStart: '2027-04-05' },
+      date: '2026-12-28',
+      position: { phase: 'offseason', seasonNumber: 1, nextSeasonStart: '2027-01-04' },
       games: [],
       series: null,
     });
     expect(await t.ok('getCurrentSeries', { token })).toBeNull();
     const reviewed = await t.ok('getCurrentSeason', { token });
-    expect(reviewed).toMatchObject({ number: 1, status: 'offseason', wins: 0, losses: 175, seriesLost: 25, winGoal: 120 });
-    // Nothing is granted in Review Week (March's allowances were granted in March).
-    expect((await t.ok('getMe', { token })).allowances.month).toBe('2027-03');
+    expect(reviewed).toMatchObject({ number: 1, status: 'offseason', wins: 0, losses: 84, seriesLost: 12, winGoal: 60 });
+    // Nothing is granted in Review Week (December's allowances were granted in December).
+    expect((await t.ok('getMe', { token })).allowances.month).toBe('2026-12');
 
     const [season2] = await env.db
       .select()
       .from(seasons)
       .where(and(eq(seasons.userId, userId), eq(seasons.number, 2)));
-    expect(season2).toMatchObject({ status: 'upcoming', startDate: '2027-04-05' });
-    expect(await t.fails('updateSeason', { token, params: { seasonId: reviewed!.id }, body: { winGoal: 90 } }, 409)).toMatchObject({
+    expect(season2).toMatchObject({ status: 'upcoming', startDate: '2027-01-04' });
+    expect(await t.fails('updateSeason', { token, params: { seasonId: reviewed!.id }, body: { winGoal: 70 } }, 409)).toMatchObject({
       code: 'OUT_OF_SEASON',
       reason: 'SEASON_STARTED',
     });
-    expect((await t.ok('updateSeason', { token, params: { seasonId: season2!.id }, body: { winGoal: 110 } })).winGoal).toBe(110);
+    expect((await t.ok('updateSeason', { token, params: { seasonId: season2!.id }, body: { winGoal: 55 } })).winGoal).toBe(55);
 
     // Opening day of season 2: a fresh 0–0 record.
-    t.at('2027-04-05', '08:00', CHICAGO);
+    t.at('2027-01-04', '08:00', CHICAGO);
     const today = await t.ok('getToday', { token });
     expect(today.position).toMatchObject({ phase: 'season', seasonNumber: 2, seriesNumber: 1, gameNumber: 1 });
     expect(today.games).toHaveLength(1);
-    expect(await t.ok('getCurrentSeason', { token })).toMatchObject({ number: 2, status: 'active', wins: 0, losses: 0, winGoal: 110 });
+    expect(await t.ok('getCurrentSeason', { token })).toMatchObject({ number: 2, status: 'active', wins: 0, losses: 0, winGoal: 55 });
     expect(await t.ok('getSeason', { token, params: { seasonId: reviewed!.id } })).toMatchObject({ status: 'complete' });
-    expect(await t.fails('updateSeason', { token, params: { seasonId: season2!.id }, body: { winGoal: 100 } }, 409)).toMatchObject({
+    expect(await t.fails('updateSeason', { token, params: { seasonId: season2!.id }, body: { winGoal: 50 } }, 409)).toMatchObject({
       code: 'OUT_OF_SEASON',
     });
   });

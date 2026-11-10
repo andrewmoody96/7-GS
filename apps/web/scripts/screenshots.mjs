@@ -84,6 +84,8 @@ async function settle(page) {
 }
 
 async function open(page, path, scenario) {
+  // The first-visit guide would cover every shot; mark it seen.
+  await page.addInitScript(() => window.localStorage.setItem('7gs.howItWorksSeen', '1'));
   const url = new URL(path, base);
   if (scenario) url.searchParams.set('demo', scenario);
   await page.goto(url.toString());
@@ -139,26 +141,31 @@ for (const theme of ['light', 'dark']) {
   await settle(page);
   await shot(page, '05-series-boxscore', theme, { fullPage: false });
 
-  // Film Room: this week's lineup card (locked), rotation, starter editor, roster with IL.
-  await open(page, '/film-room');
-  await shot(page, '06-filmroom-week-locked', theme);
+  // Team: this week's lineups (locked), rotation, starter editor, Injured List.
+  await open(page, '/team/lineups');
+  await shot(page, '06-team-lineups-locked', theme);
   await noHorizontalScroll(page, 'week card');
-  await open(page, '/film-room?tab=rotation');
-  await shot(page, '06b-filmroom-rotation', theme);
-  await open(page, '/film-room/starters/2');
+  await open(page, '/team/rotation');
+  await shot(page, '06b-team-rotation', theme);
+  await open(page, '/team/rotation/2');
   await shot(page, '07-starter-editor', theme);
-  await open(page, '/film-room?tab=roster');
-  await shot(page, '08-filmroom-roster', theme);
-  await noHorizontalScroll(page, 'roster');
+  await open(page, '/team/il');
+  await shot(page, '08-team-il', theme);
+  await noHorizontalScroll(page, 'injured list');
   await page.getByRole('button', { name: /Guitar practice/ }).click();
   await page.waitForSelector('.il-box');
   await settle(page);
   await shot(page, '09-task-sheet-il', theme, { fullPage: false });
 
-  // Season.
-  await open(page, '/season');
-  await shot(page, '10-season', theme);
-  await noHorizontalScroll(page, 'season');
+  // Team overview and the Add task window.
+  await open(page, '/team');
+  await shot(page, '10-team', theme);
+  await noHorizontalScroll(page, 'team');
+  await page.locator('.tab--add').click();
+  await page.waitForSelector('dialog[open] .addtask-form');
+  await settle(page);
+  await shot(page, '10b-add-task', theme, { fullPage: false });
+  await page.keyboard.press('Escape');
 
   // Doubleheader Saturday at clinch: pregame game 1 and the editor, rainout dialog.
   await open(page, '/', 'doubleheader');
@@ -192,14 +199,14 @@ for (const theme of ['light', 'dark']) {
   // Off days.
   await open(page, '/', 'preseason');
   await shot(page, '19-today-spring-training', theme);
-  await open(page, '/season');
-  await shot(page, '20-season-spring-training', theme);
+  await open(page, '/team');
+  await shot(page, '20-team-spring-training', theme);
   await open(page, '/', 'offseason');
   await shot(page, '21-today-review-week', theme);
 
   // Next week's card (opens Friday): free planning and the day editor.
   await open(page, '/', 'preseason');
-  await open(page, '/film-room', 'midseason');
+  await open(page, '/team/lineups', 'midseason');
   await page.getByRole('tab', { name: /Next week/ }).click();
   await page.waitForSelector('.weekbanner--open');
   await settle(page);
@@ -212,11 +219,11 @@ for (const theme of ['light', 'dark']) {
   // Today: send in a pinch hitter (the math shows before confirming).
   await open(page, '/');
   await dismissJumbotron(page);
-  await page.getByRole('button', { name: /^Pinch hit$/ }).click();
+  await page.getByRole('button', { name: /^Add a task$/ }).click();
   await page.getByLabel(/Meal prep/).check();
   await settle(page);
   await shot(page, '42-pinch-hit-sheet', theme, { fullPage: false });
-  await page.getByRole('button', { name: 'Send in' }).click();
+  await page.getByRole('button', { name: 'Add to lineup' }).click();
   await page.waitForSelector('dialog[open]', { state: 'detached' }).catch(() => {});
   await page.waitForFunction(() => document.body.textContent?.includes('+3 pinch hit'));
   await settle(page);
@@ -251,11 +258,11 @@ for (const theme of ['light', 'dark']) {
   await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   await open(page, '/series');
   await shot(page, '47-series-no-decision', theme);
-  await open(page, '/season');
-  await shot(page, '48-season-no-decision', theme);
+  await open(page, '/team');
+  await shot(page, '48-team-no-decision', theme);
 
-  // Sign-in (sign out from the Season screen's clubhouse).
-  await open(page, '/season', 'midseason');
+  // Sign-in (sign out from Team → Settings).
+  await open(page, '/team/settings', 'midseason');
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.waitForSelector('.signin');
   await settle(page);
@@ -266,15 +273,20 @@ for (const theme of ['light', 'dark']) {
   await settle(page);
   await shot(page, '23-sign-in-sent', theme);
   await page.getByRole('button', { name: 'Sign in now' }).click();
-  await page.waitForSelector('.addtask');
+  await page.waitForSelector('.app__main');
   await settle(page);
-  await shot(page, '24-new-user-roster', theme);
-  await page.getByLabel('Sign a free agent').fill('Haircut for Dad’s inauguration');
-  await page.getByText('One-off', { exact: true }).click();
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await page.waitForSelector('.pill--oneoff');
+  await shot(page, '24-new-user-today', theme);
+  await page.locator('.tab--add').click();
+  const sheet = page.locator('dialog[open]');
+  await sheet.getByLabel('Task').fill('Haircut for Dad’s inauguration');
+  await sheet.getByText('One-off', { exact: true }).click();
+  await sheet.getByRole('button', { name: /Add task/ }).click();
+  await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+  await page.locator('.tab--add').click();
+  await page.locator('dialog[open]').getByText(/^Your tasks/).click();
+  await page.waitForSelector('dialog[open] .pill--oneoff');
   await settle(page);
-  await shot(page, '25-roster-one-off', theme);
+  await shot(page, '25-new-task-one-off', theme, { fullPage: false });
 
   if (errors.length) console.warn(`⚠ ${theme}: page errors:\n  ${errors.join('\n  ')}`);
   await context.close();

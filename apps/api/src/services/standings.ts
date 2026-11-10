@@ -4,6 +4,7 @@
 
 import {
   currentWinStreak,
+  HEAD_START_SERIES,
   isIronMan,
   longestWinStreak,
   scoreline,
@@ -67,7 +68,7 @@ export async function recomputeSeries(tx: Db, seriesId: string): Promise<SeriesR
   if (!current) throw new Error(`Series ${seriesId} not found`);
   const rows = await seriesGames(tx, seriesId);
   const states = seriesGameStates(rows);
-  const status = seriesStatus(states);
+  const status = seriesStatus(states, { unscored: current.number === HEAD_START_SERIES });
   const ironMan = current.closedAt ? isIronMan(states) : null;
   if (
     current.wins === status.wins &&
@@ -189,6 +190,8 @@ export async function closeSeries(tx: Db, user: UserRow, seriesId: string, now: 
   const rows = await seriesGames(tx, seriesId);
   const [current] = await tx.select().from(series).where(eq(series.id, seriesId));
   if (!current) throw new Error(`Series ${seriesId} not found`);
+  // The Head Start isn't a series: no Iron Man, no series bonus.
+  if (current.number === HEAD_START_SERIES) return current;
   if (rows.length < 7 || rows.some((g) => g.status !== 'final')) return current;
 
   if (!current.closedAt) await tx.update(series).set({ closedAt: now }).where(eq(series.id, seriesId));

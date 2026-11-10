@@ -28,12 +28,12 @@ describe('weekly lineup card', () => {
 
   it('opens next season’s first week from Friday of Review Week, not the week before', () => {
     const s1 = seasonWindow(SIGNUP, 1);
-    const lastFriday = '2027-03-26';
-    expect(plannableWeeks(SIGNUP, lastFriday)).toEqual(['2027-03-22']); // next week is Review Week
-    const reviewFriday = '2027-04-02';
+    const lastFriday = '2026-12-25';
+    expect(plannableWeeks(SIGNUP, lastFriday)).toEqual(['2026-12-21']); // next week is Review Week
+    const reviewFriday = '2027-01-01';
     expect(s1.offseasonStart <= reviewFriday && reviewFriday <= s1.offseasonEnd).toBe(true);
     expect(plannableWeeks(SIGNUP, reviewFriday)).toEqual([seasonWindow(SIGNUP, 2).start]);
-    expect(plannableWeeks(SIGNUP, '2027-03-30')).toEqual([]); // Review Week Tuesday
+    expect(plannableWeeks(SIGNUP, '2026-12-29')).toEqual([]); // Review Week Tuesday
   });
 
   it('locks the week at its first first pitch', () => {

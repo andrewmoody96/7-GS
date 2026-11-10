@@ -1,20 +1,18 @@
 import type { MeDto, SeasonDto } from '@7gs/contracts';
-import { GAMES_PER_SEASON, seasonPace } from '@7gs/rules';
+import { gamesInSeason, GAMES_PER_SEASON, HEAD_START_SERIES, seasonPace } from '@7gs/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi, useCheckoffQueue } from '../app/context';
-import { forgetCachedMe, useCurrentSeasonQuery, useMeQuery, useUpdateMe, useUpdateSeasonGoal } from '../app/queries';
+import { forgetCachedMe, useUpdateMe, useUpdateSeasonGoal } from '../app/queries';
 import { errorMessage } from '../app/errors';
 import { getThemePref, setThemePref, type ThemePref } from '../app/theme';
 import { useNotify } from '../app/toast';
 import { Stepper } from '../components/Controls';
 import { Sheet } from '../components/Sheet';
-import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { Tile } from '../components/Tile';
-import { formatRange, formatTimeOfDay, formatWinPct, signed } from '../lib/format';
+import { formatTimeOfDay, formatWinPct, signed } from '../lib/format';
 import { vocab } from '../vocab';
-import { AllowanceChips } from './FilmRoom';
 
 const STATUS_LABEL: Record<SeasonDto['status'], string> = {
   upcoming: vocab.term.preseason,
@@ -23,41 +21,18 @@ const STATUS_LABEL: Record<SeasonDto['status'], string> = {
   complete: 'Complete',
 };
 
-export function SeasonScreen() {
-  const season = useCurrentSeasonQuery();
-  const me = useMeQuery();
-  if (season.isPending) return <Loading label="Loading the season" />;
-  if (season.isError) return <ErrorPanel error={season.error} onRetry={() => void season.refetch()} />;
-  const s = season.data;
-  return (
-    <div className="screen screen--season">
-      {s ? (
-        <>
-          <header className="screen__head">
-            <div>
-              <p className="screen__kicker">
-                {STATUS_LABEL[s.status]} · {formatRange(s.startDate, s.playEndDate)}
-              </p>
-              <h1 className="screen__title">
-                {vocab.term.season} {s.number}
-              </h1>
-            </div>
-          </header>
-          <Standings season={s} />
-          <Pace season={s} />
-          <GoalCard season={s} phase={me.data?.position.phase ?? 'season'} />
-        </>
-      ) : (
-        <EmptyState title={vocab.term.season}>
-          <p>No season on the calendar yet.</p>
-        </EmptyState>
-      )}
-      {me.data ? <Clubhouse me={me.data} /> : null}
-    </div>
-  );
+export const SEASON_STATUS_LABEL = STATUS_LABEL;
+
+/** The season's game count (more in Season 1 after a Head Start) and whether a Head Start is on. */
+export function seasonTotals(me: MeDto | undefined, season: SeasonDto): { total: number; headStart: boolean } {
+  const pos = me?.position;
+  return {
+    total: me ? gamesInSeason(me, season.number) : GAMES_PER_SEASON,
+    headStart: pos?.phase === 'season' && pos.seriesNumber === HEAD_START_SERIES,
+  };
 }
 
-function Standings({ season: s }: { season: SeasonDto }) {
+export function Standings({ season: s, total }: { season: SeasonDto; total: number }) {
   const played = s.wins + s.losses;
   const winPct = played === 0 ? null : Math.round((s.wins / played) * 1000) / 1000;
   const stats: [string, string][] = [
@@ -66,7 +41,7 @@ function Standings({ season: s }: { season: SeasonDto }) {
     [vocab.terms.seriesRecord, `${s.seriesWon}–${s.seriesLost}`],
     [vocab.terms.winStreak, String(s.currentWinStreak)],
     [vocab.terms.longestWinStreak, String(s.longestWinStreak)],
-    ['Games left', String(seasonPace(s.wins, s.losses, 0, s.noDecisions).remaining)],
+    ['Games left', String(seasonPace(s.wins, s.losses, 0, s.noDecisions, total).remaining)],
   ];
   // Suspended games that ended with no decision: neither a W nor an L.
   if (s.noDecisions > 0) stats.splice(2, 0, [vocab.terms.noDecisions, String(s.noDecisions)]);
@@ -104,7 +79,7 @@ function Standings({ season: s }: { season: SeasonDto }) {
   );
 }
 
-function Pace({ season: s }: { season: SeasonDto }) {
+export function Pace({ season: s, total }: { season: SeasonDto; total: number }) {
   if (s.winGoal === null) {
     return (
       <section className="card pace">
@@ -113,7 +88,7 @@ function Pace({ season: s }: { season: SeasonDto }) {
       </section>
     );
   }
-  const pace = seasonPace(s.wins, s.losses, s.winGoal, s.noDecisions);
+  const pace = seasonPace(s.wins, s.losses, s.winGoal, s.noDecisions, total);
   const pct = (n: number) => `${Math.min(100, (n / s.winGoal!) * 100)}%`;
   const gb = Math.abs(pace.gamesBehind).toFixed(1);
   const verdict = !pace.goalStillPossible
@@ -167,11 +142,24 @@ function Pace({ season: s }: { season: SeasonDto }) {
   );
 }
 
-function GoalCard({ season: s, phase }: { season: SeasonDto; phase: MeDto['position']['phase'] }) {
+export function GoalCard({
+  season: s,
+  total,
+  phase,
+  headStart,
+}: {
+  season: SeasonDto;
+  total: number;
+  phase: MeDto['position']['phase'];
+  headStart: boolean;
+}) {
   const update = useUpdateSeasonGoal();
-  const [goal, setGoal] = useState(s.winGoal ?? 105);
-  useEffect(() => setGoal(s.winGoal ?? 105), [s.winGoal]);
-  const open = s.status === 'upcoming' && phase !== 'season';
+  // A reasonable default: a bit better than winning 4 of every 7.
+  const suggested = Math.round(total * 0.6);
+  const [goal, setGoal] = useState(s.winGoal ?? suggested);
+  useEffect(() => setGoal(s.winGoal ?? suggested), [s.winGoal, suggested]);
+  // During a Head Start the goal stays open until Opening Day.
+  const open = headStart || (s.status === 'upcoming' && phase !== 'season');
   return (
     <section className="card goal" aria-labelledby="goal-title">
       <header className="card__head">
@@ -180,7 +168,9 @@ function GoalCard({ season: s, phase }: { season: SeasonDto; phase: MeDto['posit
         </h2>
         <p className="card__sub">
           {open
-            ? `Out of ${GAMES_PER_SEASON} games. Locked once the season starts.`
+            ? headStart
+              ? `Out of ${total} games, Head Start included. Locks on Opening Day.`
+              : `Out of ${total} games. Locked once the season starts.`
             : phase === 'offseason'
               ? `Next season’s goal can’t be set from here yet.`
               : `Goals are set in ${vocab.term.preseason} or ${vocab.term.offseason}.`}
@@ -188,7 +178,7 @@ function GoalCard({ season: s, phase }: { season: SeasonDto; phase: MeDto['posit
       </header>
       {open ? (
         <div className="goal__row">
-          <Stepper label={`${vocab.terms.winGoal} (wins)`} value={goal} min={1} max={GAMES_PER_SEASON} onChange={setGoal} />
+          <Stepper label={`${vocab.terms.winGoal} (wins)`} value={goal} min={1} max={total} onChange={setGoal} />
           <button
             type="button"
             className="btn btn--primary"
@@ -207,7 +197,7 @@ function GoalCard({ season: s, phase }: { season: SeasonDto; phase: MeDto['posit
   );
 }
 
-function Clubhouse({ me }: { me: MeDto }) {
+export function Clubhouse({ me }: { me: MeDto }) {
   const api = useApi();
   const queue = useCheckoffQueue();
   const qc = useQueryClient();
@@ -237,11 +227,10 @@ function Clubhouse({ me }: { me: MeDto }) {
     <section className="card clubhouse" aria-labelledby="clubhouse-title">
       <header className="card__head">
         <h2 id="clubhouse-title" className="card__title">
-          Clubhouse
+          Team & account
         </h2>
         <p className="card__sub">{me.email}</p>
       </header>
-      <AllowanceChips allowances={me.allowances} />
       <form
         className="field clubhouse__name"
         onSubmit={(e) => {
@@ -338,7 +327,7 @@ function DeleteAccountSheet({
     <Sheet
       open={open}
       onClose={close}
-      kicker="Clubhouse"
+      kicker="Settings"
       title="Delete your account?"
       footer={
         <div className="actions">
@@ -357,7 +346,7 @@ function DeleteAccountSheet({
       }
     >
       <p>
-        This permanently deletes every season, series and game, your roster and rotation, and your Rally Caps and
+        This permanently deletes every season, series and game, your tasks and rotation, and your Rally Caps and
         Rainouts. It signs you out on every device. <strong>It can’t be undone.</strong>
       </p>
       <p className="fine">You can sign up again later with the same email, but you’ll start from scratch.</p>

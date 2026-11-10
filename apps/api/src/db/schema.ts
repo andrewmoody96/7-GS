@@ -80,6 +80,8 @@ export const users = pgTable('users', {
   displayName: text('display_name').notNull(),
   timezone: text('timezone').notNull(),
   startDate: localDate('start_date').notNull(),
+  /** First day of the Head Start (playing before Opening Day); null = wait for Opening Day. */
+  headStartFrom: localDate('head_start_from'),
   defaultLockTime: timeOfDay('default_lock_time'),
   /** Last local date fully settled by the finalizer. Starts the day before sign-up. */
   finalizedThrough: localDate('finalized_through').notNull(),
@@ -169,7 +171,9 @@ export const series = pgTable(
   (t) => [
     unique('series_season_number_uq').on(t.seasonId, t.number),
     unique('series_user_start_uq').on(t.userId, t.startDate),
-    check('series_number_ck', sql`${t.number} BETWEEN 1 AND 25`),
+    // 0 = Head Start. The upper bound predates quarterly seasons (12 series) and stays
+    // wide so rows written under the old 25-series calendar remain valid.
+    check('series_number_ck', sql`${t.number} BETWEEN 0 AND 25`),
     check('series_colors_ck', sql`cardinality(${t.opponentColors}) = 2`),
     check('series_seed_ck', sql`${t.opponentSeed} BETWEEN 0 AND 4294967295`),
     check('series_counts_ck', sql`${t.wins} BETWEEN 0 AND 7 AND ${t.losses} BETWEEN 0 AND 7`),

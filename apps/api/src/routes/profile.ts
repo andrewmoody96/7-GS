@@ -1,10 +1,12 @@
+import { localDateOf } from '@7gs/rules';
 import type { Deps } from '../deps';
 import { validationFailed } from '../errors';
 import { route, type AnyRoute } from '../http/router';
 import { clearSessionCookie } from '../http/session';
 import { deleteAccount, normalizeEmail } from '../services/auth';
 import { inUserTx } from '../services/today';
-import { calendarView, meView, updateMe } from '../services/users';
+import { prepareDay } from '../services/finalizer';
+import { calendarView, meView, startHeadStart, updateMe } from '../services/users';
 
 export function profileRoutes(deps: Deps): AnyRoute[] {
   return [
@@ -16,6 +18,21 @@ export function profileRoutes(deps: Deps): AnyRoute[] {
       inUserTx(deps.db, auth.user, now, async (tx, user) => meView(tx, await updateMe(tx, user, body), now), {
         scope: 'account',
       }),
+    ),
+
+    route('startHeadStart', ({ auth, now }) =>
+      inUserTx(
+        deps.db,
+        auth.user,
+        now,
+        async (tx, user) => {
+          const started = await startHeadStart(tx, user, now);
+          // Today is now a game day: build its game so it's there on the next screen.
+          await prepareDay(tx, started, localDateOf(now, started.timezone), now);
+          return meView(tx, started, now);
+        },
+        { scope: 'account' },
+      ),
     ),
 
     route('deleteMe', async ({ c, auth, body }) => {
