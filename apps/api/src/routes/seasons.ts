@@ -3,6 +3,7 @@ import { route, type AnyRoute } from '../http/router';
 import { currentSeason, currentSeries, loadUserSeason, loadUserSeries, setWinGoal } from '../services/seasons';
 import { career, listSeasonSeries, listSeasons } from '../services/history';
 import { inUserTx } from '../services/today';
+import { themeOf } from '../services/users';
 import { seasonView, seriesView } from '../services/views';
 
 export function seasonRoutes(deps: Deps): AnyRoute[] {
@@ -28,14 +29,14 @@ export function seasonRoutes(deps: Deps): AnyRoute[] {
         now,
         async (tx, user) => {
           const row = await currentSeason(tx, user, now);
-          return row ? seasonView(tx, row) : null;
+          return row ? seasonView(tx, row, themeOf(user)) : null;
         },
         { scope: 'account' },
       ),
     ),
 
     route('getSeason', ({ auth, params, now }) =>
-      inUserTx(db, auth.user, now, async (tx, user) => seasonView(tx, await loadUserSeason(tx, user.id, params.seasonId)), {
+      inUserTx(db, auth.user, now, async (tx, user) => seasonView(tx, await loadUserSeason(tx, user.id, params.seasonId), themeOf(user)), {
         scope: 'account',
       }),
     ),
@@ -45,7 +46,7 @@ export function seasonRoutes(deps: Deps): AnyRoute[] {
         db,
         auth.user,
         now,
-        async (tx, user) => seasonView(tx, await setWinGoal(tx, user, params.seasonId, body.winGoal, now)),
+        async (tx, user) => seasonView(tx, await setWinGoal(tx, user, params.seasonId, body.winGoal, now), themeOf(user)),
         { scope: 'account' },
       ),
     ),

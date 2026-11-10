@@ -3,6 +3,7 @@
 // skin only has to provide another `Vocab`.
 
 import type { Theme } from '@7gs/rules';
+import { applyThemePref, getThemePref } from './app/theme';
 import type {
   GameStatus,
   Phase,
@@ -102,6 +103,8 @@ export interface Vocab {
     rainouts: string;
     tasksDone: string;
     runsShort: string;
+    /** Short unit for a task's value in plans ("R"); the scoreboard uses runsShort. */
+    valueShort: string;
     hitsShort: string;
     win: string;
     loss: string;
@@ -328,6 +331,7 @@ export const baseball: Vocab = {
     rainouts: 'Rainouts',
     tasksDone: 'Hits',
     runsShort: 'R',
+    valueShort: 'R',
     hitsShort: 'H',
     win: 'W',
     loss: 'L',
@@ -575,11 +579,178 @@ export const baseball: Vocab = {
   },
 };
 
+
+type DeepPartial<T> = { [K in keyof T]?: T[K] extends (...args: never[]) => unknown ? T[K] : T[K] extends object ? DeepPartial<T[K]> : T[K] };
+
+/** A theme = baseball's wording with its own words laid over the top (nested objects merge). */
+function overlay<T extends object>(base: T, over: DeepPartial<T>): T {
+  const out = { ...base } as Record<string, unknown>;
+  for (const [key, value] of Object.entries(over)) {
+    const current = out[key];
+    out[key] =
+      value && typeof value === 'object' && !Array.isArray(value) && current && typeof current === 'object'
+        ? overlay(current as object, value as DeepPartial<object>)
+        : value;
+  }
+  return out as T;
+}
+
 /**
- * Each sport's wording. Basketball and hockey use baseball's until their own are written
- * (phases 2 and 3 of the theme plan).
+ * Basketball: a task is a bucket, the scoreboard shows points (rules `displayScore`,
+ * near 100 at the target) and made field goals.
  */
-const VOCABS: Record<Theme, Vocab> = { baseball, basketball: baseball, hockey: baseball };
+export const basketball: Vocab = overlay(baseball, {
+  flavor: {
+    lineupOrder: 'Starting order',
+    secondGame: 'second game',
+    welcome: 'Welcome to the arena',
+    signingIn: 'Heading to the arena…',
+    serverDown: 'The arena’s systems are down. Try again in a minute.',
+    light: 'Matinee',
+    dark: 'Primetime',
+  },
+  term: {
+    preseason: 'Preseason',
+    doubleheader: 'Back-to-back',
+    dayTemplate: 'Game plan',
+    required: 'Must-make',
+    points: 'Buckets',
+    paused: 'Injury report',
+    postponed: 'Postponement',
+    comebackToken: 'Coach’s challenge',
+    lockedAt: 'Tip-off',
+  },
+  terms: {
+    starters: 'Game plans',
+    pausedShort: 'OUT',
+    comebackTokens: 'Challenges',
+    rainouts: 'Postponements',
+    tasksDone: 'Field goals',
+    runsShort: 'PTS',
+    valueShort: 'BKT',
+    hitsShort: 'FG',
+    partial: 'In and out',
+    threshold: 'Buckets to win',
+    minTasks: 'Minimum makes',
+    lockTime: 'Tip-off time',
+    runDifferential: 'Point diff',
+    rallyWins: 'Challenge wins',
+    pinchHitter: 'Sixth man',
+    pinchHitterShort: '6M',
+  },
+  carryoverNote: 'Still to do · carries to next game',
+  week: {
+    lockedBlurb:
+      'This week has started. You can still add tasks to today or any later day, but you can’t remove tasks or lower buckets to win. A task you add is a must-make (your sixth man), and that day’s buckets to win goes up by its buckets. For an optional extra, add it to the bench instead.',
+    planningBlurb: (tipOff) =>
+      `Anything goes until the week’s first tip-off${tipOff ? ` (${tipOff})` : ''}: add or remove tasks, reorder, set must-makes and buckets to win, and place one-offs on a day.`,
+    oneOffHint: 'One-offs retire once done. A missed one-off must-make moves to the next game day off the bench.',
+  },
+  pinchHit: {
+    makeMustHit: 'Make must-make',
+    explainer:
+      'The week has started, so a task you add now comes off the bench as your sixth man: it’s a must-make, and buckets to win goes up by exactly its buckets. Your cushion stays the same. For an optional extra, add it to the bench instead.',
+    raise: (n) => `+${n} sixth man`,
+    thresholdLine: (threshold, raise) => `Buckets to win ${threshold}${raise > 0 ? ` · +${raise} sixth man` : ''}`,
+    done: (name, threshold) => `${name} comes in as your sixth man. Buckets to win is ${threshold}.`,
+    doneOptional: (name, threshold) => `${name} added to the lineup. Buckets to win is ${threshold}.`,
+    explainerLater:
+      'This day hasn’t started, so you choose: a must-make, or a regular task you can skip without losing the day. Either way buckets to win goes up by exactly its buckets, so the day gets no easier.',
+    mustHitSwitch: 'Make it a must-make',
+    mustHitOff: 'A regular task: it scores when you do it, and skipping it won’t sink the day by itself.',
+  },
+  suspension: {
+    explainer:
+      'Something came up mid-day, or you couldn’t open the app until this morning. It isn’t a loss. Progress is kept and the game resumes later in the week as a back-to-back, with the same must-makes and buckets to win.',
+    resumeLede: 'Pick the day it resumes. That day becomes a back-to-back.',
+    cost: (n) => `Uses 1 of your ${n} postponements this month (postponements and suspensions share the allowance).`,
+    done: (day) => (day ? `Suspended. It resumes ${day} as a back-to-back.` : 'Suspended. It ends as a no-decision.'),
+    reason: {
+      FUTURE_GAME: 'That game hasn’t started. Plan around it with a postponement.',
+      RALLY_ROLLED: 'The coach’s challenge was already used on this game.',
+      NO_ALLOWANCE: 'No postponements left this month, so this one is played out.',
+    },
+  },
+  runs: (n) => plural(n, 'bucket', 'buckets'),
+  hits: (n) => plural(n, 'make', 'makes'),
+  resultDetail: {
+    forfeit: 'Forfeit · 1 must-make missed',
+    no_appeal: 'No appeal · 2+ must-makes missed',
+    rally: 'Challenge W',
+  },
+  resultDetailShort: { rally: 'Challenge' },
+  phase: { preseason: 'Preseason' },
+  taskStatus: { injured: 'Injury report' },
+  starterWarning: {
+    EMPTY_LINEUP: 'The lineup is empty, so this game plan can never win.',
+    MIN_TASKS_UNREACHABLE: 'The minimum makes is more than the tasks in the lineup.',
+  },
+  rainoutReason: {
+    GAME_LOCKED: 'Tip-off has passed. This one has to be played.',
+    MAKEUP_GAME: 'A makeup game can’t be postponed again.',
+    NO_ALLOWANCE: 'No postponements left this month.',
+  },
+  rallyReason: {
+    OUT_OF_SEASON: 'Challenges aren’t used in the preseason or Review Week.',
+    GAME_WON: 'You won this one. No challenge needed.',
+    TOO_MANY_MISSED: 'Two or more must-makes missed: no appeal.',
+    WINDOW_CLOSED: 'The challenge window closed at 11:59 a.m. the next day.',
+    ALREADY_ROLLED: 'The challenge was already reviewed for this game.',
+    SERIES_LIMIT: 'One challenge per series, and this series has used it.',
+    NO_TOKEN: 'No challenges left this month.',
+  },
+  error: {
+    GAME_LOCKED: 'Tip-off has passed. The lineup is locked.',
+    IL_MINIMUM: 'The injury report has a 3-day minimum.',
+  },
+  projection: {
+    moreRuns: (n) => `${n} more ${n === 1 ? 'bucket' : 'buckets'}`,
+    mustHits: (n) => plural(n, 'must-make', 'must-makes'),
+    moreHits: (n) => `${n} more ${n === 1 ? 'make' : 'makes'}`,
+    noAppeal: 'Two must-makes down: no challenge if this stands.',
+  },
+  chyron: { doubleheaderToday: 'Back-to-back today' },
+  lock: {
+    firstPitchAt: (time) => `Tip-off ${time}`,
+    firstPitchOnCheckoff: 'Tip-off at your first check-off',
+    firstCheckoffLocks: 'Your first check-off is the tip-off and locks the lineup.',
+    lockNow: 'Tip off',
+  },
+  rally: {
+    title: 'Coach’s challenge',
+    available: 'Coach’s challenge available',
+    roll: 'Challenge the call',
+    hit: 'Call overturned',
+    miss: 'Call stands',
+    missedMustHit: 'Missed must-make',
+    warningTrack: 'In and out',
+    runCushion: 'Bucket cushion',
+    tokenNote: (n) => `${plural(n, 'challenge', 'challenges')} left this month · one per series`,
+  },
+  jumbotron: { walkOff: 'Buzzer beater' },
+  il: {
+    explainer:
+      'The injury report sits a task out and freezes its streak. Its lineup spots are held and buckets to win stays put; clearing it to play puts the task back in those spots. Once today’s game or the week has tipped off, it sits out from tomorrow.',
+    minimum: (days) => `Minimum stint: ${days} game days (Review Week doesn’t count), so the injury report can’t dodge a single hard day.`,
+    place: 'Add to injury report',
+    activate: 'Clear to play',
+    heldTitle: 'On the injury report',
+    heldNote: 'Back in this spot when cleared. Buckets to win stays put.',
+    heldSpot: (role, position) => (role === 'bench' ? 'Bench' : `Starts ${ordinal(position)}`),
+  },
+  emptyStates: {
+    preseasonTitle: 'Preseason',
+    preseasonBody: (openingDay, days) =>
+      `Opening Night is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your game plans under Team. Nothing counts yet, and you can add or change tasks any time after Opening Night too. A season is 12 weeks, then a Review Week.`,
+    offseasonBody: (nextSeason) =>
+      `No games this week. Review the season, make front-office moves, and get ready for Opening Night ${nextSeason}.`,
+  },
+});
+
+/**
+ * Each sport's wording. Hockey uses baseball's until its own is written.
+ */
+const VOCABS: Record<Theme, Vocab> = { baseball, basketball, hockey: baseball };
 
 /**
  * The active theme's words. A live object: applyTheme swaps its contents, and the app
@@ -602,5 +773,10 @@ export function applyTheme(theme: Theme): boolean {
   if (theme === active) return false;
   Object.assign(vocab, VOCABS[theme]);
   active = theme;
+  // Colors follow the sport (tokens.css), and so does the status bar.
+  if (typeof document !== 'undefined') {
+    document.documentElement.dataset.sport = theme;
+    applyThemePref(getThemePref());
+  }
   return true;
 }

@@ -168,3 +168,66 @@
   --overlay: rgb(0 0 0 / 0.66);
   color-scheme: dark;
 }
+
+/* ── Basketball: hardwood, ball orange and an arena-navy scoreboard ───────────
+   Set by data-sport on <html> (vocab.ts applyTheme). Dark rules repeat every
+   variable the light block sets, so they win in dark mode. */
+
+:root[data-sport='basketball'] {
+  --bg: #efe2c8;
+  --bg-stripe: #e8d8b8;
+  --surface: #fdf9f1;
+  --surface-2: #f7efe0;
+  --surface-sunken: #ecdfc4;
+  --border: #d9c6a0;
+  --border-strong: #b89d6c;
+  --accent: #b4501c;
+  --accent-hover: #963f13;
+  --accent-text: #fff8f0;
+  --accent-soft: #f8e2d2;
+  --focus: #1d3b6e;
+  --panel: #14233f;
+  --panel-2: #0e1a31;
+  --panel-edge: #0a1325;
+  --panel-muted: #a9b8d3;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-sport='basketball']:not([data-theme='light']) {
+    --bg: #0c0e13;
+    --bg-stripe: #10131a;
+    --surface: #161a22;
+    --surface-2: #1b2029;
+    --surface-sunken: #0f1218;
+    --border: #272d39;
+    --border-strong: #3b4354;
+    --accent: #df7230;
+    --accent-hover: #ee8a48;
+    --accent-text: #160a03;
+    --accent-soft: #3b2214;
+    --focus: #f3d27a;
+    --panel: #14233f;
+    --panel-2: #0e1a31;
+    --panel-edge: #2b3d63;
+    --panel-muted: #a9b8d3;
+  }
+}
+
+:root[data-sport='basketball'][data-theme='dark'] {
+  --bg: #0c0e13;
+  --bg-stripe: #10131a;
+  --surface: #161a22;
+  --surface-2: #1b2029;
+  --surface-sunken: #0f1218;
+  --border: #272d39;
+  --border-strong: #3b4354;
+  --accent: #df7230;
+  --accent-hover: #ee8a48;
+  --accent-text: #160a03;
+  --accent-soft: #3b2214;
+  --focus: #f3d27a;
+  --panel: #14233f;
+  --panel-2: #0e1a31;
+  --panel-edge: #2b3d63;
+  --panel-muted: #a9b8d3;
+}

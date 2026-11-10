@@ -22,17 +22,21 @@ function renderApp(path: string) {
 }
 
 describe('welcome setup on first sign-in', () => {
-  it('asks for the look (only one sport so far), then opens the How it works guide', async () => {
+  it('asks for the sport, then the look in that sport’s words, then opens the How it works guide', async () => {
     const user = userEvent.setup();
     renderApp('/?welcome=start');
-    const sheet = await screen.findByRole('dialog', { name: 'Pick your look' });
-    // No sport question while baseball is the only theme.
-    expect(screen.queryByRole('dialog', { name: 'Pick your sport' })).toBeNull();
-    await user.click(within(sheet).getByRole('radio', { name: /Night game/ }));
+    const sport = await screen.findByRole('dialog', { name: 'Pick your sport' });
+    await user.click(within(sport).getByRole('button', { name: 'Basketball' }));
+
+    // Picking a sport redraws the app in its words; the setup carries on to the look.
+    const look = await screen.findByRole('dialog', { name: 'Pick your look' });
+    await user.click(within(look).getByRole('radio', { name: /Primetime/ }));
     expect(getThemePref()).toBe('dark');
     expect(document.documentElement.dataset.theme).toBe('dark');
-    await user.click(within(sheet).getByRole('button', { name: 'Done' }));
+    expect(document.documentElement.dataset.sport).toBe('basketball');
+    await user.click(within(look).getByRole('button', { name: 'Done' }));
     expect(await screen.findByRole('dialog', { name: 'How it works' })).toBeInTheDocument();
+    expect(screen.getByText(/A task list you play like a basketball season/)).toBeInTheDocument();
   });
 
   it('stays out of the way for a returning account', async () => {

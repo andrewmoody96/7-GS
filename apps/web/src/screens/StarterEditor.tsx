@@ -117,7 +117,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           value={threshold}
           min={1}
           max={LIMITS.thresholdMax}
-          suffix={vocab.terms.runsShort}
+          suffix={vocab.terms.valueShort}
           onChange={setThreshold}
           hint={`Your full lineup is worth ${vocab.runs(maxRuns)}.`}
         />

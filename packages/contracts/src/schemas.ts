@@ -435,6 +435,8 @@ export const Season = z.object({
   seriesWon: Count,
   seriesLost: Count,
   runDifferential: z.number().int(),
+  /** The run differential as the account's theme scores it (basketball: points). */
+  displayDifferential: z.number().int(),
   currentWinStreak: Count,
   longestWinStreak: Count,
 });
@@ -460,6 +462,8 @@ export const Career = z.object({
   seriesWon: Count,
   seriesLost: Count,
   runDifferential: z.number().int(),
+  /** The run differential as the account's theme scores it (basketball: points). */
+  displayDifferential: z.number().int(),
   /** Win streaks run on across Review Weeks here (they pause, never break). */
   currentWinStreak: Count,
   longestWinStreak: Count,

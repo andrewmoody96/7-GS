@@ -2,13 +2,13 @@
 // current starter's values (that's what they will snapshot on their game day).
 
 import type { GameDto, GameSummaryDto, SeasonDto, SeriesDto, SeriesSummaryDto } from '@7gs/contracts';
-import { addDays, weekday } from '@7gs/rules';
+import { addDays, displayMargin, weekday, type Theme } from '@7gs/rules';
 import { eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { rallyRolls, seasons, type EntryRow, type GameRow, type SeasonRow, type SeriesRow, type UserRow } from '../db/schema';
 import { iso, slotOf, sortEntries, toEntryDto, toRallyRollDto } from './dto';
 import { loadEntries } from './lineups';
-import { seasonWinStreaks, seriesGames } from './standings';
+import { seasonFinalGames, seasonWinStreaks, seriesGames } from './standings';
 import { ensureStarters, projectStarter, type StarterProjection } from './starters';
 import { editPolicyOf, weekLocks } from './weeks';
 import { holdsByGame } from './ilHolds';
@@ -142,8 +142,13 @@ export async function seriesView(tx: Db, user: UserRow, row: SeriesRow, now: Dat
   };
 }
 
-export async function seasonView(tx: Db, row: SeasonRow): Promise<SeasonDto> {
+export async function seasonView(tx: Db, row: SeasonRow, theme: Theme = 'baseball'): Promise<SeasonDto> {
   const streaks = await seasonWinStreaks(tx, row.id);
+  const finals = await seasonFinalGames(tx, row.id);
+  const displayDifferential = finals.reduce(
+    (n, g) => n + displayMargin(theme, { ...g, threshold: g.threshold ?? 1 }),
+    0,
+  );
   return {
     id: row.id,
     number: row.number,
@@ -159,6 +164,7 @@ export async function seasonView(tx: Db, row: SeasonRow): Promise<SeasonDto> {
     seriesWon: row.seriesWon,
     seriesLost: row.seriesLost,
     runDifferential: row.runDifferential,
+    displayDifferential,
     currentWinStreak: streaks.current,
     longestWinStreak: streaks.longest,
   };

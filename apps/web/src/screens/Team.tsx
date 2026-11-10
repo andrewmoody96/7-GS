@@ -199,7 +199,7 @@ function CareerCard({ career: c }: { career: CareerDto }) {
     [vocab.terms.seriesRecord, `${c.seriesWon}–${c.seriesLost}`],
     [vocab.terms.longestWinStreak, String(c.longestWinStreak)],
     [vocab.terms.rallyWins, String(c.rallyWins)],
-    [vocab.terms.runDifferential, signed(c.runDifferential)],
+    [vocab.terms.runDifferential, signed(c.displayDifferential)],
   ];
   return (
     <section className="card career" aria-labelledby="career-title">

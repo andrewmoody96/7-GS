@@ -92,7 +92,7 @@ export function TodayScreen() {
                   {g.postponed ? ` · ${vocab.terms.makeup}` : g.suspended ? ` · ${vocab.terms.suspended}` : ''}
                 </span>
                 <span className="dh-tab__name">{g.starterName}</span>
-                <span className="dh-tab__score">{gameScore(g.status === 'final' ? g : { runs: line.runs, threshold: g.threshold, result: null, entries: g.entries })}</span>
+                <span className="dh-tab__score">{gameScore(g.status === 'final' ? g : { id: g.id, runs: line.runs, threshold: g.threshold, result: null, entries: g.entries })}</span>
               </button>
             );
           })}
@@ -393,7 +393,7 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
       <Jumbotron
         open={celebrate}
         headline={vocab.jumbotron.inHand}
-        detail={`${gameScore({ runs: ev.runs, threshold: game.threshold, result: null, entries: game.entries })} · ${vocab.jumbotron.finalAtMidnight}`}
+        detail={`${gameScore({ id: game.id, runs: ev.runs, threshold: game.threshold, result: null, entries: game.entries })} · ${vocab.jumbotron.finalAtMidnight}`}
         onClose={() => setCelebrate(false)}
       />
     </article>

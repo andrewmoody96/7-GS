@@ -1,5 +1,5 @@
 import type { CalendarDto, MeDto, MePatchDto } from '@7gs/contracts';
-import { addDays, calendarPosition, isTheme, localDateOf, seasonWindow } from '@7gs/rules';
+import { addDays, calendarPosition, isTheme, localDateOf, seasonWindow, type Theme } from '@7gs/rules';
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { seasons, users, type UserRow } from '../db/schema';
@@ -10,6 +10,11 @@ import { syncSeasons } from './calendar';
 import { ensureStarters } from './starters';
 
 const DISPLAY_NAME_MAX = 40;
+
+/** The account's sport theme (baseball for anything unknown). */
+export function themeOf(user: Pick<UserRow, 'theme'>): Theme {
+  return isTheme(user.theme) ? user.theme : 'baseball';
+}
 
 export function displayNameFromEmail(email: string): string {
   const local = email.split('@')[0]?.trim() ?? '';
@@ -61,7 +66,7 @@ export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
     startDate: user.startDate,
     headStartFrom: user.headStartFrom,
     defaultLockTime: user.defaultLockTime,
-    theme: isTheme(user.theme) ? user.theme : 'baseball',
+    theme: themeOf(user),
     today,
     position: calendarPosition(user, today),
     allowances: await allowancesView(tx, user.id, today),

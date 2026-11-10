@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { opponentScore, scoreline } from '../src';
+import { displayScore, opponentScore, scoreline } from '../src';
 
 describe('scoreline', () => {
   it('puts the opponent one run below the runs to win', () => {
@@ -92,5 +92,43 @@ describe('live scoreboard: no lead until every must-hit is in', () => {
 
   it('never lets your score drop at the final: a missed must-hit puts the opponent one ahead', () => {
     expect(scoreline({ result: 'L', resultDetail: 'forfeit', runs: 4, threshold: 4 })).toMatchObject({ us: 4, them: 5 });
+  });
+});
+
+describe('basketball display scores', () => {
+  const seed = 4; // margin 3 + 4 = 7
+  const bb = (us: number, them: number, threshold = 4) => displayScore('basketball', { us, them }, threshold, seed);
+
+  it('lands near 100 at the target and loses or wins by a few points', () => {
+    expect(bb(0, 3)).toEqual({ us: 0, them: 93 });
+    expect(bb(2, 3)).toEqual({ us: 50, them: 93 });
+    expect(bb(4, 3)).toEqual({ us: 100, them: 93 });
+    expect(bb(5, 3)).toEqual({ us: 125, them: 93 });
+    expect(bb(3, 4)).toEqual({ us: 75, them: 93 }); // one short at midnight
+  });
+
+  it('ties while a must-make is open, holds steady after, and never drops your score', () => {
+    expect(bb(4, 4)).toEqual({ us: 100, them: 100 }); // tied: must-make open
+    expect(bb(5, 4)).toEqual({ us: 125, them: 100 }); // must-make in: opponent held
+    expect(bb(4, 5)).toEqual({ us: 100, them: 107 }); // missed must-make: you keep 100
+  });
+
+  it('keeps the same winner for every target and margin', () => {
+    for (let threshold = 1; threshold <= 40; threshold++) {
+      for (let s = 0; s < 7; s++) {
+        for (let us = 0; us <= threshold + 4; us++) {
+          // Every line rules.scoreline can produce: the opponent never sits below one
+          // under the target (its baseline), keeps pace, or is one ahead.
+          for (const them of [threshold - 1, us, us + 1, Math.max(threshold - 1, us - 1)]) {
+            const d = displayScore('basketball', { us, them }, threshold, s);
+            expect(Math.sign(d.us - d.them)).toBe(Math.sign(us - them));
+          }
+        }
+      }
+    }
+  });
+
+  it('leaves baseball alone', () => {
+    expect(displayScore('baseball', { us: 4, them: 3 }, 4, seed)).toEqual({ us: 4, them: 3 });
   });
 });

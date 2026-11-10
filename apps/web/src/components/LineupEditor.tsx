@@ -221,7 +221,7 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
           value={state.threshold}
           min={1}
           max={LIMITS.thresholdMax}
-          suffix={vocab.terms.runsShort}
+          suffix={vocab.terms.valueShort}
           onChange={(threshold) => setState((s) => ({ ...s, threshold }))}
         />
         <div className="field">

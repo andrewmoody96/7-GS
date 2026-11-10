@@ -36,6 +36,7 @@ import {
   diffDays,
   evaluateGame,
   bestSeason,
+  displayMargin,
   finalizeAfter,
   gamesInSeason,
   generateOpponent,
@@ -884,6 +885,10 @@ export function toSeasonDto(world: UserWorld, season: SeasonRow, now: Date): Sea
     seriesWon,
     seriesLost,
     runDifferential: record.runDifferential,
+    displayDifferential: finals.reduce(
+      (n, g) => n + displayMargin(world.user.theme ?? 'baseball', { ...g, threshold: rulesOf(world, g).threshold }),
+      0,
+    ),
     currentWinStreak: currentWinStreak(results),
     longestWinStreak: longestWinStreak(results),
   };
@@ -926,6 +931,7 @@ export function career(world: UserWorld, now: Date): CareerDto {
     seriesWon: sum((s) => s.seriesWon),
     seriesLost: sum((s) => s.seriesLost),
     runDifferential: sum((s) => s.runDifferential),
+    displayDifferential: sum((s) => s.displayDifferential),
     currentWinStreak: currentWinStreak(results),
     longestWinStreak: longestWinStreak(results),
     bestSeason: best ? { number: best.number, wins: best.wins, losses: best.losses, winPct: best.winPct } : null,

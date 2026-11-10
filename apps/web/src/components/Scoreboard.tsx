@@ -1,6 +1,6 @@
 import type { GameDto, OpponentDto } from '@7gs/contracts';
-import { scoreline, type GameEvaluation } from '@7gs/rules';
-import { formatDate, weekdayShort } from '../lib/format';
+import type { GameEvaluation } from '@7gs/rules';
+import { formatDate, themedLine, weekdayShort } from '../lib/format';
 import { vocab } from '../vocab';
 import { OpponentBadge, TeamBadge } from './Badges';
 import { Tile } from './Tile';
@@ -23,7 +23,8 @@ interface ScoreboardProps {
  */
 export function Scoreboard({ game, opponent, teamName, status, ev, note }: ScoreboardProps) {
   const final = game.status === 'final';
-  const line = scoreline({
+  const line = themedLine({
+    id: game.id,
     result: final ? game.result : null,
     resultDetail: game.resultDetail,
     runs: final ? game.runs : ev.runs,

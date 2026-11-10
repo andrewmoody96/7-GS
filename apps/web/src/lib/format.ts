@@ -1,7 +1,8 @@
 // Display formatting. Game dates are local calendar dates, so they're formatted as UTC
 // midnights to avoid any time-zone shift; instants use the user's IANA zone.
 
-import { scoreline, type LocalDate, type ScoreInput } from '@7gs/rules';
+import { displayScore, hashSeed, scoreline, type DisplayScore, type LocalDate, type ScoreInput } from '@7gs/rules';
+import { activeTheme } from '../vocab';
 
 const MINUS = '−';
 
@@ -98,9 +99,18 @@ export function score(a: number, b: number): string {
   return `${a}–${b}`;
 }
 
+/**
+ * The scoreboard numbers for a game in the account's theme (rules `displayScore`):
+ * baseball runs as they are, basketball converted to points. `id` keeps each game's
+ * margin the same everywhere it's shown.
+ */
+export function themedLine(game: ScoreInput & { id?: string }): DisplayScore {
+  return displayScore(activeTheme(), scoreline(game), game.threshold, hashSeed(game.id ?? ''));
+}
+
 /** Scoreboard score, yours first. Finals are never tied (see rules `scoreline`). */
-export function gameScore(game: ScoreInput): string {
-  const line = scoreline(game);
+export function gameScore(game: ScoreInput & { id?: string }): string {
+  const line = themedLine(game);
   return score(line.us, line.them);
 }
 

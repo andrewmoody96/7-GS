@@ -296,7 +296,7 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
                 <span className="daylineup__runs">
                   {e.points}
                   <span className="sr-only"> {e.points === 1 ? 'run' : 'runs'}</span>
-                  <span aria-hidden="true"> {vocab.terms.runsShort}</span>
+                  <span aria-hidden="true"> {vocab.terms.valueShort}</span>
                 </span>
                 {e.required || e.pinchHitAt || e.carriedOver || oneOffs.has(e.taskId) || leaving.has(e.taskId) ? (
                   <span className="daylineup__pills">
