@@ -232,9 +232,12 @@ function Shell() {
       </a>
       <DemoBar />
       <TopBar />
-      <main id="main" className="app__main" tabIndex={-1}>
-        <Outlet />
-      </main>
+      {/* Only scrolls on its own in the installed app (.is-installed); elsewhere it's layout-neutral. */}
+      <div className="app__scroll">
+        <main id="main" className="app__main" tabIndex={-1}>
+          <Outlet />
+        </main>
+      </div>
       <nav className="tabbar" aria-label="Main">
         {TABS.map(({ to, label, Icon, end }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => `tab${isActive ? ' is-active' : ''}`}>
