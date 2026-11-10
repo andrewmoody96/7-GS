@@ -148,6 +148,21 @@ export const endpoints = {
   getCurrentSeason: endpoint({ method: 'GET', path: '/v1/seasons/current', response: S.Season.nullable() }),
   getSeason: endpoint({ method: 'GET', path: '/v1/seasons/:seasonId', response: S.Season }),
   updateSeason: endpoint({ method: 'PATCH', path: '/v1/seasons/:seasonId', body: S.SeasonPatch, response: S.Season }),
+  /** Every season so far, newest first (history). */
+  listSeasons: endpoint({ method: 'GET', path: '/v1/seasons', response: S.SeasonList }),
+  /** A season's series in order, without their games (history). */
+  listSeasonSeries: endpoint({ method: 'GET', path: '/v1/seasons/:seasonId/series', response: S.SeriesList }),
+  // Reminders
+  getReminders: endpoint({ method: 'GET', path: '/v1/reminders', response: S.ReminderSettings }),
+  updateReminders: endpoint({ method: 'PATCH', path: '/v1/reminders', body: S.ReminderPrefsPatch, response: S.ReminderSettings }),
+  /** Save this device's notification subscription (idempotent by endpoint). */
+  subscribePush: endpoint({ method: 'POST', path: '/v1/push-subscriptions', body: S.PushSubscription, response: S.ReminderSettings }),
+  unsubscribePush: endpoint({ method: 'DELETE', path: '/v1/push-subscriptions', body: S.PushUnsubscribe, response: S.ReminderSettings }),
+  /** Send a test reminder to every device (and email, if on). */
+  sendTestReminder: endpoint({ method: 'POST', path: '/v1/reminders/test', response: S.ReminderTestResult }),
+
+  /** Lifetime totals across every season. */
+  getCareer: endpoint({ method: 'GET', path: '/v1/career', response: S.Career }),
 } as const;
 
 export type Endpoints = typeof endpoints;

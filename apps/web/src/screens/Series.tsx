@@ -1,8 +1,9 @@
 import type { GameSummaryDto, SeriesDto } from '@7gs/contracts';
 import { compareDates, generateOpponent, localDateOf } from '@7gs/rules';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { useNow, useTimeZone } from '../app/hooks';
-import { useCurrentSeriesQuery, useMeQuery } from '../app/queries';
+import { useCurrentSeriesQuery, useMeQuery, useSeriesQuery } from '../app/queries';
 import { OpponentBadge, TeamBadge } from '../components/Badges';
 import { BoxScoreSheet } from '../components/BoxScoreSheet';
 import { Chyron } from '../components/Chyron';
@@ -30,11 +31,6 @@ function nextGameLine(series: SeriesDto, today: string): string {
 export function SeriesScreen() {
   const series = useCurrentSeriesQuery();
   const me = useMeQuery();
-  const timeZone = useTimeZone();
-  const now = useNow();
-  const [boxGame, setBoxGame] = useState<GameSummaryDto | null>(null);
-  const [rallyGame, setRallyGame] = useState<GameSummaryDto | null>(null);
-  const [rainoutGame, setRainoutGame] = useState<GameSummaryDto | null>(null);
 
   if (series.isPending) return <Loading label="Loading the series" />;
   if (series.isError) return <ErrorPanel error={series.error} onRetry={() => void series.refetch()} />;
@@ -51,6 +47,35 @@ export function SeriesScreen() {
       </div>
     );
   }
+  return <SeriesView series={s} />;
+}
+
+/** A past series from History: the same view, with a way back. */
+export function PastSeriesScreen() {
+  const { seriesId } = useParams();
+  const series = useSeriesQuery(seriesId ?? null);
+  if (series.isPending) return <Loading label="Loading the series" />;
+  if (series.isError) return <ErrorPanel error={series.error} onRetry={() => void series.refetch()} />;
+  return (
+    <SeriesView
+      series={series.data}
+      back={
+        <p className="screen__kicker">
+          <Link to="/team">{vocab.tabs.team}</Link> / <Link to="/team/history">History</Link> /
+        </p>
+      }
+    />
+  );
+}
+
+/** One series: matchup, score, the 7-game strip and the game log with box scores. */
+export function SeriesView({ series: s, back }: { series: SeriesDto; back?: ReactNode }) {
+  const me = useMeQuery();
+  const timeZone = useTimeZone();
+  const now = useNow();
+  const [boxGame, setBoxGame] = useState<GameSummaryDto | null>(null);
+  const [rallyGame, setRallyGame] = useState<GameSummaryDto | null>(null);
+  const [rainoutGame, setRainoutGame] = useState<GameSummaryDto | null>(null);
 
   const today = me.data?.today ?? localDateOf(now, timeZone);
   const status = statusOfSeries(s);
@@ -60,6 +85,7 @@ export function SeriesScreen() {
 
   return (
     <div className="screen screen--series" data-situation={tags[0] ?? 'normal'}>
+      {back}
       <header className="matchup">
         <div className="matchup__badges" aria-hidden="true">
           <TeamBadge name={teamName} size={52} />

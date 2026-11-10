@@ -9,6 +9,7 @@
 //   DATABASE_URL=postgres://… pnpm --filter @7gs/api seed:demo
 //   SEED_TZ=Asia/Tokyo pnpm --filter @7gs/api seed:demo
 
+import { MemoryPusher } from '../src/push';
 import { connect } from 'node:net';
 import {
   ApiError,
@@ -173,6 +174,7 @@ const deps: Deps = {
   log: silentLogger,
   config: { cookieSecure: false, validateResponses: true },
   mailer: null,
+  pusher: new MemoryPusher(),
   rollDice: cryptoDice,
 };
 const app = createApp(deps);

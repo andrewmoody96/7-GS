@@ -4,12 +4,22 @@
 import type { StarterDto, TaskDto } from '@7gs/contracts';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { useCurrentSeasonQuery, useMeQuery, useStartersQuery, useTasksQuery } from '../app/queries';
+import {
+  useCareerQuery,
+  useCurrentSeasonQuery,
+  useMeQuery,
+  useSeasonSeriesQuery,
+  useSeasonsQuery,
+  useStartersQuery,
+  useTasksQuery,
+} from '../app/queries';
 import { useTasksModal } from '../app/tasksModal';
 import { IconChevronRight, IconWarning } from '../components/icons';
+import { RemindersCard } from '../components/RemindersCard';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { AllowanceChips, IlExplainer, TaskGroup, TaskSheet } from '../components/TaskViews';
-import { formatRange, formatTimeOfDay } from '../lib/format';
+import { formatRange, formatTimeOfDay, formatWinPct, signed } from '../lib/format';
+import type { CareerDto, SeasonDto, SeriesSummaryDto } from '@7gs/contracts';
 import { vocab } from '../vocab';
 import { Clubhouse, GoalCard, Pace, SEASON_STATUS_LABEL, seasonTotals, Standings } from './Season';
 import { WeekCardView } from './WeekCard';
@@ -20,6 +30,7 @@ export const TEAM_SECTIONS = {
   lineups: 'This week’s lineups',
   rotation: 'Rotation',
   il: vocab.term.paused,
+  history: 'History',
   settings: 'Settings',
 } as const;
 
@@ -71,7 +82,8 @@ export function TeamScreen() {
           title={TEAM_SECTIONS.il}
           sub={injured > 0 ? `${injured} ${injured === 1 ? 'task' : 'tasks'} sitting out.` : 'Rest a task without lowering the bar.'}
         />
-        <TeamLink to="/team/settings" title={TEAM_SECTIONS.settings} sub="Team name, theme, sign out and your account." />
+        <TeamLink to="/team/history" title={TEAM_SECTIONS.history} sub="Every past series and season, and your career stats." />
+        <TeamLink to="/team/settings" title={TEAM_SECTIONS.settings} sub="Team name, theme, reminders, sign out and your account." />
       </nav>
       {s && totals ? (
         <>
@@ -144,7 +156,134 @@ export function InjuredListScreen() {
 
 export function SettingsScreen() {
   const me = useMeQuery();
-  return <SubPage title={TEAM_SECTIONS.settings}>{me.data ? <Clubhouse me={me.data} /> : <Loading label="Loading settings" />}</SubPage>;
+  return (
+    <SubPage title={TEAM_SECTIONS.settings}>
+      <RemindersCard />
+      {me.data ? <Clubhouse me={me.data} /> : <Loading label="Loading settings" />}
+    </SubPage>
+  );
+}
+
+// ── History and career ───────────────────────────────────────────────────────
+
+export function HistoryScreen() {
+  const career = useCareerQuery();
+  const seasons = useSeasonsQuery();
+  if (career.isPending || seasons.isPending) return <Loading label="Loading your history" />;
+  if (career.isError) return <ErrorPanel error={career.error} onRetry={() => void career.refetch()} />;
+  if (seasons.isError) return <ErrorPanel error={seasons.error} onRetry={() => void seasons.refetch()} />;
+  // Upcoming seasons have nothing to look back on yet.
+  const started = seasons.data.filter((s) => s.status !== 'upcoming');
+  return (
+    <SubPage title={TEAM_SECTIONS.history}>
+      <CareerCard career={career.data} />
+      {started.length === 0 ? (
+        <EmptyState title="Nothing played yet">
+          <p>Your seasons and series show up here once Opening Day comes.</p>
+        </EmptyState>
+      ) : (
+        started.map((s, i) => <SeasonHistory key={s.id} season={s} defaultOpen={i === 0} />)
+      )}
+    </SubPage>
+  );
+}
+
+function CareerCard({ career: c }: { career: CareerDto }) {
+  const stats: [string, string][] = [
+    [vocab.terms.record, `${c.wins}–${c.losses}`],
+    [vocab.terms.winPct, formatWinPct(c.winPct)],
+    [vocab.terms.seriesRecord, `${c.seriesWon}–${c.seriesLost}`],
+    [vocab.terms.longestWinStreak, String(c.longestWinStreak)],
+    [vocab.terms.rallyWins, String(c.rallyWins)],
+    [vocab.terms.runDifferential, signed(c.runDifferential)],
+  ];
+  return (
+    <section className="card career" aria-labelledby="career-title">
+      <header className="card__head">
+        <h2 id="career-title" className="card__title">
+          Career
+        </h2>
+        <p className="card__sub">
+          {c.seasonsPlayed === 0
+            ? 'Every season you play adds up here.'
+            : `${c.seasonsPlayed} ${c.seasonsPlayed === 1 ? 'season' : 'seasons'} played`}
+          {c.bestSeason
+            ? ` · Best: ${vocab.term.season} ${c.bestSeason.number}, ${c.bestSeason.wins}–${c.bestSeason.losses}`
+            : ''}
+        </p>
+      </header>
+      <dl className="statgrid">
+        {stats.map(([label, value]) => (
+          <div key={label} className="stat">
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+const STATUS_WORD: Record<SeasonDto['status'], string> = {
+  upcoming: 'Upcoming',
+  active: 'In progress',
+  offseason: 'Review Week',
+  complete: 'Final',
+};
+
+function SeasonHistory({ season: s, defaultOpen }: { season: SeasonDto; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const series = useSeasonSeriesQuery(open ? s.id : null);
+  return (
+    <section className="card seasonhist" aria-label={`${vocab.term.season} ${s.number}`}>
+      <details open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)} className="disclosure seasonhist__details">
+        <summary>
+          <span className="seasonhist__title">
+            {vocab.term.season} {s.number} · {s.wins}–{s.losses}
+          </span>
+          <span className="seasonhist__meta">
+            {STATUS_WORD[s.status]} · {formatRange(s.startDate, s.playEndDate)} · {vocab.terms.seriesRecord} {s.seriesWon}–{s.seriesLost}
+            {s.winGoal !== null ? ` · Goal ${s.winGoal}` : ''}
+          </span>
+        </summary>
+        {series.isPending && open ? <p className="loading-line">Loading series…</p> : null}
+        {series.data ? (
+          <ol className="todo seasonhist__series">
+            {series.data.map((x) => (
+              <li key={x.id}>
+                <SeriesRow series={x} />
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </details>
+    </section>
+  );
+}
+
+function seriesOutcome(x: SeriesSummaryDto): string {
+  if (x.number === 0) return `${x.wins}–${x.losses}`;
+  if (x.result === 'won') return `W ${x.wins}–${x.losses}`;
+  if (x.result === 'lost') return `L ${x.wins}–${x.losses}`;
+  return `${x.wins}–${x.losses}`;
+}
+
+function SeriesRow({ series: x }: { series: SeriesSummaryDto }) {
+  return (
+    <Link to={`/team/history/series/${x.id}`} className={`todo__item seriesrow seriesrow--${x.result ?? 'open'}`}>
+      <span>
+        <strong>
+          {vocab.seriesName(x.number)} · vs {x.opponent.name}
+        </strong>
+        <small>
+          {formatRange(x.startDate, x.endDate)}
+          {x.ironMan ? ` · ${vocab.terms.ironMan}` : ''}
+        </small>
+      </span>
+      <span className="seriesrow__score">{seriesOutcome(x)}</span>
+      <IconChevronRight />
+    </Link>
+  );
 }
 
 // ── Old links ────────────────────────────────────────────────────────────────

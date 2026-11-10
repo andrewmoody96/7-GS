@@ -1875,3 +1875,109 @@ button.cell:hover {
   background: transparent;
   color: var(--text-muted);
 }
+
+/* ── History ─────────────────────────────────────────────────────────────── */
+
+.career,
+.seasonhist {
+  margin-bottom: 14px;
+}
+
+.seasonhist__details {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.seasonhist__details > summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  align-items: center;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.seasonhist__details > summary::before {
+  grid-row: span 2;
+}
+
+.seasonhist__title {
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.seasonhist__meta {
+  grid-column: 2;
+  font-family: var(--font-body, inherit);
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.seasonhist__series {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seriesrow__score {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.seriesrow--won .seriesrow__score {
+  color: var(--accent);
+}
+
+.seriesrow--lost .seriesrow__score {
+  color: var(--text-muted);
+}
+
+/* ── Reminders ───────────────────────────────────────────────────────────── */
+
+.reminders {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.reminders__device {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-m);
+  background: var(--surface-sunken);
+}
+
+.reminders__device p {
+  margin: 0;
+}
+
+.reminders__device--on {
+  border-left: 4px solid var(--accent);
+}
+
+.reminders__kinds {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reminders__kinds .field__hint {
+  margin: 2px 0 0;
+}
+
+.reminders__time {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}

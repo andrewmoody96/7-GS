@@ -16,13 +16,13 @@ export function SignInScreen() {
   const [params] = useSearchParams();
   const me = useMeQuery();
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState<{ email: string; devToken?: string } | null>(null);
+  const [sent, setSent] = useState<{ email: string; devToken?: string; emailed?: boolean } | null>(null);
   const emailId = useId();
   const autoVerified = useRef(false);
 
   const request = useMutation({
     mutationFn: (address: string) => api.call('requestMagicLink', { body: { email: address } }),
-    onSuccess: (res, address) => setSent({ email: address, devToken: res.devToken }),
+    onSuccess: (res, address) => setSent({ email: address, devToken: res.devToken, emailed: res.emailed }),
   });
   const verify = useMutation({
     // The device's zone becomes the account's zone on first sign-in.
@@ -70,13 +70,25 @@ export function SignInScreen() {
 
       {sent ? (
         <section className="card signin__card" aria-live="polite">
-          <h2 className="card__title">Check your email</h2>
-          <p>
-            We sent a sign-in link to <strong>{sent.email}</strong>. It works for 15 minutes.
-          </p>
+          <h2 className="card__title">{sent.devToken && sent.emailed !== true ? 'Sign in' : 'Check your email'}</h2>
+          {sent.emailed === false ? (
+            <p>
+              We couldn’t email a link to <strong>{sent.email}</strong> just now, but you can still sign in below.
+            </p>
+          ) : sent.devToken && sent.emailed === undefined ? null : (
+            <p>
+              We sent a sign-in link to <strong>{sent.email}</strong>. It works for 15 minutes.
+            </p>
+          )}
           {sent.devToken ? (
             <div className="devtoken">
-              <p className="fine">Development: the API returned the link’s token instead of emailing it.</p>
+              <p className="fine">
+                {sent.emailed === true
+                  ? 'Or skip the email: quick sign-in is still on for testing.'
+                  : sent.emailed === false
+                    ? 'Quick sign-in is on for testing.'
+                    : 'No email service is set up, so you can sign in directly.'}
+              </p>
               <button type="button" className="btn btn--primary btn--block" onClick={() => verify.mutate(sent.devToken!)} disabled={verify.isPending}>
                 Sign in now
               </button>

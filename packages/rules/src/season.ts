@@ -93,3 +93,31 @@ export function seasonPace(
     goalStillPossible: winsNeeded <= remaining,
   };
 }
+
+export interface SeasonLine {
+  number: number;
+  wins: number;
+  losses: number;
+}
+
+/**
+ * The best season for the career card: most wins, then the better win %, then the
+ * earlier season. Seasons with no decided games don't count. null when none do.
+ */
+export function bestSeason<T extends SeasonLine>(seasons: readonly T[]): (T & { winPct: number }) | null {
+  let best: (T & { winPct: number }) | null = null;
+  for (const s of seasons) {
+    const played = s.wins + s.losses;
+    if (played === 0) continue;
+    const winPct = Math.round((s.wins / played) * 1000) / 1000;
+    if (
+      best === null ||
+      s.wins > best.wins ||
+      (s.wins === best.wins && winPct > best.winPct) ||
+      (s.wins === best.wins && winPct === best.winPct && s.number < best.number)
+    ) {
+      best = { ...s, winPct };
+    }
+  }
+  return best;
+}

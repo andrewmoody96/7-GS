@@ -116,8 +116,10 @@ export const MePatch = z
 export const MagicLinkRequest = z.object({ email: z.email() });
 export const MagicLinkResponse = z.object({
   sent: z.literal(true),
-  /** Only returned when the server runs without an email provider (development). */
+  /** Returned when quick sign-in is on (ALLOW_DEV_LOGIN, or no email provider in development). */
   devToken: z.string().optional(),
+  /** With a devToken: whether the link was also emailed (false = email isn't working). */
+  emailed: z.boolean().optional(),
 });
 export const VerifyRequest = z.object({
   token: z.string().min(16),
@@ -429,6 +431,33 @@ export const Season = z.object({
 
 export const SeasonPatch = z.object({ winGoal: z.number().int().min(1).max(MAX_WIN_GOAL) });
 
+/** Every season on the calendar so far, newest first. */
+export const SeasonList = z.object({ seasons: z.array(Season) });
+
+/** A series without its games, for history lists. */
+export const SeriesSummary = Series.omit({ games: true });
+export const SeriesList = z.object({ series: z.array(SeriesSummary) });
+
+/** Lifetime totals across every season (GAME_DESIGN §5). */
+export const Career = z.object({
+  /** Seasons with at least one decided game. */
+  seasonsPlayed: Count,
+  wins: Count,
+  losses: Count,
+  /** null before the first decided game. */
+  winPct: z.number().min(0).max(1).nullable(),
+  rallyWins: Count,
+  seriesWon: Count,
+  seriesLost: Count,
+  runDifferential: z.number().int(),
+  /** Win streaks run on across Review Weeks here (they pause, never break). */
+  currentWinStreak: Count,
+  longestWinStreak: Count,
+  bestSeason: z
+    .object({ number: z.number().int().min(1), wins: Count, losses: Count, winPct: z.number().min(0).max(1) })
+    .nullable(),
+});
+
 // ── Task IL ──────────────────────────────────────────────────────────────────
 
 export const InjuredListResponse = z.object({ task: Task });
@@ -466,3 +495,39 @@ export const Ok = z.object({ ok: z.literal(true) });
 
 /** Deleting an account: the user types their email to confirm. */
 export const DeleteAccount = z.object({ confirmEmail: z.string().trim().min(1) });
+
+// ── Reminders ────────────────────────────────────────────────────────────────
+
+export const ReminderPrefs = z.object({
+  /** Evening check-in, only when today's game isn't won yet. */
+  evening: z.boolean(),
+  eveningAt: TimeOfDay,
+  /** Around 10:30 p.m., only when a must-hit is still open. */
+  lastCall: z.boolean(),
+  /** The morning after an appealable loss, before the Rally Cap deadline. */
+  rally: z.boolean(),
+  /** Friday when next week's card opens, and Sunday evening if it hasn't been opened. */
+  plan: z.boolean(),
+  /** Also send reminders by email. */
+  email: z.boolean(),
+});
+
+export const ReminderSettings = ReminderPrefs.extend({
+  /** Whether the server can send email (an email provider is set up). */
+  emailAvailable: z.boolean(),
+  /** The Web Push public key (VAPID) a device subscribes with. */
+  pushKey: z.string().min(1),
+  /** Devices currently subscribed to notifications. */
+  devices: Count,
+});
+
+export const ReminderPrefsPatch = ReminderPrefs.partial();
+
+export const PushSubscription = z.object({
+  endpoint: z.url().max(2048),
+  keys: z.object({ p256dh: z.string().min(1).max(512), auth: z.string().min(1).max(512) }),
+});
+
+export const PushUnsubscribe = z.object({ endpoint: z.url().max(2048) });
+
+export const ReminderTestResult = z.object({ devices: Count, email: z.boolean() });

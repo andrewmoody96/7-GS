@@ -18,7 +18,9 @@ import { ManualClock } from '../src/clock';
 import { createDatabase, truncateAll, type DatabaseHandle, type Db } from '../src/db/client';
 import type { Deps } from '../src/deps';
 import { MemoryLogger } from '../src/logger';
+import { MemoryPusher } from '../src/push';
 import { runFinalizer } from '../src/services/finalizer';
+import { runReminders } from '../src/services/reminders';
 
 export const CHICAGO = 'America/Chicago';
 export const TOKYO = 'Asia/Tokyo';
@@ -86,7 +88,7 @@ export class TestApp {
     readonly db: Db,
     start: Date | string,
     /** Swap in a mailer or production config. */
-    overrides: Partial<Pick<Deps, 'config' | 'mailer'>> = {},
+    overrides: Partial<Pick<Deps, 'config' | 'mailer' | 'pusher'>> = {},
   ) {
     this.clock = new ManualClock(start);
     this.deps = {
@@ -95,6 +97,7 @@ export class TestApp {
       log: this.log,
       config: { cookieSecure: false, validateResponses: true },
       mailer: null,
+      pusher: new MemoryPusher(),
       rollDice: () => {
         const roll = this.rolls.shift();
         if (roll === undefined) throw new Error('Test did not queue a dice roll');
@@ -159,6 +162,10 @@ export class TestApp {
     const token = /7gs_session=([^;]+)/.exec(setCookie)?.[1];
     if (!token) throw new Error('No session cookie set');
     return { token, userId: result.data.me.id, setCookie, isNewUser: result.data.isNewUser };
+  }
+
+  reminders() {
+    return runReminders(this.deps, this.clock.now());
   }
 
   finalize() {

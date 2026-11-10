@@ -45,13 +45,17 @@ export function authRoutes(deps: Deps): AnyRoute[] {
       }
       const token = await createLoginToken(deps.db, email, now);
       if (deps.mailer) {
+        // With ALLOW_DEV_LOGIN on, email is a bonus: "Sign in now" keeps working even if
+        // the email fails, so a misconfigured provider never locks everyone out.
+        const devLogin = deps.config.allowDevLogin === true;
         try {
           await deps.mailer.sendMagicLink(email, signInLink(c, deps, token));
         } catch (error) {
           deps.log.error('Magic link email failed', { email, error: describeError(error) });
+          if (devLogin) return { sent: true as const, devToken: token, emailed: false };
           throw new ApiException(502, 'CONFLICT', 'We couldn’t send the email. Try again in a minute.', 'EMAIL_FAILED');
         }
-        return { sent: true as const };
+        return devLogin ? { sent: true as const, devToken: token, emailed: true } : { sent: true as const };
       }
       // No email provider configured (development): hand the token back and log it.
       deps.log.info('Magic link issued (no email provider configured)', { email, devToken: token });

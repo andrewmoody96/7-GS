@@ -90,6 +90,28 @@ heroku config:set ALLOW_DEV_LOGIN=true
 
 `EMAIL_FROM` must use a domain (or sender address) you've verified with the provider.
 
+### Email without a domain: Gmail
+
+No domain of your own? Send from a Gmail account instead. Sign-in links and email
+reminders then come from that Gmail address (Gmail allows about 500 emails a day, plenty
+for a small group).
+
+1. The Gmail account needs **2-Step Verification** on: myaccount.google.com → Security.
+2. Create an **app password**: myaccount.google.com/apppasswords → name it "7-Game Series"
+   → **Create**. Google shows 16 letters in four groups. Copy them (the spaces don't matter).
+3. In the Heroku dashboard → your app → **Settings → Reveal Config Vars**, add:
+
+   | KEY | VALUE |
+   |---|---|
+   | `GMAIL_USER` | the Gmail address, e.g. `yourname@gmail.com` |
+   | `GMAIL_APP_PASSWORD` | the 16 letters |
+   | `EMAIL_FROM` | optional: the sender name people see, e.g. `7-Game Series` |
+
+4. Once a test sign-in email arrives, delete `ALLOW_DEV_LOGIN` so sign-in needs the email link.
+
+The app password only lets the app send mail; it can't sign in to the Google account. To
+stop it, delete it on the same Google page.
+
 Decide who can get in. Without an invite list, anyone with the URL can create an account:
 
 ```sh
@@ -147,13 +169,26 @@ With `NODE_ENV=production` set, the server also does the following automatically
 | `NODE_ENV` | — | Set to `production`. |
 | `DATABASE_URL` | set by the add-on | TLS is on in production; set `DATABASE_SSL=false` to turn it off. |
 | `APP_URL` | — | Origin used in email links. Required with email. |
-| `RESEND_API_KEY` / `POSTMARK_API_TOKEN` | — | Use one. |
+| `GMAIL_USER` + `GMAIL_APP_PASSWORD` | — | Email from a Gmail account, no domain needed (see above). |
+| `RESEND_API_KEY` / `POSTMARK_API_TOKEN` | — | Use one (or Gmail). |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | generated | Reminder (push) keys. Leave unset: the server makes a pair on first start and keeps it in the database. |
 | `EMAIL_FROM` | — | Required with either provider. |
 | `ALLOW_DEV_LOGIN` | `false` in prod | `true` shows the "Sign in now" shortcut. |
 | `ALLOWED_EMAILS` | unset (open) | Invite list: comma-separated addresses and/or `@domains`. |
 | `FINALIZER_INTERVAL_MS` | `900000` | How often games are settled. |
 | `FORCE_HTTPS`, `COOKIE_SECURE`, `LIMIT_MAGIC_LINKS` | `true` in prod | Escape hatches; leave them alone on Heroku. |
 | `LOG_REQUESTS` | `true` | One log line per request. |
+
+### Reminders
+
+Reminders arrive as notifications (and by email for anyone who turns that on, once email
+is set up). Each person turns them on per device in **Team → Settings → Reminders**:
+
+- **iPhone:** only in the Home Screen app (Safari → Share → Add to Home Screen first).
+- **Desktop:** Chrome, Edge, Firefox or Safari, in a normal tab.
+
+Nothing to configure on Heroku: the server creates its push keys on first start. They
+live in the database, so a new database means everyone turns reminders on again.
 
 ### Deleting accounts
 

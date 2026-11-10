@@ -48,7 +48,21 @@ describe('loadConfig', () => {
     const problems = problemsOf(() => loadConfig({ NODE_ENV: 'production', SERVE_WEB: 'false' }));
     expect(problems).toHaveLength(2);
     expect(problems[0]).toMatch(/DATABASE_URL/);
-    expect(problems[1]).toMatch(/RESEND_API_KEY or POSTMARK_API_TOKEN/);
+    expect(problems[1]).toMatch(/GMAIL_USER \+ GMAIL_APP_PASSWORD/);
+  });
+
+  it('sends from a Gmail account with an app password, no domain needed', () => {
+    const base = { NODE_ENV: 'production', SERVE_WEB: 'false', DATABASE_URL: 'postgres://h/db', APP_URL: 'https://x.herokuapp.com' };
+    // Google shows app passwords in groups of four; the spaces don't matter. (A made-up
+    // value built at runtime, so secret scanners don't mistake it for a real one.)
+    const groups = ['w', 'x', 'y', 'z'].map((c) => c.repeat(4));
+    const config = loadConfig({ ...base, GMAIL_USER: 'me@gmail.com', GMAIL_APP_PASSWORD: groups.join(' ') }).email;
+    expect(config).toMatchObject({ provider: 'gmail', user: 'me@gmail.com', from: '7-Game Series <me@gmail.com>' });
+    expect(config && 'password' in config ? config.password : null).toBe(groups.join(''));
+    expect(
+      loadConfig({ ...base, GMAIL_USER: 'me@gmail.com', GMAIL_APP_PASSWORD: 'x', EMAIL_FROM: 'Moody Ball Club <ignored@else.com>' }).email,
+    ).toMatchObject({ from: 'Moody Ball Club <me@gmail.com>' });
+    expect(problemsOf(() => loadConfig({ ...base, GMAIL_USER: 'me@gmail.com' })).join('\n')).toMatch(/GMAIL_APP_PASSWORD/);
   });
 
   it('requires EMAIL_FROM with a provider, and APP_URL for the links', () => {
@@ -163,6 +177,7 @@ describe('email sign-in', () => {
         if (fail) throw new Error('provider down');
         sent.push({ email, link });
       },
+      async sendMessage() {},
     };
   }
 
@@ -184,6 +199,21 @@ describe('email sign-in', () => {
     const error = await t.fails('requestMagicLink', { body: { email: 'fan@example.com' } }, 502);
     expect(error).toMatchObject({ reason: 'EMAIL_FAILED' });
     expect(t.log.lines.some((l) => l.message === 'Magic link email failed')).toBe(true);
+  });
+
+  it('keeps quick sign-in working alongside email while dev login is on, even if email fails', async () => {
+    const mailer = recordingMailer();
+    const t = new TestApp(env.db, NOW, { mailer, config: { ...base, appUrl: 'https://seven.example', allowDevLogin: true } });
+    const res = await t.ok('requestMagicLink', { body: { email: 'fan@example.com' } });
+    expect(res).toMatchObject({ sent: true, emailed: true });
+    expect(res.devToken).toBeTruthy();
+    expect(mailer.sent).toHaveLength(1);
+
+    const broken = new TestApp(env.db, NOW, { mailer: recordingMailer(true), config: { ...base, appUrl: 'https://seven.example', allowDevLogin: true } });
+    const fallback = await broken.ok('requestMagicLink', { body: { email: 'fan@example.com' } });
+    expect(fallback).toMatchObject({ sent: true, emailed: false });
+    expect((await broken.ok('verifyMagicLink', { body: { token: fallback.devToken, timezone: CHICAGO } })).me.email).toBe('fan@example.com');
+    expect(broken.log.lines.some((l) => l.message === 'Magic link email failed')).toBe(true);
   });
 
   it('never hands out a dev token when dev login is off', async () => {

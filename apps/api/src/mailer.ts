@@ -1,9 +1,35 @@
-// Magic-link email over a provider's HTTP API (no SDKs): Resend (RESEND_API_KEY) or
-// Postmark (POSTMARK_API_TOKEN, also what Heroku's Postmark add-on sets).
+// Email: sign-in links and reminders. Resend (RESEND_API_KEY) or Postmark
+// (POSTMARK_API_TOKEN) over their HTTP APIs, or a Gmail account over SMTP with an app
+// password (GMAIL_USER + GMAIL_APP_PASSWORD), which needs no domain of your own.
 
+import nodemailer from 'nodemailer';
 import type { Mailer } from './deps';
 
-export type EmailConfig = { provider: 'resend' | 'postmark'; apiKey: string; from: string };
+export type EmailConfig =
+  | { provider: 'resend' | 'postmark'; apiKey: string; from: string }
+  | { provider: 'gmail'; user: string; password: string; from: string };
+
+function createGmailMailer(config: Extract<EmailConfig, { provider: 'gmail' }>): Mailer {
+  const transport = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: config.user, pass: config.password },
+  });
+  const mailer: Mailer = {
+    async sendMagicLink(email, link) {
+      await mailer.sendMessage(email, magicLinkEmail(link));
+    },
+    async sendMessage(email, { subject, text, html }) {
+      try {
+        await transport.sendMail({ from: config.from, to: email, subject, text, html });
+      } catch (error) {
+        throw new Error(`Gmail rejected the email: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    },
+  };
+  return mailer;
+}
 
 type Fetch = typeof fetch;
 
@@ -30,9 +56,12 @@ export function magicLinkEmail(link: string): { subject: string; text: string; h
 }
 
 export function createMailer(config: EmailConfig, fetchImpl: Fetch = fetch): Mailer {
-  return {
+  if (config.provider === 'gmail') return createGmailMailer(config);
+  const mailer: Mailer = {
     async sendMagicLink(email, link) {
-      const { subject, text, html } = magicLinkEmail(link);
+      await mailer.sendMessage(email, magicLinkEmail(link));
+    },
+    async sendMessage(email, { subject, text, html }) {
       const request: { url: string; headers: Record<string, string>; body: unknown } =
         config.provider === 'resend'
           ? {
@@ -57,4 +86,5 @@ export function createMailer(config: EmailConfig, fetchImpl: Fetch = fetch): Mai
       }
     },
   };
+  return mailer;
 }

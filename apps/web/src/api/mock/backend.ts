@@ -10,6 +10,8 @@ import {
   type ResponseBody,
   type StarterPutDto,
   type TaskUpdateDto,
+  type ReminderPrefsDto,
+  type ReminderSettingsDto,
 } from '@7gs/contracts';
 import { localDateOf, type Weekday } from '@7gs/rules';
 import { ApiError, type RawCallOptions } from '../client';
@@ -320,6 +322,19 @@ export class MockBackend {
       const season = engine.currentSeasonRow(w, now);
       return season ? engine.toSeasonDto(w, season, now) : null;
     },
+    // ── Reminders: the demo stores the choices but never sends anything ──
+    getReminders: ({ world }) => demoReminders(world()),
+    updateReminders: ({ world, body }) => {
+      const w = world();
+      w.reminders = { ...demoReminders(w), ...(body as Partial<ReminderPrefsDto>) };
+      return demoReminders(w);
+    },
+    subscribePush: ({ world }) => demoReminders(world()),
+    unsubscribePush: ({ world }) => demoReminders(world()),
+    sendTestReminder: () => ({ devices: 0, email: false }),
+    listSeasons: ({ world, now }) => ({ seasons: engine.listSeasons(world(), now) }),
+    listSeasonSeries: ({ world, params }) => ({ series: engine.listSeasonSeries(world(), params.seasonId ?? '') }),
+    getCareer: ({ world, now }) => engine.career(world(), now),
     getSeason: ({ world, params, now }) => {
       const w = world();
       return engine.toSeasonDto(w, engine.seasonById(w, params.seasonId ?? ''), now);
@@ -327,6 +342,13 @@ export class MockBackend {
     updateSeason: ({ world, params, body, now }) =>
       engine.updateSeasonGoal(world(), params.seasonId ?? '', (body as { winGoal: number }).winGoal, now),
   };
+}
+
+const DEFAULT_REMINDERS: ReminderPrefsDto = { evening: true, eveningAt: '20:00', lastCall: true, rally: true, plan: true, email: false };
+
+function demoReminders(world: UserWorld): ReminderSettingsDto {
+  const prefs = { ...DEFAULT_REMINDERS, ...world.reminders, email: false };
+  return { ...prefs, emailAvailable: false, pushKey: 'demo', devices: 0 };
 }
 
 export { DEMO_EMAIL };

@@ -1,6 +1,7 @@
 import type { Deps } from '../deps';
 import { route, type AnyRoute } from '../http/router';
 import { currentSeason, currentSeries, loadUserSeason, loadUserSeries, setWinGoal } from '../services/seasons';
+import { career, listSeasonSeries, listSeasons } from '../services/history';
 import { inUserTx } from '../services/today';
 import { seasonView, seriesView } from '../services/views';
 
@@ -48,5 +49,17 @@ export function seasonRoutes(deps: Deps): AnyRoute[] {
         { scope: 'account' },
       ),
     ),
+
+    route('listSeasons', ({ auth, now }) =>
+      inUserTx(db, auth.user, now, async (tx, user) => ({ seasons: await listSeasons(tx, user) }), { scope: 'account' }),
+    ),
+
+    route('listSeasonSeries', ({ auth, params, now }) =>
+      inUserTx(db, auth.user, now, async (tx, user) => ({ series: await listSeasonSeries(tx, user, params.seasonId) }), {
+        scope: 'account',
+      }),
+    ),
+
+    route('getCareer', ({ auth, now }) => inUserTx(db, auth.user, now, (tx, user) => career(tx, user), { scope: 'account' })),
   ];
 }

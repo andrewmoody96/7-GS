@@ -31,9 +31,21 @@ function flag(value: string | undefined, fallback: boolean): boolean {
 }
 
 function emailFromEnv(env: NodeJS.ProcessEnv, problems: string[]): EmailConfig | null {
-  const from = env.EMAIL_FROM?.trim();
   const resend = env.RESEND_API_KEY?.trim();
   const postmark = env.POSTMARK_API_TOKEN?.trim();
+  // Gmail needs no domain: it sends from the Gmail address with an app password.
+  const gmailUser = env.GMAIL_USER?.trim();
+  const gmailPassword = env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+  if (!resend && !postmark && (gmailUser || gmailPassword)) {
+    if (!gmailUser || !gmailPassword) {
+      problems.push('Gmail needs both GMAIL_USER (your Gmail address) and GMAIL_APP_PASSWORD (a Google app password).');
+      return null;
+    }
+    const name = env.EMAIL_FROM?.trim() || '7-Game Series';
+    // Gmail sends as the account itself; EMAIL_FROM can only change the display name.
+    return { provider: 'gmail', user: gmailUser, password: gmailPassword, from: `${name.replace(/<.*>/, '').trim()} <${gmailUser}>` };
+  }
+  const from = env.EMAIL_FROM?.trim();
   if (!resend && !postmark) return null;
   if (!from) {
     problems.push('EMAIL_FROM is required to send sign-in links (e.g. "7-Game Series <play@yourdomain.com>").');
@@ -68,7 +80,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const allowDevLogin = flag(env.ALLOW_DEV_LOGIN, !production);
   if (production && !email && !allowDevLogin) {
     problems.push(
-      'No email provider: set RESEND_API_KEY or POSTMARK_API_TOKEN, plus EMAIL_FROM. ' +
+      'No email provider: set GMAIL_USER + GMAIL_APP_PASSWORD, or RESEND_API_KEY / POSTMARK_API_TOKEN plus EMAIL_FROM. ' +
         '(ALLOW_DEV_LOGIN=true skips email for a private trial: anyone could then sign in as any address.)',
     );
   }
