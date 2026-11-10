@@ -1855,3 +1855,23 @@ button.cell:hover {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+
+/* A task's name in a lineup: tap to edit the task. Reads as plain text. */
+.taskname {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--text-muted);
+  text-underline-offset: 3px;
+}
+
+.pill--leaving {
+  border: 1px dashed var(--text-muted);
+  background: transparent;
+  color: var(--text-muted);
+}

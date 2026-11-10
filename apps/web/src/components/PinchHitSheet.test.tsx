@@ -11,6 +11,7 @@ import { pinchHitMath } from '../lib/game';
 import { LineupsScreen } from '../screens/Team';
 import { TodayScreen } from '../screens/Today';
 import { TasksSheet } from './TasksSheet';
+import { TaskSheet } from './TaskViews';
 
 // Friday 2 October 2026 in Chicago: the midseason demo (week locked, a carried-over one-off).
 const REAL_NOW = Date.parse('2026-10-02T17:00:00Z');
@@ -189,5 +190,51 @@ describe('Add task window', () => {
     });
     const today = (await api.call('getToday')).games[0]!;
     expect(today.entries.some((e) => e.taskName === 'Learn to juggle')).toBe(false);
+  });
+});
+
+describe('Deleting a task', () => {
+  it('asks first, says it stays this week, and offers undo while it does', async () => {
+    const user = userEvent.setup();
+    const { api } = renderWithApp(<div />);
+    const today = (await api.call('getToday')).games[0]!;
+    const entry = today.entries.find((e) => e.role === 'lineup' && e.completedAt === null)!;
+    const task = (await api.call('listTasks')).tasks.find((t) => t.id === entry.taskId)!;
+    const withTask = (await api.call('listTasks')).tasks.find((t) => t.id === task.id)!;
+
+    const view = render(
+      <AppProviders api={api} queue={new CheckoffQueue()} queryClient={createQueryClient()}>
+        <MemoryRouter>
+          <TaskSheet task={withTask} today={today.playedDate} onClose={() => {}} />
+        </MemoryRouter>
+      </AppProviders>,
+    );
+    const dialog = await view.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete task…' }));
+    expect(within(dialog).getByText(/stays in this week’s lineups through/)).toBeInTheDocument();
+    // Keep backs out without deleting.
+    await user.click(within(dialog).getByRole('button', { name: 'Keep' }));
+    expect((await api.call('listTasks')).tasks.find((t) => t.id === task.id)!.status).not.toBe('retired');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Delete task…' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(async () => {
+      expect((await api.call('listTasks')).tasks.find((t) => t.id === task.id)).toMatchObject({ status: 'retired' });
+    });
+
+    const leaving = (await api.call('listTasks')).tasks.find((t) => t.id === task.id)!;
+    view.unmount();
+    const again = render(
+      <AppProviders api={api} queue={new CheckoffQueue()} queryClient={createQueryClient()}>
+        <MemoryRouter>
+          <TaskSheet task={leaving} today={today.playedDate} onClose={() => {}} />
+        </MemoryRouter>
+      </AppProviders>,
+    );
+    const sheet = await again.findByRole('dialog');
+    await user.click(within(sheet).getByRole('button', { name: 'Undo delete' }));
+    await waitFor(async () => {
+      expect((await api.call('listTasks')).tasks.find((t) => t.id === task.id)).toMatchObject({ status: 'active' });
+    });
   });
 });

@@ -428,11 +428,24 @@ export function useUpdateTask() {
   );
 }
 
+/** Delete a task. One still in a week under way stays there through that week. */
 export function useRetireTask() {
   const api = useApi();
   return useRosterMutation(
     (taskId: string) => api.call('retireTask', { params: { taskId } }),
-    (task) => `${task.name} retired.`,
+    (task) =>
+      task.lockedThrough
+        ? `${task.name} deleted. It stays in this week’s lineups through ${weekdayLong(task.lockedThrough)}.`
+        : `${task.name} deleted.`,
+  );
+}
+
+/** Undo a delete while the task is still in a week under way. */
+export function useRestoreTask() {
+  const api = useApi();
+  return useRosterMutation(
+    (taskId: string) => api.call('restoreTask', { params: { taskId } }),
+    (task) => `${task.name} is back on your task list and in your Rotation.`,
   );
 }
 

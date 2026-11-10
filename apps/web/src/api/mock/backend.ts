@@ -232,13 +232,14 @@ export class MockBackend {
     getCalendar: ({ world, now }) => engine.toCalendarDto(world(), now),
 
     // ── Roster ──
-    listTasks: ({ world }) => {
+    listTasks: ({ world, now }) => {
       const w = world();
-      return { tasks: w.tasks.map((t) => engine.toTaskDto(w, t)) };
+      return { tasks: w.tasks.map((t) => engine.toTaskDto(w, t, now)) };
     },
     createTask: ({ world, body, now }) => engine.createTask(world(), this.env, body as Parameters<typeof engine.createTask>[2], now),
     updateTask: ({ world, params, body, now }) => engine.updateTask(world(), params.taskId ?? '', body as TaskUpdateDto, now),
     retireTask: ({ world, params, now }) => engine.retireTask(world(), params.taskId ?? '', now),
+    restoreTask: ({ world, params, now }) => engine.restoreTask(world(), params.taskId ?? '', now),
     placeOnInjuredList: ({ world, params, now }) => ({ task: engine.placeOnInjuredList(world(), params.taskId ?? '', now) }),
     activateFromInjuredList: ({ world, params, now }) => ({
       task: engine.activateFromInjuredList(world(), this.env, params.taskId ?? '', now),

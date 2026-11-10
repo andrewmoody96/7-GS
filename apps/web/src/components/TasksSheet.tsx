@@ -7,6 +7,7 @@ import { LIMITS, type TaskKind } from '@7gs/rules';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useAddTask, useMeQuery, useTasksQuery, useWeekQuery, useWeeksQuery } from '../app/queries';
 import { weekdayShort } from '../lib/format';
+import { isLeaving } from '../lib/tasks';
 import { vocab } from '../vocab';
 import { Stepper, Switch } from './Controls';
 import { IconPlus } from './icons';
@@ -65,7 +66,9 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const all = tasks.data ?? [];
   const active = all.filter((t) => t.status === 'active');
   const injured = all.filter((t) => t.status === 'injured');
-  const retired = all.filter((t) => t.status === 'retired');
+  const leaving = all.filter(isLeaving);
+  // Finished one-offs. Deleted tasks that have left are gone (past box scores keep them).
+  const done = all.filter((t) => t.status === 'retired' && t.deletedAt === null);
   const current = editing ? (all.find((t) => t.id === editing.id) ?? editing) : null;
 
   const submit = (e?: FormEvent) => {
@@ -165,7 +168,8 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
           {injured.length > 0 ? (
             <TaskGroup title={`${vocab.term.paused} · ${injured.length}`} tasks={injured} onSelect={setEditing} />
           ) : null}
-          {retired.length > 0 ? <TaskGroup title={`Retired · ${retired.length}`} tasks={retired} onSelect={setEditing} /> : null}
+          {leaving.length > 0 ? <TaskGroup title={`Deleted, leaving after this week · ${leaving.length}`} tasks={leaving} onSelect={setEditing} /> : null}
+          {done.length > 0 ? <TaskGroup title={`Done one-offs · ${done.length}`} tasks={done} onSelect={setEditing} /> : null}
         </details>
       </Sheet>
       {current ? <TaskSheet task={current} today={me.data?.today ?? null} onClose={() => setEditing(null)} /> : null}

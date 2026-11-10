@@ -142,6 +142,16 @@ export const Task = z.object({
   currentStreak: Count,
   longestStreak: Count,
   createdAt: Instant,
+  /** When the user deleted it (status retired). null otherwise, including a finished one-off. */
+  deletedAt: Instant.nullable(),
+  /**
+   * The last day of a week already under way that still has this task in its lineup. Those
+   * days keep the task as it was planned: a deleted task stays there until then, and a
+   * new point value starts the day after. null when no such day is left.
+   */
+  lockedThrough: LocalDate.nullable(),
+  /** The task's runs on those locked days, when they differ from `points`. */
+  lockedPoints: Points.nullable(),
 });
 
 export const TaskCreate = z.object({

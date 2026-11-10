@@ -202,6 +202,8 @@ export const taskDefinitions = pgTable(
     longestStreak: count('longest_streak'),
     createdAt: instant('created_at').notNull(),
     updatedAt: instant('updated_at').notNull(),
+    /** Set when the user deletes the task (status retired); null for a one-off retired by completing it. */
+    deletedAt: instant('deleted_at'),
   },
   (t) => [
     index('task_definitions_user_idx').on(t.userId),

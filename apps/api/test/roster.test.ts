@@ -66,7 +66,7 @@ describe('tasks', () => {
     expect((await t.ok('listTasks', { token: other.token })).tasks).toEqual([]);
   });
 
-  it('renames a task in a lineup that is still before first pitch, but not after', async () => {
+  it('renames a task everywhere, but a new point value skips days that are under way', async () => {
     const { t, token } = await signedUp();
     const ids = await createTasks(t, token, [{ name: 'Read' }, { name: 'Gym' }]);
     await t.ok('putStarter', {
@@ -91,9 +91,11 @@ describe('tasks', () => {
     expect(entries.find((e) => e.taskId === ids.Read)).toMatchObject({ taskName: 'Read 20 pages', points: 2 });
 
     await t.ok('lockGame', { token, params: { gameId: game!.id } });
-    await t.ok('updateTask', { token, params: { taskId: ids.Read! }, body: { name: 'Read a chapter', points: 5 } });
+    const edited = await t.ok('updateTask', { token, params: { taskId: ids.Read! }, body: { name: 'Read a chapter', points: 5 } });
     entries = (await t.ok('getGame', { token, params: { gameId: game!.id } })).entries;
-    expect(entries.find((e) => e.taskId === ids.Read)).toMatchObject({ taskName: 'Read 20 pages', points: 2 });
+    // The name is just a label; the runs stay as planned.
+    expect(entries.find((e) => e.taskId === ids.Read)).toMatchObject({ taskName: 'Read a chapter', points: 2 });
+    expect(edited).toMatchObject({ points: 5, lockedThrough: '2026-10-05', lockedPoints: 2 });
   });
 });
 

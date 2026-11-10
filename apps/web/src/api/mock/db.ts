@@ -40,6 +40,8 @@ export interface TaskRow {
   ilStartedOn: LocalDate | null;
   ilMinUntil: LocalDate | null;
   createdAt: string;
+  /** Set when the user deletes it; absent in worlds saved before deletes were tracked. */
+  deletedAt?: string | null;
 }
 
 export interface StarterRow {

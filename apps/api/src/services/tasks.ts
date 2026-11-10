@@ -4,23 +4,79 @@ import type { TaskDto, TaskUpdateDto } from '@7gs/contracts';
 import { compareDates, IL_MIN_DAYS, ilMinUntil, ilReturnDate, ilStartDate, localDateOf, type LocalDate, type TaskKind } from '@7gs/rules';
 import { and, asc, eq, gte, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { dayTemplateTasks, games, lineupEntries, taskDefinitions, type GameRow, type TaskRow, type UserRow } from '../db/schema';
+import { games, lineupEntries, taskDefinitions, type GameRow, type TaskRow, type UserRow } from '../db/schema';
 import { conflict, notFound } from '../errors';
 import { uuidv7 } from '../ids';
-import { toTaskDto } from './dto';
-import { compactPositions, openGames, refreshScore } from './lineups';
+import { toTaskDto, type LockedAppearance } from './dto';
+import { compactPositions, isDayOver, refreshScore } from './lineups';
 import { dropHoldsForTask, recordHolds, restoreHolds } from './ilHolds';
 import { ensureToday } from './today';
 import { seriesGames } from './standings';
-import { weekLockOf } from './weeks';
+import { weekLockOf, weekLocks } from './weeks';
 
-export async function listTasks(tx: Db, user: UserRow): Promise<TaskDto[]> {
+/**
+ * Built, unfinished games whose day isn't over, split by whether their week has started.
+ * A locked game (its week has had first pitch, or the game itself has) keeps every task
+ * exactly as planned: edits and deletes reach only the planning ones (GAME_DESIGN §4a).
+ */
+async function gamesByLock(tx: Db, user: UserRow, now: Date): Promise<{ planning: GameRow[]; locked: GameRow[] }> {
+  const rows = (
+    await tx
+      .select()
+      .from(games)
+      .where(and(eq(games.userId, user.id), isNotNull(games.lineupBuiltAt), ne(games.status, 'final')))
+  ).filter((g) => !isDayOver(g, user, now));
+  const locks = await weekLocks(
+    tx,
+    user,
+    rows.map((g) => g.seriesId),
+    now,
+  );
+  const planning: GameRow[] = [];
+  const locked: GameRow[] = [];
+  for (const g of rows) (g.lockedAt || locks.get(g.seriesId) ? locked : planning).push(g);
+  return { planning, locked };
+}
+
+/** For each task still in a locked game: the last such day and its runs there. */
+async function lockedAppearances(tx: Db, user: UserRow, now: Date): Promise<Map<string, LockedAppearance>> {
+  const { locked } = await gamesByLock(tx, user, now);
+  const out = new Map<string, LockedAppearance>();
+  if (locked.length === 0) return out;
+  const dateOf = new Map(locked.map((g) => [g.id, g.playedDate]));
+  const entries = await tx
+    .select({ taskId: lineupEntries.taskId, gameId: lineupEntries.gameId, points: lineupEntries.points })
+    .from(lineupEntries)
+    .where(
+      and(
+        inArray(
+          lineupEntries.gameId,
+          locked.map((g) => g.id),
+        ),
+        ne(lineupEntries.role, 'subbed_out'),
+      ),
+    );
+  for (const e of entries) {
+    const date = dateOf.get(e.gameId);
+    if (!date) continue;
+    const seen = out.get(e.taskId);
+    if (!seen || compareDates(date, seen.through) > 0) out.set(e.taskId, { through: date, points: e.points });
+  }
+  return out;
+}
+
+async function taskView(tx: Db, user: UserRow, row: TaskRow, now: Date): Promise<TaskDto> {
+  return toTaskDto(row, (await lockedAppearances(tx, user, now)).get(row.id) ?? null);
+}
+
+export async function listTasks(tx: Db, user: UserRow, now: Date): Promise<TaskDto[]> {
   const rows = await tx
     .select()
     .from(taskDefinitions)
     .where(eq(taskDefinitions.userId, user.id))
     .orderBy(asc(taskDefinitions.createdAt), asc(taskDefinitions.id));
-  return rows.map(toTaskDto);
+  const locked = await lockedAppearances(tx, user, now);
+  return rows.map((row) => toTaskDto(row, locked.get(row.id) ?? null));
 }
 
 export async function createTask(
@@ -43,6 +99,7 @@ export async function createTask(
     })
     .returning();
   if (!row) throw new Error('Task insert failed');
+  // A new task isn't in any lineup yet.
   return toTaskDto(row);
 }
 
@@ -57,8 +114,10 @@ async function loadTask(tx: Db, user: UserRow, taskId: string): Promise<TaskRow>
 }
 
 /**
- * Edit a task. Lineups that are built but still before first pitch pick up a new name
- * or point value (entries are frozen at lock, GAME_DESIGN §4); history never changes.
+ * Edit a task. A new name reaches every unfinished lineup (it's only a label). A new
+ * point value reaches only days whose week hasn't started: days already under way keep
+ * the runs they were planned with, so what it takes to win them never changes
+ * (GAME_DESIGN §4a). Finished games are history and never change.
  */
 export async function updateTask(tx: Db, user: UserRow, taskId: string, patch: TaskUpdateDto, now: Date): Promise<TaskDto> {
   const task = await loadTask(tx, user, taskId);
@@ -75,24 +134,27 @@ export async function updateTask(tx: Db, user: UserRow, taskId: string, patch: T
   if (!row) throw notFound('Task');
 
   if (patch.name !== undefined || patch.points !== undefined) {
-    const open = await openGames(tx, user, now);
-    if (open.length > 0) {
+    const { planning, locked } = await gamesByLock(tx, user, now);
+    const setFor = async (targets: readonly GameRow[], values: Partial<typeof lineupEntries.$inferInsert>) => {
+      if (targets.length === 0) return;
       await tx
         .update(lineupEntries)
-        .set({ taskName: row.name, points: row.points })
+        .set(values)
         .where(
           and(
             eq(lineupEntries.taskId, row.id),
             inArray(
               lineupEntries.gameId,
-              open.map((g) => g.id),
+              targets.map((g) => g.id),
             ),
           ),
         );
-      for (const game of open) await refreshScore(tx, game);
-    }
+    };
+    await setFor(planning, { taskName: row.name, points: row.points });
+    if (patch.name !== undefined) await setFor(locked, { taskName: row.name });
+    if (patch.points !== undefined) for (const game of planning) await refreshScore(tx, game);
   }
-  return toTaskDto(row);
+  return taskView(tx, user, row, now);
 }
 
 /** Drop a task from lineups that are still editable (built, before first pitch). */
@@ -151,20 +213,43 @@ async function removeFromBuiltLineupsFrom(tx: Db, user: UserRow, taskId: string,
   }
 }
 
-/** Retire (soft delete): off every starter and every still-editable lineup. */
+/**
+ * Delete a task (status retired, deletedAt set). It leaves the task list, the rotation and
+ * every day whose week hasn't started. Days in a week already under way keep it exactly
+ * as planned through that week, so the bar never drops. Its rotation spots are kept but
+ * skipped (lineups only take active tasks), so restoring it puts them back.
+ */
 export async function retireTask(tx: Db, user: UserRow, taskId: string, now: Date): Promise<TaskDto> {
   const task = await loadTask(tx, user, taskId);
-  if (task.status === 'retired') return toTaskDto(task);
+  if (task.status === 'retired') return taskView(tx, user, task, now);
   const [row] = await tx
     .update(taskDefinitions)
-    .set({ status: 'retired', carryover: false, ilStartedOn: null, ilMinUntil: null, updatedAt: now })
+    .set({ status: 'retired', deletedAt: now, carryover: false, ilStartedOn: null, ilMinUntil: null, updatedAt: now })
     .where(eq(taskDefinitions.id, task.id))
     .returning();
   if (!row) throw notFound('Task');
-  await tx.delete(dayTemplateTasks).where(eq(dayTemplateTasks.taskId, task.id));
   await dropHoldsForTask(tx, task.id);
-  await removeFromOpenLineups(tx, await openGames(tx, user, now), task.id);
-  return toTaskDto(row);
+  await removeFromOpenLineups(tx, (await gamesByLock(tx, user, now)).planning, task.id);
+  return taskView(tx, user, row, now);
+}
+
+/**
+ * Undo a delete while the task is still in a week under way. It comes back active, with
+ * its rotation spots. Days planned since the delete don't get it back on their own.
+ */
+export async function restoreTask(tx: Db, user: UserRow, taskId: string, now: Date): Promise<TaskDto> {
+  const task = await loadTask(tx, user, taskId);
+  const locked = (await lockedAppearances(tx, user, now)).get(task.id) ?? null;
+  if (task.status !== 'retired' || task.deletedAt === null || locked === null) {
+    throw conflict('NOT_ELIGIBLE', 'Only a deleted task that is still in this week’s lineups can be brought back.', 'NOT_QUEUED');
+  }
+  const [row] = await tx
+    .update(taskDefinitions)
+    .set({ status: 'active', deletedAt: null, updatedAt: now })
+    .where(eq(taskDefinitions.id, task.id))
+    .returning();
+  if (!row) throw notFound('Task');
+  return toTaskDto(row, locked);
 }
 
 /** The IL minimum is a rule shared with the web app's demo backend. */
@@ -180,7 +265,7 @@ export { ilMinUntil } from '@7gs/rules';
 export async function placeOnInjuredList(tx: Db, user: UserRow, taskId: string, now: Date): Promise<TaskDto> {
   const task = await loadTask(tx, user, taskId);
   if (task.status === 'retired') throw conflict('CONFLICT', 'A retired task cannot go on the injured list.', 'RETIRED');
-  if (task.status === 'injured') return toTaskDto(task);
+  if (task.status === 'injured') return taskView(tx, user, task, now);
 
   const today = localDateOf(now, user.timezone);
   const todays = await ensureToday(tx, user, now);
@@ -217,7 +302,7 @@ export async function placeOnInjuredList(tx: Db, user: UserRow, taskId: string, 
     .returning();
   if (!row) throw notFound('Task');
   await removeFromBuiltLineupsFrom(tx, user, task.id, start, now);
-  return toTaskDto(row);
+  return taskView(tx, user, row, now);
 }
 
 /**
@@ -246,5 +331,5 @@ export async function activateFromInjuredList(tx: Db, user: UserRow, taskId: str
     .returning();
   if (!row) throw notFound('Task');
   await restoreHolds(tx, user, task.id, ilReturnDate(today, task.ilStartedOn), now);
-  return toTaskDto(row);
+  return taskView(tx, user, row, now);
 }

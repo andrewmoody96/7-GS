@@ -3,10 +3,11 @@
 // month's allowance chips.
 
 import type { AllowancesDto, TaskDto } from '@7gs/contracts';
-import { compareDates, IL_MIN_DAYS, LIMITS, type LocalDate, type TaskKind } from '@7gs/rules';
+import { addDays, compareDates, IL_MIN_DAYS, LIMITS, type LocalDate, type TaskKind } from '@7gs/rules';
 import { useEffect, useId, useState } from 'react';
-import { useActivateFromInjuredList, usePlaceOnInjuredList, useRetireTask, useUpdateTask } from '../app/queries';
-import { formatDate } from '../lib/format';
+import { useActivateFromInjuredList, usePlaceOnInjuredList, useRestoreTask, useRetireTask, useUpdateTask } from '../app/queries';
+import { formatDate, weekdayLong, weekdayShort } from '../lib/format';
+import { isLeaving, newPointsFrom } from '../lib/tasks';
 import { vocab } from '../vocab';
 import { Stepper } from './Controls';
 import { IconBandage, IconChevronRight, IconFlame } from './icons';
@@ -63,6 +64,12 @@ export function TaskGroup({ title, tasks, onSelect }: { title: string; tasks: Ta
                     </span>
                   ) : null}
                   {task.carryover && task.status !== 'retired' ? <span className="pill pill--carried">{vocab.carryoverNote}</span> : null}
+                  {isLeaving(task) && task.lockedThrough ? (
+                    <span className="pill pill--leaving">Leaving after {weekdayShort(task.lockedThrough)}</span>
+                  ) : null}
+                  {newPointsFrom(task) && !isLeaving(task) ? (
+                    <span className="pill pill--carried">{vocab.runs(task.points)} from {weekdayShort(newPointsFrom(task)!)}</span>
+                  ) : null}
                   {task.status === 'injured' && task.ilMinUntil ? (
                     <span className="pill pill--il">{vocab.il.eligibleOn(formatDate(task.ilMinUntil))}</span>
                   ) : null}
@@ -110,6 +117,7 @@ export function KindPicker({ value, onChange, name }: { value: TaskKind; onChang
 export function TaskSheet({ task, today, onClose }: { task: TaskDto; today: LocalDate | null; onClose: () => void }) {
   const update = useUpdateTask();
   const retire = useRetireTask();
+  const restore = useRestoreTask();
   const toIl = usePlaceOnInjuredList();
   const activate = useActivateFromInjuredList();
   const [name, setName] = useState(task.name);
@@ -136,7 +144,7 @@ export function TaskSheet({ task, today, onClose }: { task: TaskDto; today: Loca
     <Sheet
       open
       onClose={onClose}
-      kicker={vocab.taskStatus[task.status]}
+      kicker={isLeaving(task) ? 'Leaving' : vocab.taskStatus[task.status]}
       title={task.name}
       footer={
         <div className="actions">
@@ -173,8 +181,18 @@ export function TaskSheet({ task, today, onClose }: { task: TaskDto; today: Loca
           max={LIMITS.pointsMax}
           suffix={points === 1 ? 'run' : 'runs'}
           onChange={setPoints}
-          hint="Runs already scored keep the value they had at first pitch."
+          hint={
+            task.lockedThrough && !retired
+              ? `Days already under way (through ${weekdayShort(task.lockedThrough)}) keep ${vocab.runs(task.lockedPoints ?? task.points)}. A new value starts ${weekdayShort(addDays(task.lockedThrough, 1))}.`
+              : 'Days you’ve already started keep the runs they were planned with.'
+          }
         />
+        {newPointsFrom(task) && !retired ? (
+          <p className="notice">
+            Worth {vocab.runs(task.points)} from {weekdayLong(newPointsFrom(task)!)}. This week stays{' '}
+            {vocab.runs(task.lockedPoints!)}.
+          </p>
+        ) : null}
         <div className="field">
           <label className="field__label" htmlFor={notesId}>
             Notes
@@ -226,23 +244,46 @@ export function TaskSheet({ task, today, onClose }: { task: TaskDto; today: Loca
         </section>
       ) : null}
 
+      {isLeaving(task) && task.lockedThrough ? (
+        <section className="danger-zone">
+          <p>
+            <strong>Deleted.</strong> It stays in this week’s lineups through {weekdayLong(task.lockedThrough)} and still counts
+            there, then it’s gone.
+          </p>
+          <button type="button" className="btn" disabled={restore.isPending} onClick={() => restore.mutate(task.id, { onSuccess: onClose })}>
+            Undo delete
+          </button>
+        </section>
+      ) : null}
+
       {!retired ? (
         <section className="danger-zone">
           {confirmRetire ? (
             <>
-              <p>Retire {task.name}? It leaves future lineups; past box scores keep it.</p>
+              <p>
+                <strong>Delete “{task.name}”?</strong> It comes off your task list, your Rotation and any day you haven’t started.
+                {task.lockedThrough
+                  ? ` It stays in this week’s lineups through ${weekdayLong(task.lockedThrough)} and still counts there.`
+                  : ''}{' '}
+                Past box scores keep it.
+              </p>
               <div className="actions">
                 <button type="button" className="btn btn--quiet" onClick={() => setConfirmRetire(false)}>
                   Keep
                 </button>
-                <button type="button" className="btn btn--danger" onClick={() => retire.mutate(task.id, { onSuccess: onClose })}>
-                  Retire
+                <button
+                  type="button"
+                  className="btn btn--danger"
+                  disabled={retire.isPending}
+                  onClick={() => retire.mutate(task.id, { onSuccess: onClose })}
+                >
+                  Delete
                 </button>
               </div>
             </>
           ) : (
             <button type="button" className="btn btn--quiet btn--danger-text" onClick={() => setConfirmRetire(true)}>
-              Retire task…
+              Delete task…
             </button>
           )}
         </section>

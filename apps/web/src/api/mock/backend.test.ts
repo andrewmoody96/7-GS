@@ -384,6 +384,45 @@ describe('mock backend rainouts, Rally Cap and IL', () => {
 
 const HOUR = 60 * 60 * 1000;
 
+describe('mock backend editing and deleting tasks mid-week', () => {
+  it('keeps a deleted task in the week under way, then lets the delete be undone', async () => {
+    const { api } = setup('midseason');
+    const today = (await api.call('getToday')).games[0]!;
+    const batter = today.entries.find((e) => e.role === 'lineup' && e.required && e.completedAt === null)!;
+    const weekStart = (await api.call('listWeeks')).weeks[0]!.startDate;
+    const before = await api.call('getWeek', { params: { startDate: weekStart } });
+
+    const deleted = await api.call('retireTask', { params: { taskId: batter.taskId } });
+    expect(deleted.status).toBe('retired');
+    expect(deleted.deletedAt).not.toBeNull();
+    expect(deleted.lockedThrough).not.toBeNull();
+
+    const after = await api.call('getWeek', { params: { startDate: weekStart } });
+    for (const game of after.games.filter((g) => g.status !== 'final')) {
+      const was = before.games.find((g) => g.id === game.id)!;
+      expect(game.threshold).toBe(was.threshold);
+      expect(game.entries.map((e) => e.taskId).sort()).toEqual(was.entries.map((e) => e.taskId).sort());
+    }
+    const { starters } = await api.call('listStarters');
+    expect(starters.every((st) => st.lineup.every((slot) => slot.taskId !== batter.taskId))).toBe(true);
+
+    const restored = await api.call('restoreTask', { params: { taskId: batter.taskId } });
+    expect(restored).toMatchObject({ status: 'active', deletedAt: null });
+    await expectApiError(api.call('restoreTask', { params: { taskId: batter.taskId } }), 'NOT_ELIGIBLE', 'NOT_QUEUED');
+  });
+
+  it('keeps planned runs on days under way when a task’s worth changes', async () => {
+    const { api } = setup('midseason');
+    const today = (await api.call('getToday')).games[0]!;
+    const entry = today.entries.find((e) => e.role === 'lineup')!;
+    const edited = await api.call('updateTask', { params: { taskId: entry.taskId }, body: { points: entry.points + 3, name: 'Renamed' } });
+    expect(edited).toMatchObject({ points: entry.points + 3, lockedPoints: entry.points });
+    const after = (await api.call('getToday')).games[0]!;
+    expect(after.entries.find((e) => e.id === entry.id)).toMatchObject({ points: entry.points, taskName: 'Renamed' });
+    expect(after.threshold).toBe(today.threshold);
+  });
+});
+
 describe('mock backend pinch hitters and one-offs', () => {
   it('adds a regular task to a later day (same raise), but never to today', async () => {
     const { api } = setup('midseason');

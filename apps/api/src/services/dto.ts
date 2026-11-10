@@ -1,7 +1,7 @@
 // Row → contracts DTO mappers that don't need extra queries.
 
 import type { LineupEntryDto, RallyRollDto, TaskDto } from '@7gs/contracts';
-import type { RallyOdds } from '@7gs/rules';
+import type { LocalDate, RallyOdds } from '@7gs/rules';
 import type { EntryRow, GameRow, RallyRollRow, TaskRow } from '../db/schema';
 
 export function iso(value: Date): string;
@@ -10,7 +10,13 @@ export function iso(value: Date | null): string | null {
   return value === null ? null : value.toISOString();
 }
 
-export function toTaskDto(task: TaskRow): TaskDto {
+/** Where the task still sits in a week already under way (see TaskDto.lockedThrough). */
+export interface LockedAppearance {
+  through: LocalDate;
+  points: number;
+}
+
+export function toTaskDto(task: TaskRow, locked: LockedAppearance | null = null): TaskDto {
   return {
     id: task.id,
     name: task.name,
@@ -24,6 +30,9 @@ export function toTaskDto(task: TaskRow): TaskDto {
     currentStreak: task.currentStreak,
     longestStreak: task.longestStreak,
     createdAt: iso(task.createdAt),
+    deletedAt: iso(task.deletedAt),
+    lockedThrough: locked?.through ?? null,
+    lockedPoints: locked && locked.points !== task.points ? locked.points : null,
   };
 }
 

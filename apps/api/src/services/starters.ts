@@ -98,10 +98,12 @@ function toStarterDto(
 async function taskPoints(tx: Db, userId: string, taskIds: string[]): Promise<Map<string, number>> {
   if (taskIds.length === 0) return new Map();
   const rows = await tx
-    .select({ id: taskDefinitions.id, points: taskDefinitions.points })
+    .select({ id: taskDefinitions.id, points: taskDefinitions.points, status: taskDefinitions.status })
     .from(taskDefinitions)
     .where(and(eq(taskDefinitions.userId, userId), inArray(taskDefinitions.id, taskIds)));
-  return new Map(rows.map((r) => [r.id, r.points]));
+  // A deleted task keeps its rotation spots (so undoing the delete restores them), but
+  // they're hidden and lineups skip it.
+  return new Map(rows.filter((r) => r.status !== 'retired').map((r) => [r.id, r.points]));
 }
 
 export async function listStarters(tx: Db, user: UserRow, now: Date): Promise<StarterDto[]> {
@@ -112,7 +114,7 @@ export async function listStarters(tx: Db, user: UserRow, now: Date): Promise<St
   );
   const points = await taskPoints(tx, user.id, [...new Set(slots.map((s) => s.taskId))]);
   return starters.map((starter) => {
-    const own = slots.filter((s) => s.templateId === starter.id);
+    const own = slots.filter((s) => s.templateId === starter.id && points.has(s.taskId));
     const warnings = starterWarnings(
       own.map((s) => ({ taskId: s.taskId, points: points.get(s.taskId) ?? 1, role: s.role })),
       starter.threshold,

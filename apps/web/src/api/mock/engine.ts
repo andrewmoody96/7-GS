@@ -322,20 +322,41 @@ function runDay(world: UserWorld, env: Env, date: LocalDate): void {
 }
 
 /** Copies roster names and points onto entries, as the API does at first pitch. */
-function snapshotEntries(world: UserWorld, game: GameRow): void {
+/** Copies current task names onto a game's entries (names are labels; runs are set by edits). */
+function snapshotNames(world: UserWorld, game: GameRow): void {
   for (const entry of game.entries) {
     const task = world.tasks.find((t) => t.id === entry.taskId);
-    if (task) {
-      entry.taskName = task.name;
-      // A pinch hitter's runs already raised the threshold; keep the two in step.
-      if (!entry.pinchHitAt) entry.points = task.points;
-    }
+    if (task) entry.taskName = task.name;
   }
+}
+
+/**
+ * Built, unfinished games whose day isn't over, split by whether their week has started.
+ * Locked ones keep every task exactly as planned (GAME_DESIGN §4a).
+ */
+function gamesByLock(world: UserWorld, now: Date): { planning: GameRow[]; locked: GameRow[] } {
+  const today = todayOf(world, now);
+  const planning: GameRow[] = [];
+  const locked: GameRow[] = [];
+  for (const g of world.games) {
+    if (!g.lineupBuiltAt || g.status === 'final' || compareDates(g.playedDate, today) < 0) continue;
+    (g.lockedAt || weekLock(world, g.seriesId, now) ? locked : planning).push(g);
+  }
+  return { planning, locked };
+}
+
+function lockedAppearance(world: UserWorld, taskId: string, now: Date): { through: LocalDate; points: number } | null {
+  let found: { through: LocalDate; points: number } | null = null;
+  for (const g of gamesByLock(world, now).locked) {
+    const e = g.entries.find((x) => x.taskId === taskId && x.role !== 'subbed_out');
+    if (e && (!found || compareDates(g.playedDate, found.through) > 0)) found = { through: g.playedDate, points: e.points };
+  }
+  return found;
 }
 
 function lockAt(world: UserWorld, game: GameRow, at: Date): void {
   if (game.lockedAt) return;
-  snapshotEntries(world, game);
+  snapshotNames(world, game);
   game.lockedAt = iso(at);
   if (game.status === 'scheduled') game.status = 'live';
 }
@@ -647,7 +668,8 @@ export function allowancesOf(world: UserWorld, now: Date): AllowancesDto {
 
 // ── DTOs ─────────────────────────────────────────────────────────────────────
 
-export function toTaskDto(world: UserWorld, task: TaskRow): TaskDto {
+export function toTaskDto(world: UserWorld, task: TaskRow, now: Date | null = null): TaskDto {
+  const locked = now ? lockedAppearance(world, task.id, now) : null;
   const appearances: boolean[] = [];
   for (const game of world.games.filter((g) => g.status === 'final').sort(chronological)) {
     const entry = game.entries.find((e) => e.taskId === task.id && e.role === 'lineup');
@@ -667,11 +689,17 @@ export function toTaskDto(world: UserWorld, task: TaskRow): TaskDto {
     currentStreak: streaks.current,
     longestStreak: streaks.longest,
     createdAt: task.createdAt,
+    deletedAt: task.deletedAt ?? null,
+    lockedThrough: locked?.through ?? null,
+    lockedPoints: locked && locked.points !== task.points ? locked.points : null,
   };
 }
 
 export function toStarterDto(world: UserWorld, starter: StarterRow): StarterDto {
   const pointsOf = (taskId: string) => world.tasks.find((t) => t.id === taskId)?.points ?? 1;
+  // A deleted task keeps its rotation spots (undo restores them) but they're hidden.
+  const shown = (slot: { taskId: string }) => world.tasks.find((t) => t.id === slot.taskId)?.status !== 'retired';
+  starter = { ...starter, lineup: starter.lineup.filter(shown), bench: starter.bench.filter(shown) };
   const warnings = starterWarnings(
     [
       ...starter.lineup.map((s) => ({ taskId: s.taskId, points: pointsOf(s.taskId), role: 'lineup' as const })),
@@ -1421,31 +1449,6 @@ export function rollRally(
 
 // ── Roster ───────────────────────────────────────────────────────────────────
 
-/**
- * Games from today on whose lineup is built (the weekly card builds them early) but not
- * yet locked: they still track the roster.
- */
-function editableGames(world: UserWorld, now: Date): GameRow[] {
-  const today = todayOf(world, now);
-  return world.games.filter(
-    (g) => compareDates(g.playedDate, today) >= 0 && g.lineupBuiltAt && !g.lockedAt && g.status !== 'final',
-  );
-}
-
-/**
- * Takes a task out of upcoming lineups (IL or retirement). Runs to win never changes:
- * before the week's first pitch the user adjusts it while planning; after it, the bar
- * never drops and the task leaves lineups from tomorrow (GAME_DESIGN §7).
- */
-function removeFromEditableGames(world: UserWorld, taskId: string, now: Date): void {
-  const today = todayOf(world, now);
-  for (const game of editableGames(world, now)) {
-    if (game.playedDate === today && weekLock(world, game.seriesId, now) !== null) continue;
-    game.entries = game.entries.filter((e) => e.taskId !== taskId);
-    renumber(game);
-  }
-}
-
 export function createTask(
   world: UserWorld,
   env: Env,
@@ -1466,7 +1469,7 @@ export function createTask(
     createdAt: iso(now),
   };
   world.tasks.push(task);
-  return toTaskDto(world, task);
+  return toTaskDto(world, task, now);
 }
 
 export function updateTask(
@@ -1486,26 +1489,50 @@ export function updateTask(
       task.carryoverDate = null;
     }
   }
-  for (const game of editableGames(world, now)) snapshotEntries(world, game);
-  return toTaskDto(world, task);
+  const { planning, locked } = gamesByLock(world, now);
+  for (const game of [...planning, ...locked]) snapshotNames(world, game);
+  if (body.points !== undefined) {
+    // Only days whose week hasn't started take the new runs.
+    for (const game of planning) {
+      for (const e of game.entries) if (e.taskId === task.id) e.points = task.points;
+    }
+  }
+  return toTaskDto(world, task, now);
 }
 
 export function retireTask(world: UserWorld, taskId: string, now: Date): TaskDto {
   const task = findTask(world, taskId);
+  if (task.status === 'retired') return toTaskDto(world, task, now);
   task.status = 'retired';
+  task.deletedAt = iso(now);
   task.carryover = false;
   task.carryoverDate = null;
   task.ilStartedOn = null;
   task.ilMinUntil = null;
   for (const game of world.games) game.ilHolds = game.ilHolds.filter((h) => h.taskId !== taskId);
-  removeFromEditableGames(world, taskId, now);
-  return toTaskDto(world, task);
+  // Days in a week already under way keep it through that week; the rest drop it.
+  for (const game of gamesByLock(world, now).planning) {
+    game.entries = game.entries.filter((e) => e.taskId !== taskId);
+    renumber(game);
+  }
+  return toTaskDto(world, task, now);
+}
+
+/** Undo a delete while the task is still in a week under way. */
+export function restoreTask(world: UserWorld, taskId: string, now: Date): TaskDto {
+  const task = findTask(world, taskId);
+  if (task.status !== 'retired' || !task.deletedAt || !lockedAppearance(world, taskId, now)) {
+    fail(409, 'NOT_ELIGIBLE', 'Only a deleted task that is still in this week’s lineups can be brought back.', 'NOT_QUEUED');
+  }
+  task.status = 'active';
+  task.deletedAt = null;
+  return toTaskDto(world, task, now);
 }
 
 export function placeOnInjuredList(world: UserWorld, taskId: string, now: Date): TaskDto {
   const task = findTask(world, taskId);
   if (task.status === 'retired') fail(409, 'NOT_ELIGIBLE', 'Retired tasks can’t go on the IL.', 'RETIRED');
-  if (task.status === 'injured') return toTaskDto(world, task);
+  if (task.status === 'injured') return toTaskDto(world, task, now);
   const today = todayOf(world, now);
   // Today's game keeps it once that game (or its week) has had first pitch.
   const playsToday = world.games.some(
@@ -1532,7 +1559,7 @@ export function placeOnInjuredList(world: UserWorld, taskId: string, now: Date):
     game.entries = game.entries.filter((e) => !leaving.includes(e));
     renumber(game);
   }
-  return toTaskDto(world, task);
+  return toTaskDto(world, task, now);
 }
 
 /**
@@ -1558,7 +1585,7 @@ export function activateFromInjuredList(world: UserWorld, env: Env, taskId: stri
     if (game.status === 'final' || !game.lineupBuiltAt || compareDates(game.playedDate, from) < 0) continue;
     restoreHold(env, game, task, hold);
   }
-  return toTaskDto(world, task);
+  return toTaskDto(world, task, now);
 }
 
 export function putStarter(world: UserWorld, day: Weekday, body: StarterPutDto): StarterDto {
