@@ -132,3 +132,35 @@ describe('basketball display scores', () => {
     expect(displayScore('baseball', { us: 4, them: 3 }, 4, seed)).toEqual({ us: 4, them: 3 });
   });
 });
+
+describe('hockey display scores', () => {
+  const hk = (us: number, them: number, threshold: number) => displayScore('hockey', { us, them }, threshold, 0);
+
+  it('keeps small targets one goal per task', () => {
+    expect(hk(0, 2, 3)).toEqual({ us: 0, them: 2 });
+    expect(hk(3, 2, 3)).toEqual({ us: 3, them: 2 });
+    expect(hk(2, 3, 3)).toEqual({ us: 2, them: 3 });
+  });
+
+  it('turns a big target into about four goals, and most games end by one', () => {
+    expect(hk(0, 7, 8)).toEqual({ us: 0, them: 3 });
+    expect(hk(4, 7, 8)).toEqual({ us: 2, them: 3 });
+    expect(hk(8, 7, 8)).toEqual({ us: 4, them: 3 });
+    expect(hk(10, 7, 8)).toEqual({ us: 5, them: 3 });
+    expect(hk(6, 7, 8)).toEqual({ us: 3, them: 4 }); // short at midnight
+    expect(hk(8, 9, 8)).toEqual({ us: 4, them: 5 }); // missed must-score: you keep 4
+    expect(hk(8, 8, 8)).toEqual({ us: 4, them: 4 }); // tied: must-score open
+  });
+
+  it('keeps the same winner for every possible scoreline', () => {
+    for (let threshold = 1; threshold <= 40; threshold++) {
+      for (let us = 0; us <= threshold + 6; us++) {
+        for (const them of [threshold - 1, us, us + 1, Math.max(threshold - 1, us - 1)]) {
+          const d = hk(us, them, threshold);
+          expect(Math.sign(d.us - d.them)).toBe(Math.sign(us - them));
+          expect(Math.max(d.us, d.them)).toBeLessThanOrEqual(Math.max(5, Math.ceil(((threshold + 7) * 4) / threshold)));
+        }
+      }
+    }
+  });
+});

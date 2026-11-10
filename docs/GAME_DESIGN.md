@@ -476,26 +476,32 @@ It's saved on the account (so notifications and emails match) and can be switche
 time, mid-season included. A new account picks its sport and Auto / light / dark on first
 sign-in; both stay in Team → Settings.
 
-| | Baseball | Basketball |
-|---|---|---|
-| A task is worth | runs | buckets |
-| Scoreboard | R (runs), H (hits) | PTS (points), FG (made shots) |
-| Required task | Must-hit | Must-make |
-| Added after the week starts | Pinch hitter | Sixth man |
-| Lock | First pitch | Tip-off |
-| Two games a day | Doubleheader | Back-to-back |
-| Comeback appeal | Rally Cap | Coach's challenge |
-| Skip a day | Rainout | Postponement |
-| Task out a while | Injured List | Injury report |
-| Big win | Walk-off W | Buzzer beater |
-| Before the season | Spring Training | Preseason |
+| | Baseball | Basketball | Hockey |
+|---|---|---|---|
+| A task is worth | runs | buckets | shots |
+| Scoreboard | R (runs), H (hits) | PTS (points), FG (made shots) | G (goals), SOG (shots on goal) |
+| Required task | Must-hit | Must-make | Must-score |
+| Added after the week starts | Pinch hitter | Sixth man | Extra skater |
+| Lock | First pitch | Tip-off | Puck drop |
+| Two games a day | Doubleheader | Back-to-back | Back-to-back |
+| Comeback appeal | Rally Cap | Coach's challenge | Coach's challenge |
+| Skip a day | Rainout | Postponement | Postponement |
+| Task out a while | Injured List | Injury report | Injured reserve |
+| Big win | Walk-off W | Buzzer beater | OT winner |
+| Before the season | Spring Training | Preseason | Training camp |
+| Today tab icon | Home plate | Basketball | Stick and puck |
 
 **Basketball scores** (rules `displayScore`): each bucket is worth 100 ÷ the day's target
 (rounded), so reaching the target lands near 100. The opponent sits 3–9 points short of
 that (fixed per game), keeps level while a must-make is open, and wins by that margin when
 you lose, so scores read like 101–94. Same winner as baseball every time; your score never
 drops. Season and career point differential add up these converted margins. Planning
-screens keep task values in buckets. Hockey (1–5 goals, shots on goal) is next. A new account picks its
+screens keep task values in buckets.
+
+**Hockey scores:** the target is worth at most 4 goals (a target of 3 is 3 goals; a target
+of 8 is 4, so every second shot scores). The opponent sits one goal short, so most games
+end by a goal (4–3, 3–4). Shots on goal count every task done. Same winner every time;
+your score never drops. A new account picks its
 sport (once there's a choice) and Auto / light / dark on first sign-in.
 
 ## 10. Architecture notes

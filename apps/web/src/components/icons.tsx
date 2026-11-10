@@ -43,6 +43,15 @@ export const IconBasketball = (p: IconProps) => (
   </Icon>
 );
 
+/** A hockey stick and puck: the Today tab in the hockey theme. */
+export const IconHockey = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7 3l7.5 14.5H20" />
+    <path d="M14.5 17.5L13 20h7v-2.5" />
+    <ellipse cx="7" cy="19" rx="3.5" ry="1.6" />
+  </Icon>
+);
+
 /** Seven boxes: the Series strip. */
 export const IconSeries = (p: IconProps) => (
   <Icon {...p}>
