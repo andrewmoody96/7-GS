@@ -12,6 +12,7 @@ import {
   type GameEvaluation,
   type SeriesGameState,
   type SeriesStatus,
+  HEAD_START_SERIES,
 } from '@7gs/rules';
 import type { SituationKey, Vocab } from '../vocab';
 import { joinList } from './format';
@@ -88,8 +89,9 @@ export function seriesGameStates(games: readonly GameSummaryDto[]): SeriesGameSt
   });
 }
 
-export function statusOfSeries(series: Pick<SeriesDto, 'games'>): SeriesStatus {
-  return seriesStatus(seriesGameStates(series.games));
+/** Series 0 is the Head Start: its games count, but it's never scored as a series. */
+export function statusOfSeries(series: Pick<SeriesDto, 'games' | 'number'>): SeriesStatus {
+  return seriesStatus(seriesGameStates(series.games), { unscored: series.number === HEAD_START_SERIES });
 }
 
 /** Runs to win added by pinch hitters (each raised it by exactly its runs). */

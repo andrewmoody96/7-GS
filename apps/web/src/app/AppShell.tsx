@@ -64,7 +64,7 @@ function TopBar() {
   const pos = me.data?.position;
   const meta =
     pos?.phase === 'season'
-      ? `S${pos.seasonNumber} · ${vocab.term.series} ${pos.seriesNumber}`
+      ? `S${pos.seasonNumber} · ${vocab.seriesName(pos.seriesNumber)}`
       : pos?.phase === 'preseason'
         ? vocab.term.preseason
         : pos?.phase === 'offseason'

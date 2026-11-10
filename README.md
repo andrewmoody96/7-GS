@@ -1,7 +1,12 @@
 # 7-Game Series
 
 Treat every week like a best-of-7 playoff series. Every day is a game; you win it by
-completing the tasks in that day's lineup. Wins and losses roll up into a season record.
+completing the tasks in that day's lineup. Wins and losses roll up into a season record,
+and a season is a quarter of the year: 12 weeks, then a Review Week.
+
+The point is to win the season, not to be perfect. Nobody finishes everything, and long
+lists set us up to fail. 7-Game Series helps you set reasonable goals and see the value
+in what you did get done: win 4 of 7 and you win the week.
 
 - Game rules: [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)
 - Data model and API: [`docs/DATA_MODEL_AND_API.md`](docs/DATA_MODEL_AND_API.md)

@@ -1,6 +1,7 @@
 // Request and response bodies for /v1. Names match docs/DATA_MODEL_AND_API.md.
 
 import {
+  GAMES_PER_SEASON,
   GAME_RESULTS,
   GAME_STATUSES,
   LIMITS,
@@ -10,6 +11,8 @@ import {
   RALLY_INELIGIBLE_REASONS,
   RESULT_DETAILS,
   SEASON_STATUSES,
+  SERIES_LENGTH,
+  SERIES_PER_SEASON,
   SERIES_RESULTS,
   STARTER_WARNINGS,
   SUSPENSION_INELIGIBLE_REASONS,
@@ -34,6 +37,9 @@ import {
 
 // ── Calendar ─────────────────────────────────────────────────────────────────
 
+/** A full season plus the longest possible Head Start (Tuesday through Sunday). */
+export const MAX_WIN_GOAL = GAMES_PER_SEASON + SERIES_LENGTH - 1;
+
 export const CalendarPosition = z.discriminatedUnion('phase', [
   z.object({
     phase: z.literal('preseason'),
@@ -44,7 +50,8 @@ export const CalendarPosition = z.discriminatedUnion('phase', [
   z.object({
     phase: z.literal('season'),
     seasonNumber: z.number().int().min(1),
-    seriesNumber: z.number().int().min(1).max(25),
+    /** 0 = Head Start (the partial week before Opening Day, not scored as a series). */
+    seriesNumber: z.number().int().min(0).max(SERIES_PER_SEASON),
     gameNumber: z.number().int().min(1).max(7),
     seriesStart: LocalDate,
     seriesEnd: LocalDate,
@@ -88,6 +95,8 @@ export const Me = z.object({
   displayName: z.string().min(1).max(40),
   timezone: TimeZone,
   startDate: LocalDate,
+  /** First day of the Head Start, when the user chose to play before Opening Day. */
+  headStartFrom: LocalDate.nullable(),
   defaultLockTime: TimeOfDay.nullable(),
   today: LocalDate,
   position: CalendarPosition,
@@ -278,7 +287,8 @@ export const Opponent = z.object({
 export const Series = z.object({
   id: Id,
   seasonNumber: z.number().int().min(1),
-  number: z.number().int().min(1).max(25),
+  /** 0 = Head Start. */
+  number: z.number().int().min(0).max(SERIES_PER_SEASON),
   startDate: LocalDate,
   endDate: LocalDate,
   opponent: Opponent,
@@ -389,7 +399,7 @@ export const Season = z.object({
   playEndDate: LocalDate,
   offseasonEndDate: LocalDate,
   status: z.enum(SEASON_STATUSES),
-  winGoal: z.number().int().min(1).max(175).nullable(),
+  winGoal: z.number().int().min(1).max(MAX_WIN_GOAL).nullable(),
   wins: Count,
   losses: Count,
   rallyWins: Count,
@@ -401,7 +411,7 @@ export const Season = z.object({
   longestWinStreak: Count,
 });
 
-export const SeasonPatch = z.object({ winGoal: z.number().int().min(1).max(175) });
+export const SeasonPatch = z.object({ winGoal: z.number().int().min(1).max(MAX_WIN_GOAL) });
 
 // ── Task IL ──────────────────────────────────────────────────────────────────
 

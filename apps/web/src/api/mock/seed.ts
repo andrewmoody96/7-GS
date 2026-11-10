@@ -11,6 +11,7 @@ import {
   zonedTimeToInstant,
   type LocalDate,
   type Weekday,
+  SERIES_PER_SEASON,
 } from '@7gs/rules';
 import { MOCK_DB_VERSION, type MockDb, type ScenarioName, type StarterRow, type UserRow, type UserWorld } from './db';
 import * as engine from './engine';
@@ -342,8 +343,8 @@ export function scenarioDates(scenario: ScenarioName, realToday: LocalDate): Sce
       // Signed up on Tuesday; Opening Day is next Monday.
       return { demoToday, weekStart, signupDate: addDays(demoToday, -2) };
     case 'offseason':
-      // Review Week right after a full 25-series season.
-      return { demoToday, weekStart, signupDate: addDays(weekStart, -25 * 7 - 2) };
+      // Review Week right after a full 12-series season.
+      return { demoToday, weekStart, signupDate: addDays(weekStart, -SERIES_PER_SEASON * 7 - 2) };
     default:
       // Week 10 of Season 1, after two days of Spring Training.
       return { demoToday, weekStart, signupDate: addDays(weekStart, -9 * 7 - 2) };
@@ -434,7 +435,7 @@ function buildScript(seeder: Seeder, scenario: ScenarioName, dates: ScenarioDate
       return {
         ...base,
         demoTime: scenario === 'midseason' ? '18:40' : '11:20',
-        winGoal: 110,
+        winGoal: 55,
         plans,
         todayPlans,
         actions: [
@@ -466,7 +467,7 @@ function buildScript(seeder: Seeder, scenario: ScenarioName, dates: ScenarioDate
       return {
         ...base,
         demoTime: '08:15',
-        winGoal: 110,
+        winGoal: 55,
         plans,
         actions: [retireColdShower(addDays(signupDate, 20)), rainoutWednesday, guitarToIl(addDays(weekStart, 2))],
       };
@@ -479,7 +480,7 @@ function buildScript(seeder: Seeder, scenario: ScenarioName, dates: ScenarioDate
         actions: [guitarToIl(addDays(signupDate, 1)), retireColdShower(addDays(signupDate, 1))],
       };
     case 'offseason':
-      return { ...base, demoTime: '19:00', winGoal: 110, actions: [retireColdShower(addDays(signupDate, 30))] };
+      return { ...base, demoTime: '19:00', winGoal: 55, actions: [retireColdShower(addDays(signupDate, 30))] };
   }
 }
 

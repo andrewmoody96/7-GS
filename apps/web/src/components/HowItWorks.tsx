@@ -21,7 +21,7 @@ export function markHowItWorksSeen(): void {
   }
 }
 
-/** The game in five steps: plain task words first, the baseball name second. */
+/** Why the game exists and how it works in six steps: plain task words first, the baseball name second. */
 export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const must = vocab.term.required.toLowerCase();
   return (
@@ -38,7 +38,22 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
         </div>
       }
     >
-      <p className="lede">A task list you play like a baseball season. Every day is a game. Every week is a best-of-7 series.</p>
+      <p className="lede">
+        A task list you play like a baseball season. Every day is a game, every week is a best-of-7 series, and the goal is to win
+        the season.
+      </p>
+      <aside className="howto__why">
+        <h3>Why it works this way</h3>
+        <p>
+          Nobody is perfect. We set ourselves up to fail with long lists, then punish ourselves for not finishing them. 7-Game
+          Series helps you set reasonable goals and see the value in what you did get done, even on a day that wasn’t everything
+          you hoped for.
+        </p>
+        <p>
+          You don’t have to win every day. Win 4 of 7 and you win the week. Plan the week ahead, protect your must-do’s, and add
+          more to your plate if you want to. You just can’t take things off once the week has started.
+        </p>
+      </aside>
       <ol className="howto">
         <li>
           <h3>Add your tasks</h3>
@@ -85,7 +100,19 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
         </li>
         <li>
           <h3>Win the week</h3>
-          <p>Seven days, seven games. Win four and you take the series. Series add up to your season record.</p>
+          <p>Seven days, seven games. Win four and you take the series. A rough day or three doesn’t sink the week.</p>
+        </li>
+        <li>
+          <h3>Win the season</h3>
+          <p>
+            A season is a quarter of the year: 12 weeks, then a <strong>{vocab.term.offseason}</strong> to look back and reset.
+            That’s four seasons a year. Set a <strong>{vocab.terms.winGoal.toLowerCase()}</strong> you can really hit, and
+            every win counts toward it.
+          </p>
+          <p>
+            New here? Your season starts on Monday. If you’d rather not wait, choose <strong>{vocab.headStart.action}</strong>{' '}
+            on the Today screen: the days left this week count toward your record.
+          </p>
         </li>
       </ol>
       <h3 className="howto__sub">When life happens</h3>

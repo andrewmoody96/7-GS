@@ -10,6 +10,16 @@ Every week is a best-of-7 playoff series. Every day is a game. You win a game by
 completing the tasks in that day's lineup. Every game and every series rolls up into
 a season record.
 
+**The purpose of the app is to win the season.** Nobody is perfect. We set ourselves up
+for failure with long lists, then punish ourselves for not getting everything done.
+7-Game Series is here to help people set reasonable goals and see the value in what
+they did accomplish in a day, even when it wasn't everything they'd hoped for.
+
+Weekly planning, plus the rule that you can add to your plate but not take things off
+once the week starts, helps users prioritize the must-do's and keep goals in check. Win
+4 of 7 to win the series, and rack up wins toward the season goal by doing what you said
+you'd do. (Playoffs at the end of a season are planned, not built: see §11.)
+
 ## 2. Decisions so far
 
 | # | Topic | Decision |
@@ -23,7 +33,8 @@ a season record.
 | 7 | Skipping days / tasks | **DECIDED** — Only Rainouts (planned, whole day), Suspended games (emergencies) and the Injured List (a task). |
 | 8 | Rainout outcome | **DECIDED** — The game is made up as a doubleheader later in the same series (§7). |
 | 9 | Rainout allowance | **DECIDED** — 2 per month, with a 3rd earnable (§7). |
-| 10 | Seasons | **DECIDED** — Two seasons per year, anchored to the user's start date, with offseason weeks (§5). |
+| 10 | Seasons | **DECIDED** — Quarterly: four seasons per year (12 series + a Review Week each), anchored to the user's start date (§5). |
+| 22 | When a new user starts | **DECIDED** — Their choice: wait for Monday's Opening Day (the default), or start today with a Head Start (§5). |
 | 11 | Day / week boundaries | **DECIDED** — Days run 00:00–23:59 in the user's local time. Weeks (series) run Monday–Sunday. |
 | 12 | Point values | **DECIDED** — Free-form. Every task defaults to 1 run, and the user can set any whole number. |
 | 13 | Offseason length | **DECIDED** — Exactly 1 review week per season. The weeks can't be combined. |
@@ -43,7 +54,8 @@ future sport skins possible.
 
 | UI term | Data term | Meaning |
 |---|---|---|
-| Season | `season` | 25 series of play followed by 1 offseason week (§5). |
+| Season | `season` | A quarter: 12 series of play followed by 1 offseason week (§5). |
+| Head Start | `series.number = 0` | The days between an early start and Opening Day. Games count; not scored as a series (§5). |
 | Offseason (Review Week) | `offseason` | The 1 week at the end of each season. No games, nothing recorded. |
 | Spring Training | `preseason` | The partial week before a user's first Monday. Not counted. |
 | Series | `series` | One Monday–Sunday week, 7 games. |
@@ -156,19 +168,25 @@ Like a fantasy lineup, each series is planned as a week.
 
 ### Calendar math
 
-A year is treated as 52 weeks, split into two seasons of 26 weeks each:
+A year is treated as 52 weeks, split into four quarterly seasons of 13 weeks each:
 
 ```
-| Season 1: 25 series (~5 mo 3 wk) | Off: 1 wk | Season 2: 25 series (~5 mo 3 wk) | Off: 1 wk | → repeat
+| S1: 12 series | Off: 1 wk | S2: 12 series | Off: 1 wk | S3: 12 series | Off: 1 wk | S4: 12 series | Off: 1 wk | → repeat
 ```
 
-- **25 weeks of play + 1 offseason week = 26 weeks ≈ 6 months**, so a year holds two
-  seasons and 2 offseason weeks in total.
-- Season 1 begins on the **first Monday on or after the user's start date**.
-- The days between sign-up and that Monday are **Spring Training**. The user can set
-  up the roster and rotation and try check-offs, but nothing is recorded.
-- Season 2 begins the Monday after the first offseason week. Season 3 begins the
-  Monday after the second offseason week, and so on.
+- **12 weeks of play + 1 offseason week = 13 weeks ≈ 3 months**, so a year holds four
+  seasons and 4 offseason weeks in total. A season has 84 games.
+- **Opening Day** of Season 1 is the **first Monday on or after the user's start date**.
+- The days between sign-up and that Monday are the user's choice:
+  - **Wait for Opening Day (default): Spring Training.** The user can add tasks, set up
+    the rotation and plan Opening Week, but nothing is recorded.
+  - **Start today: a Head Start.** From the day they choose through Sunday, every day is
+    a real game that counts toward the Season 1 record (so that season has up to 6 more
+    games, and the win goal can be set that much higher). The partial week is **not
+    scored as a series**: no clinch, no series W/L, no Iron Man or series bonus. Series 1
+    still starts on Monday. The choice is offered on the Today screen all through Spring
+    Training and can't be undone. The win goal stays open until Opening Day.
+- Each later season begins the Monday after the previous season's offseason week.
 - 52 weeks is 364 days, so season start dates drift about one day earlier each
   calendar year. That's acceptable; series always stay Monday-aligned.
 
@@ -202,7 +220,7 @@ Each season tracks:
 - run differential (runs scored minus thresholds),
 - sweeps, comeback series (won after trailing 0–3, 1–3), Rally Cap wins.
 
-**Season goal**: the user sets a target win count (e.g. 120 of 175 games). The app
+**Season goal**: the user sets a target win count (e.g. 50 of 84 games). The app
 shows pace and Games Behind (GB), so every game matters even after a series is decided.
 Season stats reset each season; lifetime ("career") stats keep accumulating.
 
@@ -418,4 +436,9 @@ instead of squeezing them. Phones keep the stacked list.
 
 ## 11. Open questions
 
-None for game rules. Next step: data model and API contract.
+- **Playoffs.** The idea: rack up wins in the regular season and try to get through a
+  playoff at the end of each quarter. Not designed or built yet; seasons are 12 regular
+  series for now. Open: how you qualify, how many rounds, and what losing a round means.
+- **Adding a non-required task mid-week.** Today an added task is a must-hit (pinch
+  hitter) or goes to the bench. A third option, optional but still raising runs to win,
+  is undecided.

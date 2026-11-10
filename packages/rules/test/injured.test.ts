@@ -13,8 +13,8 @@ describe('Injured List', () => {
     expect(ilMinUntil(SIGNUP, '2026-10-07')).toBe('2026-10-10');
     const s1 = seasonWindow(SIGNUP, 1);
     // Starts on the last Saturday of the season: Sat, Sun, then Review Week, then Monday.
-    expect(ilMinUntil(SIGNUP, '2027-03-27')).toBe('2027-04-06');
-    expect(s1.playEnd).toBe('2027-03-28');
+    expect(ilMinUntil(SIGNUP, '2026-12-26')).toBe('2027-01-05');
+    expect(s1.playEnd).toBe('2026-12-27');
   });
 
   it('returns the task from tomorrow, or everywhere if the stint hasn’t started', () => {
@@ -37,8 +37,8 @@ describe('Injured List', () => {
 
 describe('season pace with no-decisions', () => {
   it('keeps the goal over fewer decidable games', () => {
-    // 174 decidable games; goal 87 → pace is exactly half.
-    expect(seasonPace(10, 10, 87, 1)).toMatchObject({ remaining: 154, expectedWins: 10, gamesBehind: 0 });
-    expect(seasonPace(10, 10, 87)).toMatchObject({ remaining: 155 });
+    // 82 decidable games; goal 41 → pace is exactly half.
+    expect(seasonPace(10, 10, 41, 2)).toMatchObject({ remaining: 62, expectedWins: 10, gamesBehind: 0 });
+    expect(seasonPace(10, 10, 41)).toMatchObject({ remaining: 64 });
   });
 });

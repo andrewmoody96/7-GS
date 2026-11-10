@@ -17,7 +17,7 @@ import {
   useQueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
-import { addDays, localDateOf, type TaskKind } from '@7gs/rules';
+import { addDays, headStartGames, localDateOf, type TaskKind } from '@7gs/rules';
 import { useTimeZone } from './hooks';
 import { useCallback } from 'react';
 import { isApiError, isRetryable } from '../api/client';
@@ -26,6 +26,7 @@ import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { errorMessage } from './errors';
 import { useNotify } from './toast';
 import { weekdayShort } from '../lib/format';
+import { vocab } from '../vocab';
 
 export const qk = {
   me: ['me'] as const,
@@ -479,6 +480,23 @@ export function useUpdateSeasonGoal() {
     onSuccess: (season) => {
       qc.setQueryData(qk.currentSeason, season);
       notify(`Goal set: ${season.winGoal} wins.`, 'success');
+    },
+    onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
+/** Start playing today instead of waiting for Opening Day (Spring Training only). */
+export function useStartHeadStart() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: () => api.call('startHeadStart'),
+    onSuccess: (me) => {
+      qc.setQueryData(qk.me, me);
+      invalidateGameDay(qc);
+      invalidate(qc, qk.calendar);
+      notify(vocab.headStart.started(headStartGames(me)), 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
   });

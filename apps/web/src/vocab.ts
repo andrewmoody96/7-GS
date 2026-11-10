@@ -169,6 +169,20 @@ export interface Vocab {
   hits: (n: number) => string;
   gameLabel: (gameNumber: number) => string;
   seriesLabel: (status: SeriesStatus) => string;
+  /** "Series 3", or the Head Start's name for series 0. */
+  seriesName: (number: number) => string;
+  headStart: {
+    name: string;
+    /** What a Head Start is, in one line. */
+    blurb: string;
+    offerTitle: string;
+    offerBody: (days: number, openingDay: string) => string;
+    action: string;
+    waitNote: (openingDay: string) => string;
+    confirmTitle: string;
+    confirmBody: (days: number, openingDay: string) => string;
+    started: (days: number) => string;
+  };
   resultDetail: Record<ResultDetail, string>;
   /** Compact form for tight spots like the game log ('' when nothing to add). */
   resultDetailShort: Record<ResultDetail, string>;
@@ -245,7 +259,7 @@ export interface Vocab {
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export const baseball: Vocab = {
-  app: { name: '7-Game Series', shortName: '7GS', tagline: 'Every week is a best-of-7.' },
+  app: { name: '7-Game Series', shortName: '7GS', tagline: 'Win the day. Win the week. Win the season.' },
   term: {
     season: 'Season',
     offseason: 'Review Week',
@@ -374,6 +388,20 @@ export const baseball: Vocab = {
   hits: (n) => plural(n, 'hit', 'hits'),
   gameLabel: (n) => `Game ${n}`,
   seriesLabel: (status) => status.label,
+  seriesName: (n) => (n === 0 ? 'Head Start' : `Series ${n}`),
+  headStart: {
+    name: 'Head Start',
+    blurb: 'Head Start: these games count toward your season record. They aren’t scored as a series. Series 1 starts Monday.',
+    offerTitle: 'When do you want to start?',
+    offerBody: (days, openingDay) =>
+      `Start today and the ${days === 1 ? 'day' : `${days} days`} left this week ${days === 1 ? 'is a real game' : 'are real games'} that ${days === 1 ? 'counts' : 'count'} toward your season record. Series 1 still starts ${openingDay}.`,
+    action: 'Start today',
+    waitNote: (openingDay) => `Or do nothing and your season starts ${openingDay}. Until then, nothing counts.`,
+    confirmTitle: 'Start your season today?',
+    confirmBody: (days, openingDay) =>
+      `Today becomes a real game, and so ${days <= 2 ? 'does tomorrow' : 'do the days'} through Sunday${days === 1 ? '' : ` (${days} games in all)`}. Wins and losses go on your season record. This short week isn’t scored as a series: Series 1 starts ${openingDay}. You can’t undo this.`,
+    started: (days) => `You’re playing. ${days === 1 ? 'Today counts' : `${days} games this week count`} toward your season record.`,
+  },
   resultDetail: {
     clean: 'Win',
     short: 'Came up short',
@@ -499,7 +527,7 @@ export const baseball: Vocab = {
   emptyStates: {
     preseasonTitle: 'Spring Training',
     preseasonBody: (openingDay, days) =>
-      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks and set up your rotation in the Film Room. Nothing counts yet, and you can add or change tasks any time after Opening Day too.`,
+      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks and set up your rotation in the Film Room. Nothing counts yet, and you can add or change tasks any time after Opening Day too. A season is 12 weeks, then a Review Week.`,
     offseasonTitle: 'Review Week',
     offseasonBody: (nextSeason) =>
       `No games this week. Review the season, make front-office moves, and get ready for Opening Day ${nextSeason}.`,

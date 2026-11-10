@@ -2,7 +2,7 @@
 // goes until the week's first pitch, then lineups only grow (pinch hitters, bench adds).
 
 import { SERIES_LENGTH } from './constants';
-import { calendarPosition } from './calendar';
+import { calendarPosition, type SeasonAnchor } from './calendar';
 import { effectiveLockedAt } from './checkoff';
 import { addDays, compareDates, nextMondayOnOrAfter, weekday, type LocalDate } from './dates';
 
@@ -51,23 +51,23 @@ export const NEXT_WEEK_OPENS_WEEKDAY = 5;
  * (or Opening Week during Spring Training), plus next week from Friday on when next
  * week is a game week.
  */
-export function plannableWeeks(signupDate: LocalDate, today: LocalDate): LocalDate[] {
-  const position = calendarPosition(signupDate, today);
+export function plannableWeeks(anchor: SeasonAnchor, today: LocalDate): LocalDate[] {
+  const position = calendarPosition(anchor, today);
   const weeks: LocalDate[] = [];
   if (position.phase === 'preseason') return [position.openingDay];
   if (position.phase === 'season') weeks.push(position.seriesStart);
   if (weekday(today) >= NEXT_WEEK_OPENS_WEEKDAY) {
     const nextMonday = nextMondayOnOrAfter(addDays(today, 1));
-    if (calendarPosition(signupDate, nextMonday).phase === 'season') weeks.push(nextMonday);
+    if (calendarPosition(anchor, nextMonday).phase === 'season') weeks.push(nextMonday);
   }
   return weeks;
 }
 
 /** The next date after `after` with a game (skips Review Week). For one-off carryovers. */
-export function nextGameDate(signupDate: LocalDate, after: LocalDate): LocalDate {
+export function nextGameDate(anchor: SeasonAnchor, after: LocalDate): LocalDate {
   let d = addDays(after, 1);
   for (let i = 0; i < 400; i++, d = addDays(d, 1)) {
-    if (calendarPosition(signupDate, d).phase === 'season') return d;
+    if (calendarPosition(anchor, d).phase === 'season') return d;
   }
   throw new RangeError(`No game day found after ${after}`);
 }

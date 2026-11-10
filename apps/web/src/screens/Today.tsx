@@ -9,6 +9,7 @@ import {
   useEntryAction,
   useLockGame,
   useMeQuery,
+  useStartHeadStart,
   usePatchLineup,
   useRallyQuoteQuery,
   useSuspensionQuoteQuery,
@@ -25,6 +26,7 @@ import { PinchHitSheet } from '../components/PinchHitSheet';
 import { RainoutSheet } from '../components/RainoutSheet';
 import { RallySheet } from '../components/RallySheet';
 import { Scoreboard, type BoardStatus } from '../components/Scoreboard';
+import { Sheet } from '../components/Sheet';
 import { SuspendSheet } from '../components/SuspendSheet';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { Tile } from '../components/Tile';
@@ -415,6 +417,55 @@ function Projection({ ev, game }: { ev: GameEvaluation; game: GameDto }) {
 
 // ── Off days ─────────────────────────────────────────────────────────────────
 
+/** Spring Training's choice: play from today, or wait for Opening Day (the default). */
+function StartChoice({ position }: { position: Extract<CalendarPosition, { phase: 'preseason' }> }) {
+  const start = useStartHeadStart();
+  const [confirming, setConfirming] = useState(false);
+  const days = position.daysUntilOpeningDay;
+  const openingDay = formatDateLong(position.openingDay);
+  return (
+    <section className="card startchoice" aria-labelledby="startchoice-title">
+      <h2 id="startchoice-title" className="card__title">
+        {vocab.headStart.offerTitle}
+      </h2>
+      <p>{vocab.headStart.offerBody(days, openingDay)}</p>
+      <div className="startchoice__actions">
+        <button type="button" className="btn btn--primary" onClick={() => setConfirming(true)}>
+          {vocab.headStart.action}
+        </button>
+      </div>
+      <p className="fine">{vocab.headStart.waitNote(openingDay)}</p>
+      <Sheet
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        kicker={vocab.headStart.name}
+        title={vocab.headStart.confirmTitle}
+        footer={
+          <div className="actions">
+            <button type="button" className="btn btn--quiet" onClick={() => setConfirming(false)}>
+              Wait for Opening Day
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary"
+              disabled={start.isPending}
+              onClick={() => start.mutate(undefined, { onSuccess: () => setConfirming(false) })}
+            >
+              {start.isPending ? 'Starting…' : vocab.headStart.action}
+            </button>
+          </div>
+        }
+      >
+        <p className="lede">{vocab.headStart.confirmBody(days, openingDay)}</p>
+        <p>
+          Today’s game uses today’s {vocab.term.dayTemplate.toLowerCase()} from your Rotation. If it’s empty, add tasks to today from
+          the {vocab.week.title} once you’ve started.
+        </p>
+      </Sheet>
+    </section>
+  );
+}
+
 function SpringTraining({ position }: { position: Extract<CalendarPosition, { phase: 'preseason' }> }) {
   return (
     <div className="screen screen--offday">
@@ -429,6 +480,7 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
         </div>
       </section>
       <p className="lede">{vocab.emptyStates.preseasonBody(formatDateLong(position.openingDay), position.daysUntilOpeningDay)}</p>
+      <StartChoice position={position} />
       <nav className="todo" aria-label="Get ready">
         <Link to="/film-room?tab=tasks" className="todo__item">
           <span>
@@ -447,7 +499,7 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
         <Link to="/season" className="todo__item">
           <span>
             <strong>Set a {vocab.terms.winGoal.toLowerCase()}</strong>
-            <small>Only during {vocab.term.preseason} or {vocab.term.offseason}.</small>
+            <small>How many of the season’s games you aim to win. Set it before Series 1 starts.</small>
           </span>
           <IconChevronRight />
         </Link>

@@ -52,7 +52,7 @@ export async function inUserTx<T>(
 
 export async function todayView(tx: Db, user: UserRow, now: Date): Promise<TodayDto> {
   const today = localDateOf(now, user.timezone);
-  const position = calendarPosition(user.startDate, today);
+  const position = calendarPosition(user, today);
   const rows = await ensureToday(tx, user, now);
   const seriesRow = position.phase === 'season' ? await findSeriesByStart(tx, user.id, position.seriesStart) : undefined;
   return {

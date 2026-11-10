@@ -71,7 +71,7 @@ export async function finalizeGame(tx: Db, user: UserRow, game: GameRow, now: Da
 /** Calendar bookkeeping for a date: season rows and statuses, the month's allowances. */
 export async function syncAccount(tx: Db, user: UserRow, date: LocalDate, now: Date): Promise<void> {
   await syncSeasons(tx, user, date, now);
-  if (isGameDay(user.startDate, date)) await ensureMonthlyAllowances(tx, user, date, now);
+  if (isGameDay(user, date)) await ensureMonthlyAllowances(tx, user, date, now);
 }
 
 /** Prepare a day that has started: games exist, lineups built, scheduled locks applied. */
@@ -124,7 +124,7 @@ export async function settleDate(tx: Db, user: UserRow, date: LocalDate, now: Da
     await settleOneOffs(tx, user, date, finalized, now);
   }
 
-  const pos = calendarPosition(user.startDate, date);
+  const pos = calendarPosition(user, date);
   if (pos.phase === 'season' && pos.gameNumber === 7) {
     const row = await findSeriesByStart(tx, user.id, pos.seriesStart);
     if (row) await closeSeries(tx, user, row.id, now);

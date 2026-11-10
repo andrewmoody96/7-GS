@@ -217,6 +217,7 @@ export class MockBackend {
       if (patch.defaultLockTime !== undefined) w.user.defaultLockTime = patch.defaultLockTime;
       return engine.toMeDto(w, now);
     },
+    startHeadStart: ({ world, now }) => engine.startHeadStart(world(), this.env, now),
     deleteMe: ({ world, body }) => {
       const w = world();
       const { confirmEmail } = body as { confirmEmail: string };

@@ -3,7 +3,7 @@
 // be planned before the week's first pitch.
 
 import { LocalDate as LocalDateSchema, type ResponseBody, type WeekDto } from '@7gs/contracts';
-import { addDays, calendarPosition, isInWeek, localDateOf, plannableWeeks, type LocalDate } from '@7gs/rules';
+import { addDays, calendarPosition, isInWeek, localDateOf, plannableWeeks, weekPosition, type LocalDate } from '@7gs/rules';
 import type { Db } from '../db/client';
 import type { GameRow, UserRow } from '../db/schema';
 import { conflict, notFound } from '../errors';
@@ -21,13 +21,13 @@ function byPlayOrder(a: GameRow, b: GameRow): number {
 export async function listWeeks(tx: Db, user: UserRow, now: Date): Promise<ResponseBody<'listWeeks'>> {
   const today = localDateOf(now, user.timezone);
   const weeks = [];
-  for (const startDate of plannableWeeks(user.startDate, today)) {
+  for (const startDate of plannableWeeks(user, today)) {
     const row = await findSeriesByStart(tx, user.id, startDate);
     const lock = row ? weekLockOf(await seriesGames(tx, row.id), user, now) : null;
     weeks.push({
       startDate,
       label:
-        calendarPosition(user.startDate, today).phase === 'preseason'
+        calendarPosition(user, today).phase === 'preseason'
           ? ('opening' as const)
           : isInWeek(startDate, today)
             ? ('current' as const)
@@ -42,9 +42,8 @@ export async function listWeeks(tx: Db, user: UserRow, now: Date): Promise<Respo
 export function assertPlannable(user: UserRow, startDate: string, today: LocalDate): LocalDate {
   const parsed = LocalDateSchema.safeParse(startDate);
   if (!parsed.success) throw notFound('Week');
-  const pos = calendarPosition(user.startDate, parsed.data);
-  if (pos.phase !== 'season' || pos.seriesStart !== parsed.data) throw notFound('Week');
-  if (!plannableWeeks(user.startDate, today).includes(parsed.data)) {
+  if (!weekPosition(user, parsed.data)) throw notFound('Week');
+  if (!plannableWeeks(user, today).includes(parsed.data)) {
     throw conflict(
       'NOT_ELIGIBLE',
       "Only this week's card can be planned, plus next week's from Friday.",
@@ -57,8 +56,8 @@ export function assertPlannable(user: UserRow, startDate: string, today: LocalDa
 export async function weekCard(tx: Db, user: UserRow, rawStartDate: string, now: Date): Promise<WeekDto> {
   const today = localDateOf(now, user.timezone);
   const startDate = assertPlannable(user, rawStartDate, today);
-  const pos = calendarPosition(user.startDate, startDate);
-  if (pos.phase !== 'season') throw notFound('Week');
+  const pos = weekPosition(user, startDate);
+  if (!pos) throw notFound('Week');
 
   const season = await ensureSeason(tx, user, pos.seasonNumber, today, now);
   const seriesRow = await ensureSeries(tx, user, season, pos.seriesNumber, startDate, now);

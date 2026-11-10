@@ -8,6 +8,7 @@ import {
   compareDates,
   generateOpponent,
   hashSeed,
+  isGameDay,
   seasonWindow,
   SERIES_LENGTH,
   type LocalDate,
@@ -47,7 +48,7 @@ export async function ensureSeason(
 ): Promise<SeasonRow> {
   const existing = await findSeason(tx, user.id, number);
   if (existing) return existing;
-  const w = seasonWindow(user.startDate, number);
+  const w = seasonWindow(user, number);
   await tx
     .insert(seasons)
     .values({
@@ -71,7 +72,7 @@ export async function ensureSeason(
  * its goal can be set) and roll statuses forward: upcoming → active → offseason → complete.
  */
 export async function syncSeasons(tx: Db, user: UserRow, date: LocalDate, now: Date): Promise<void> {
-  const pos = calendarPosition(user.startDate, date);
+  const pos = calendarPosition(user, date);
   await ensureSeason(tx, user, pos.seasonNumber, date, now);
   if (pos.phase === 'offseason') await ensureSeason(tx, user, pos.seasonNumber + 1, date, now);
 
@@ -137,6 +138,8 @@ export async function ensureSeriesGames(tx: Db, user: UserRow, row: SeriesRow, n
   for (let i = 0; i < SERIES_LENGTH; i++) {
     if (have.has(i + 1)) continue;
     const date = addDays(row.startDate, i);
+    // A Head Start week has no games before the day the user started.
+    if (!isGameDay(user, date)) continue;
     values.push({
       id: uuidv7(),
       userId: user.id,
@@ -153,12 +156,12 @@ export async function ensureSeriesGames(tx: Db, user: UserRow, row: SeriesRow, n
 }
 
 /**
- * Ensure the season, series and 7 game rows for `date` exist, and return the games
+ * Ensure the season, series and game rows (7, or fewer in a Head Start) for `date` exist, and return the games
  * played on `date` (0 in Spring Training / Review Week or after a rainout, 2 on a
  * doubleheader day), ordered by slot.
  */
 export async function ensureDay(tx: Db, user: UserRow, date: LocalDate, now: Date): Promise<GameRow[]> {
-  const pos = calendarPosition(user.startDate, date);
+  const pos = calendarPosition(user, date);
   if (pos.phase !== 'season') return [];
   const season = await ensureSeason(tx, user, pos.seasonNumber, date, now);
   const row = await ensureSeries(tx, user, season, pos.seriesNumber, pos.seriesStart, now);

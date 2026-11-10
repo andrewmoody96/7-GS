@@ -98,13 +98,17 @@ describe('season standings', () => {
   });
 
   it('measures pace against the win goal', () => {
-    // Goal 120 of 175. After 35 games, goal pace is 24 wins.
-    expect(seasonPace(20, 15, 120)).toMatchObject({ expectedWins: 24, gamesBehind: 4, onPace: false, projectedWins: 100 });
-    expect(seasonPace(26, 9, 120)).toMatchObject({ gamesBehind: -2, onPace: true });
-    expect(seasonPace(0, 0, 120)).toMatchObject({ gamesBehind: 0, onPace: true, projectedWins: null });
+    // Goal 60 of 84. After 35 games, goal pace is 25 wins.
+    expect(seasonPace(20, 15, 60)).toMatchObject({ expectedWins: 25, gamesBehind: 5, onPace: false, projectedWins: 48 });
+    expect(seasonPace(27, 8, 60)).toMatchObject({ gamesBehind: -2, onPace: true });
+    expect(seasonPace(0, 0, 60)).toMatchObject({ gamesBehind: 0, onPace: true, projectedWins: null });
   });
 
   it('knows when the goal is out of reach', () => {
-    expect(seasonPace(10, 150, 120)).toMatchObject({ winsNeeded: 110, remaining: 15, goalStillPossible: false });
+    expect(seasonPace(10, 64, 60)).toMatchObject({ winsNeeded: 50, remaining: 10, goalStillPossible: false });
+  });
+
+  it('counts Head Start games in the season total', () => {
+    expect(seasonPace(3, 2, 60, 0, 89)).toMatchObject({ played: 5, remaining: 84 });
   });
 });
