@@ -147,9 +147,9 @@ for (const theme of ['light', 'dark']) {
   await shot(page, '06b-filmroom-rotation', theme);
   await open(page, '/film-room/starters/2');
   await shot(page, '07-starter-editor', theme);
-  await open(page, '/film-room?tab=roster');
+  await open(page, '/film-room?tab=tasks');
   await shot(page, '08-filmroom-roster', theme);
-  await noHorizontalScroll(page, 'roster');
+  await noHorizontalScroll(page, 'tasks');
   await page.getByRole('button', { name: /Guitar practice/ }).click();
   await page.waitForSelector('.il-box');
   await settle(page);
@@ -269,9 +269,9 @@ for (const theme of ['light', 'dark']) {
   await page.waitForSelector('.addtask');
   await settle(page);
   await shot(page, '24-new-user-roster', theme);
-  await page.getByLabel('Sign a free agent').fill('Haircut for Dad’s inauguration');
+  await page.getByLabel('Add a task').fill('Haircut for Dad’s inauguration');
   await page.getByText('One-off', { exact: true }).click();
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('button', { name: 'Add task', exact: true }).click();
   await page.waitForSelector('.pill--oneoff');
   await settle(page);
   await shot(page, '25-roster-one-off', theme);

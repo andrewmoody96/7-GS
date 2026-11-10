@@ -51,7 +51,7 @@ future sport skins possible.
 | Doubleheader | `game.slot = 2` | A made-up game played on the same day as another game. |
 | Opponent | `opponent` | Generated team name. Their scoreboard score is one less than your runs to win. |
 | Runs to win | `threshold` | The runs you need for a W, set per starter. |
-| Roster | `task_definition` | All of a user's tasks/habits. |
+| Tasks | `task_definition` | All of a user's tasks/habits. Plain task-app wording on purpose: you **add a task** first, and the baseball layer starts once it's in a lineup. |
 | Starter | `day_template` | Fixed weekday theme: default lineup, must-hits, threshold. |
 | Lineup | `lineup_entry` | Tasks scheduled for a game, in priority (batting) order. |
 | Must-hit | `required = true` | A lineup task that must be completed to win. |
@@ -382,7 +382,7 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 1. **Today**: scoreboard (runs vs. threshold), lineup with one-tap check-offs,
    must-hit indicators. Shows both games on a doubleheader day.
 2. **Series**: 7-game strip, series score, broadcast-style status chyron.
-3. **Film Room**: weekly setup of the fixed rotation, roster, IL, and Rainouts.
+3. **Film Room**: weekly setup of the fixed rotation, tasks, IL, and Rainouts.
 4. **Season**: standings, pace vs. goal, streaks, box score history.
 5. **Rally Cap sheet**: shown on a final, eligible L. Odds breakdown and roll.
 6. **Review Week hub**: season review, awards, front-office changes for the next season.

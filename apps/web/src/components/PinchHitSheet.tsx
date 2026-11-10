@@ -151,7 +151,7 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
           {vocab.terms.threshold} {game.threshold} · pick a {vocab.terms.task.toLowerCase()} to see the raise
         </p>
       )}
-      {tasks.isPending ? <p className="loading-line">Loading the roster…</p> : null}
+      {tasks.isPending ? <p className="loading-line">Loading your tasks…</p> : null}
       {!tasks.isPending && candidates.length === 0 ? <p className="empty-line">{vocab.pinchHit.none}</p> : null}
       {promoting ? null : (
         <>

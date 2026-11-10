@@ -357,7 +357,7 @@ function DeleteAccountSheet({
       }
     >
       <p>
-        This permanently deletes every season, series and game, your roster and rotation, and your Rally Caps and
+        This permanently deletes every season, series and game, your tasks and rotation, and your Rally Caps and
         Rainouts. It signs you out on every device. <strong>It can’t be undone.</strong>
       </p>
       <p className="fine">You can sign up again later with the same email, but you’ll start from scratch.</p>

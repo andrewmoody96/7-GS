@@ -413,7 +413,7 @@ export function useCreateTask() {
   const api = useApi();
   return useRosterMutation(
     (body: { name: string; points: number; notes?: string | null; kind?: TaskKind }) => api.call('createTask', { body }),
-    (task) => `${task.name} joins the roster.`,
+    (task) => `Task added: ${task.name}.`,
   );
 }
 

@@ -254,7 +254,7 @@ export const baseball: Vocab = {
     game: 'Game',
     doubleheader: 'Doubleheader',
     opponent: 'Opponent',
-    taskDefinition: 'Roster',
+    taskDefinition: 'Tasks',
     dayTemplate: 'Starter',
     lineupEntry: 'Lineup',
     required: 'Must-hit',
@@ -268,7 +268,7 @@ export const baseball: Vocab = {
   },
   terms: {
     seasons: 'Seasons',
-    roster: 'Roster',
+    roster: 'Tasks',
     task: 'Task',
     tasks: 'Tasks',
     starters: 'Starters',
@@ -339,7 +339,7 @@ export const baseball: Vocab = {
     thresholdLine: (threshold, raise) => `Runs to win ${threshold}${raise > 0 ? ` · +${raise} pinch hit` : ''}`,
     confirm: 'Send in',
     fromBench: 'On the bench',
-    fromRoster: 'From the roster',
+    fromRoster: 'From your tasks',
     none: 'Every active task is already in this lineup.',
     done: (name, threshold) => `${name} pinch hits. Runs to win is ${threshold}.`,
   },
@@ -499,7 +499,7 @@ export const baseball: Vocab = {
   emptyStates: {
     preseasonTitle: 'Spring Training',
     preseasonBody: (openingDay, days) =>
-      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Set up your roster and rotation in the Film Room. Nothing counts yet, and you can add or change tasks any time after Opening Day too.`,
+      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks and set up your rotation in the Film Room. Nothing counts yet, and you can add or change tasks any time after Opening Day too.`,
     offseasonTitle: 'Review Week',
     offseasonBody: (nextSeason) =>
       `No games this week. Review the season, make front-office moves, and get ready for Opening Day ${nextSeason}.`,

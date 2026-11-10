@@ -162,7 +162,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           moveRoleLabel={`To ${vocab.terms.lineup.toLowerCase()}`}
         />
         <details className="disclosure">
-          <summary>Add from the {vocab.terms.roster.toLowerCase()}</summary>
+          <summary>Add from your {vocab.terms.roster.toLowerCase()}</summary>
           <AddFromRoster
             tasks={tasks}
             used={used}

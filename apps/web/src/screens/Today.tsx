@@ -430,10 +430,10 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
       </section>
       <p className="lede">{vocab.emptyStates.preseasonBody(formatDateLong(position.openingDay), position.daysUntilOpeningDay)}</p>
       <nav className="todo" aria-label="Get ready">
-        <Link to="/film-room?tab=roster" className="todo__item">
+        <Link to="/film-room?tab=tasks" className="todo__item">
           <span>
-            <strong>Set your {vocab.terms.roster.toLowerCase()}</strong>
-            <small>The tasks and habits on your team.</small>
+            <strong>Add your {vocab.terms.roster.toLowerCase()}</strong>
+            <small>The habits and to-dos you want to get done.</small>
           </span>
           <IconChevronRight />
         </Link>
@@ -488,7 +488,7 @@ function ReviewWeek({ position }: { position: Extract<CalendarPosition, { phase:
         <Link to="/film-room" className="todo__item">
           <span>
             <strong>Front office</strong>
-            <small>Retire tasks, sign free agents, rebuild starters.</small>
+            <small>Add or retire tasks, rebuild starters.</small>
           </span>
           <IconChevronRight />
         </Link>
