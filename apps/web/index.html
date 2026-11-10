@@ -5,13 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>7-Game Series</title>
     <meta name="description" content="Every week is a best-of-7 playoff series. Win the day by finishing your lineup." />
-    <meta name="theme-color" content="#123d2a" />
+    <!-- The status bar and browser chrome match the page (light/dark). theme.ts keeps them in
+         step when the theme is forced in Settings. -->
+    <meta name="theme-color" content="#ece5d3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#08110c" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Not black-translucent: on iOS 26 a Home Screen app that draws under the status bar
+         gets a system blur over its top bar. "default" starts the page below a solid status
+         bar. iOS reads this only when the app is added to the Home Screen. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="7GS" />
   </head>
   <body>
