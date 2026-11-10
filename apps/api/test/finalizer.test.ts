@@ -431,6 +431,16 @@ describe('seasons and Review Week', () => {
       longestWinStreak: 0,
       bestSeason: { number: 1, wins: 0, losses: 84 },
     });
+
+    // Point differential follows the theme; the record doesn't.
+    const baseball = (await t.ok('listSeasons', { token })).seasons.find((x) => x.number === 1)!;
+    expect(baseball.displayDifferential).toBe(baseball.runDifferential);
+    await t.ok('updateMe', { token, body: { theme: 'basketball' } });
+    const basketball = (await t.ok('listSeasons', { token })).seasons.find((x) => x.number === 1)!;
+    expect(basketball).toMatchObject({ wins: 0, losses: 84, runDifferential: baseball.runDifferential });
+    expect(basketball.displayDifferential).toBeLessThan(baseball.displayDifferential);
+    expect((await t.ok('getCareer', { token })).displayDifferential).toBe(basketball.displayDifferential);
+    await t.ok('updateMe', { token, body: { theme: 'baseball' } });
     expect(await t.fails('updateSeason', { token, params: { seasonId: season2!.id }, body: { winGoal: 50 } }, 409)).toMatchObject({
       code: 'OUT_OF_SEASON',
     });

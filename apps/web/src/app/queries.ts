@@ -520,7 +520,7 @@ export function useRestoreTask() {
   const api = useApi();
   return useRosterMutation(
     (taskId: string) => api.call('restoreTask', { params: { taskId } }),
-    (task) => `${task.name} is back on your task list and in your Rotation.`,
+    (task) => `${task.name} is back on your task list and in your ${vocab.flavor.rotation}.`,
   );
 }
 
@@ -533,7 +533,7 @@ export function usePlaceOnInjuredList() {
       const today = localDateOf(api.now(), timeZone);
       const from = task.ilStartedOn;
       const when = !from ? '' : from === today ? ' from today' : from === addDays(today, 1) ? ' from tomorrow' : ` from ${weekdayShort(from)}`;
-      return `${task.name} sits out${when}. Its lineup spots are held and runs to win stays put.`;
+      return `${task.name} sits out${when}. Its lineup spots are held and ${vocab.terms.threshold.toLowerCase()} stays put.`;
     },
   );
 }
@@ -542,7 +542,7 @@ export function useActivateFromInjuredList() {
   const api = useApi();
   return useRosterMutation(
     (taskId: string) => api.call('activateFromInjuredList', { params: { taskId } }),
-    ({ task }) => `${task.name} is back from the IL and returns to its held spots from tomorrow.`,
+    ({ task }) => `${task.name} is back from the ${vocab.terms.pausedShort} and returns to its held spots from tomorrow.`,
   );
 }
 
@@ -555,7 +555,7 @@ export function usePutStarter() {
       api.call('putStarter', { params: { weekday: v.weekday }, body: v.body }),
     onSuccess: () => {
       invalidate(qc, qk.starters, ['series']);
-      notify('Starter saved. It shapes future weeks. To change a day that’s already on this week’s Lineup card, add tasks there.', 'success');
+      notify(`${vocab.term.dayTemplate} saved. It shapes future weeks. To change a day that’s already on this week’s lineup card, add tasks there.`, 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
   });
@@ -613,7 +613,7 @@ export function useAddTask() {
       invalidate(qc, qk.tasks, qk.starters);
       notify(
         game
-          ? `${task.name} added to ${weekdayLong(game.playedDate)}. Runs to win is ${game.threshold}.`
+          ? `${task.name} added to ${weekdayLong(game.playedDate)}. ${vocab.terms.threshold} is ${game.threshold}.`
           : `Task added: ${task.name}.`,
         'success',
       );

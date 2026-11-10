@@ -1,5 +1,5 @@
 import type { MeDto, SeasonDto } from '@7gs/contracts';
-import { gamesInSeason, GAMES_PER_SEASON, HEAD_START_SERIES, seasonPace } from '@7gs/rules';
+import { gamesInSeason, GAMES_PER_SEASON, HEAD_START_SERIES, seasonPace, THEME_TERMS } from '@7gs/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -12,16 +12,17 @@ import { Stepper } from '../components/Controls';
 import { Sheet } from '../components/Sheet';
 import { Tile } from '../components/Tile';
 import { formatTimeOfDay, formatWinPct, signed } from '../lib/format';
-import { vocab } from '../vocab';
+import { AVAILABLE_THEMES, vocab } from '../vocab';
 
-const STATUS_LABEL: Record<SeasonDto['status'], string> = {
+// A function, not a constant: the labels follow the account's theme.
+const statusLabel = (): Record<SeasonDto['status'], string> => ({
   upcoming: vocab.term.preseason,
   active: 'In progress',
   offseason: vocab.term.offseason,
   complete: 'Complete',
-};
+});
 
-export const SEASON_STATUS_LABEL = STATUS_LABEL;
+export const seasonStatusLabel = (status: SeasonDto['status']) => statusLabel()[status];
 
 /** The season's game count (more in Season 1 after a Head Start) and whether a Head Start is on. */
 export function seasonTotals(me: MeDto | undefined, season: SeasonDto): { total: number; headStart: boolean } {
@@ -36,7 +37,7 @@ export function Standings({ season: s, total }: { season: SeasonDto; total: numb
   const played = s.wins + s.losses;
   const winPct = played === 0 ? null : Math.round((s.wins / played) * 1000) / 1000;
   const stats: [string, string][] = [
-    [vocab.terms.runDifferential, signed(s.runDifferential)],
+    [vocab.terms.runDifferential, signed(s.displayDifferential)],
     [vocab.terms.rallyWins, String(s.rallyWins)],
     [vocab.terms.seriesRecord, `${s.seriesWon}–${s.seriesLost}`],
     [vocab.terms.winStreak, String(s.currentWinStreak)],
@@ -207,6 +208,7 @@ export function Clubhouse({ me }: { me: MeDto }) {
   const [theme, setTheme] = useState<ThemePref>(getThemePref);
   const nameId = useId();
   const themeId = useId();
+  const sportId = useId();
   const [deleting, setDeleting] = useState(false);
   // Signing out and deleting both leave nothing of this account on the device.
   const leave = async () => {
@@ -254,13 +256,34 @@ export function Clubhouse({ me }: { me: MeDto }) {
           <dd>{me.timezone}</dd>
         </div>
         <div>
-          <dt>Default first pitch</dt>
+          <dt>Default {vocab.term.lockedAt.toLowerCase()}</dt>
           <dd>{me.defaultLockTime ? formatTimeOfDay(me.defaultLockTime) : 'First check-off'}</dd>
         </div>
       </dl>
       <div className="field">
+        <span className="field__label" id={sportId}>
+          Sport
+        </span>
+        <div className="segmented" role="radiogroup" aria-labelledby={sportId}>
+          {AVAILABLE_THEMES.map((sport) => (
+            <label key={sport} className={`segmented__item${me.theme === sport ? ' is-selected' : ''}`}>
+              <input
+                type="radio"
+                name="sport"
+                className="sr-only"
+                checked={me.theme === sport}
+                disabled={updateMe.isPending}
+                onChange={() => updateMe.mutate({ theme: sport })}
+              />
+              {THEME_TERMS[sport].name}
+            </label>
+          ))}
+        </div>
+        <p className="field__hint">Changes the words and the look, never the rules or your record.</p>
+      </div>
+      <div className="field">
         <span className="field__label" id={themeId}>
-          Theme
+          Look
         </span>
         <div className="segmented" role="radiogroup" aria-labelledby={themeId}>
           {(['system', 'light', 'dark'] as const).map((pref) => (
@@ -275,7 +298,7 @@ export function Clubhouse({ me }: { me: MeDto }) {
                   setThemePref(pref);
                 }}
               />
-              {pref === 'system' ? 'Auto' : pref === 'light' ? 'Day game' : 'Night game'}
+              {pref === 'system' ? 'Auto' : pref === 'light' ? vocab.flavor.light : vocab.flavor.dark}
             </label>
           ))}
         </div>
@@ -346,7 +369,7 @@ function DeleteAccountSheet({
       }
     >
       <p>
-        This permanently deletes every season, series and game, your tasks and rotation, and your Rally Caps and
+        This permanently deletes every season, series and game, your tasks and {vocab.flavor.rotation.toLowerCase()}, and your {vocab.terms.comebackTokens} and
         Rainouts. It signs you out on every device. <strong>It can’t be undone.</strong>
       </p>
       <p className="fine">You can sign up again later with the same email, but you’ll start from scratch.</p>

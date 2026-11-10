@@ -21,15 +21,19 @@ import { AllowanceChips, IlExplainer, TaskGroup, TaskSheet } from '../components
 import { formatRange, formatTimeOfDay, formatWinPct, signed } from '../lib/format';
 import type { CareerDto, SeasonDto, SeriesSummaryDto } from '@7gs/contracts';
 import { vocab } from '../vocab';
-import { Clubhouse, GoalCard, Pace, SEASON_STATUS_LABEL, seasonTotals, Standings } from './Season';
+import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings } from './Season';
 import { WeekCardView } from './WeekCard';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 export const TEAM_SECTIONS = {
   lineups: 'This week’s lineups',
-  rotation: 'Rotation',
-  il: vocab.term.paused,
+  get rotation() {
+    return vocab.flavor.rotation;
+  },
+  get il() {
+    return vocab.term.paused;
+  },
   history: 'History',
   settings: 'Settings',
 } as const;
@@ -67,7 +71,7 @@ export function TeamScreen() {
       <header className="screen__head">
         <div>
           <p className="screen__kicker">
-            {s ? `${vocab.term.season} ${s.number} · ${SEASON_STATUS_LABEL[s.status]} · ${formatRange(s.startDate, s.playEndDate)}` : vocab.tabs.team}
+            {s ? `${vocab.term.season} ${s.number} · ${seasonStatusLabel(s.status)} · ${formatRange(s.startDate, s.playEndDate)}` : vocab.tabs.team}
           </p>
           <h1 className="screen__title">{me.data?.displayName ?? vocab.tabs.team}</h1>
         </div>
@@ -147,7 +151,7 @@ export function InjuredListScreen() {
         <p className="muted">Nobody’s on the {vocab.terms.pausedShort} right now.</p>
       )}
       {active.length > 0 ? (
-        <TaskGroup title="Tap a task to place it on the IL" tasks={active} onSelect={setSelected} />
+        <TaskGroup title={`Tap a task to place it on the ${vocab.terms.pausedShort}`} tasks={active} onSelect={setSelected} />
       ) : null}
       {current ? <TaskSheet task={current} today={me.data?.today ?? null} onClose={() => setSelected(null)} /> : null}
     </SubPage>
@@ -195,7 +199,7 @@ function CareerCard({ career: c }: { career: CareerDto }) {
     [vocab.terms.seriesRecord, `${c.seriesWon}–${c.seriesLost}`],
     [vocab.terms.longestWinStreak, String(c.longestWinStreak)],
     [vocab.terms.rallyWins, String(c.rallyWins)],
-    [vocab.terms.runDifferential, signed(c.runDifferential)],
+    [vocab.terms.runDifferential, signed(c.displayDifferential)],
   ];
   return (
     <section className="card career" aria-labelledby="career-title">
@@ -311,11 +315,11 @@ function Rotation() {
   const starters = useStartersQuery();
   const tasks = useTasksQuery();
   const me = useMeQuery();
-  if (starters.isPending || tasks.isPending) return <Loading label="Loading the rotation" />;
+  if (starters.isPending || tasks.isPending) return <Loading label={`Loading the ${vocab.flavor.rotation.toLowerCase()}`} />;
   if (starters.isError) return <ErrorPanel error={starters.error} onRetry={() => void starters.refetch()} />;
   const byId = new Map((tasks.data ?? []).map((t) => [t.id, t]));
   return (
-    <section aria-label="Rotation">
+    <section aria-label={vocab.flavor.rotation}>
       <p className="lede">
         Your default plan for each weekday, used to fill in future weeks. It doesn’t change days already on this week’s{' '}
         {vocab.week.title}. To add a task to this week, use <strong>+ Add task</strong> or <Link to="/team/lineups">{TEAM_SECTIONS.lineups}</Link>.

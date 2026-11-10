@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { describe, expect, it } from 'vitest';
 import type { Mailer } from '../src/deps';
+import { reminderSends } from '../src/db/schema';
 import { createWebPusher, MemoryPusher } from '../src/push';
 import { CHICAGO, createTasks, TestApp, useTestDb } from './helpers';
 
@@ -148,10 +149,19 @@ describe('sending reminders', () => {
     await t.reminders();
     expect(kinds(pusher)).toEqual(['rally']);
     expect(pusher.sent[0]!.message.body).toContain('Roll a Rally Cap before noon');
+
+    // The same reminder in the hockey theme: only the words change.
+    await t.ok('updateMe', { token, body: { theme: 'hockey' } });
+    t.at('2026-10-06', '08:45', CHICAGO);
+    await env.db.delete(reminderSends);
+    await t.reminders();
+    expect(pusher.sent[1]!.message).toMatchObject({ title: 'Coach’s challenge available' });
+    expect(pusher.sent[1]!.message.body).toContain('Use a coach’s challenge before noon');
     // Not after the window.
     t.at('2026-10-06', '12:30', CHICAGO);
+    await env.db.delete(reminderSends);
     await t.reminders();
-    expect(pusher.sent).toHaveLength(1);
+    expect(pusher.sent).toHaveLength(2);
   });
 
   it('nudges to plan next week on Friday, and on Sunday only if the card is unopened', async () => {

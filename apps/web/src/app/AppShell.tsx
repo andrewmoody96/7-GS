@@ -1,26 +1,37 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { getMockBackend } from '../api';
 import { isApiError } from '../api/client';
 import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
 import { hasSeenHowItWorks, HowItWorksSheet, markHowItWorksSeen } from '../components/HowItWorks';
-import { IconHelp, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
+import { useWelcomeStep, WelcomeSetup } from '../components/WelcomeSetup';
+import { IconBasketball, IconHelp, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
 import { Sheet } from '../components/Sheet';
 import { ErrorPanel } from '../components/States';
 import { formatDate, formatDayTime } from '../lib/format';
-import { vocab } from '../vocab';
+import type { Theme } from '@7gs/rules';
+import { activeTheme, applyTheme, vocab } from '../vocab';
 import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { forgetCachedMe, invalidateGameDay, useMeQuery } from './queries';
 import { useNotify } from './toast';
 import { useNow } from './hooks';
 import { TasksModalProvider, useTasksModal } from './tasksModal';
 
-const TABS = [
-  { to: '/', label: vocab.tabs.today, Icon: IconToday, end: true },
-  { to: '/series', label: vocab.tabs.series, Icon: IconSeries, end: false },
-  { to: '/team', label: vocab.tabs.team, Icon: IconSeason, end: false },
-] as const;
+/** The Today tab's icon follows the sport: home plate, or a basketball. */
+const TODAY_ICONS: Record<Theme, typeof IconToday> = {
+  baseball: IconToday,
+  basketball: IconBasketball,
+  hockey: IconToday,
+};
+
+// A function, not a constant: the labels and the Today icon follow the account's theme.
+const tabs = () =>
+  [
+    { to: '/', label: vocab.tabs.today, Icon: TODAY_ICONS[activeTheme()], end: true },
+    { to: '/series', label: vocab.tabs.series, Icon: IconSeries, end: false },
+    { to: '/team', label: vocab.tabs.team, Icon: IconSeason, end: false },
+  ] as const;
 
 /** Requires a session: unauthenticated users go to sign-in; offline users keep their cached profile. */
 export function AuthGate({ children }: { children: ReactNode }) {
@@ -31,7 +42,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (unauthorized) forgetCachedMe();
   }, [unauthorized]);
   if (unauthorized) return <Navigate to="/sign-in" replace />;
-  if (me.data) return children;
+  if (me.data) {
+    // The account's sport theme: swap the words before anything below renders, and
+    // redraw everything when it changes (key) so no screen keeps the old words.
+    applyTheme(me.data.theme);
+    return <Fragment key={me.data.theme}>{children}</Fragment>;
+  }
   if (me.isPending) {
     return (
       <div className="splash" role="status">
@@ -54,8 +70,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
 function TopBar() {
   const me = useMeQuery();
-  // The guide opens by itself the first time on a device, then lives behind the ? button.
-  const [helpOpen, setHelpOpen] = useState(() => !hasSeenHowItWorks());
+  // A new account's welcome setup (sport, then look) comes first; then the guide opens by
+  // itself the first time on a device, and lives behind the ? button after that.
+  const [welcomeStep] = useWelcomeStep();
+  const [helpOpen, setHelpOpen] = useState(() => welcomeStep === null && !hasSeenHowItWorks());
   const closeHelp = () => {
     markHowItWorksSeen();
     setHelpOpen(false);
@@ -96,6 +114,7 @@ function TopBar() {
           <IconHelp />
         </button>
       </div>
+      <WelcomeSetup onDone={() => setHelpOpen(!hasSeenHowItWorks())} />
       <HowItWorksSheet open={helpOpen} onClose={closeHelp} />
     </header>
   );
@@ -236,7 +255,7 @@ function Shell() {
         <Outlet />
       </main>
       <nav className="tabbar" aria-label="Main">
-        {TABS.map(({ to, label, Icon, end }) => (
+        {tabs().map(({ to, label, Icon, end }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => `tab${isActive ? ' is-active' : ''}`}>
             <Icon className="tab__icon" />
             <span className="tab__label">{label}</span>

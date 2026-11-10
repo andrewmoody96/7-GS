@@ -184,7 +184,7 @@ export function TaskSheet({ task, today, onClose }: { task: TaskDto; today: Loca
           hint={
             task.lockedThrough && !retired
               ? `Days already under way (through ${weekdayShort(task.lockedThrough)}) keep ${vocab.runs(task.lockedPoints ?? task.points)}. A new value starts ${weekdayShort(addDays(task.lockedThrough, 1))}.`
-              : 'Days you’ve already started keep the runs they were planned with.'
+              : `Days you’ve already started keep the ${vocab.term.points.toLowerCase()} they were planned with.`
           }
         />
         {newPointsFrom(task) && !retired ? (

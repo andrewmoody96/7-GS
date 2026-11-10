@@ -34,6 +34,15 @@ export const IconToday = (p: IconProps) => (
   </Icon>
 );
 
+/** A basketball: the Today tab in the basketball theme. */
+export const IconBasketball = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3v18" />
+    <path d="M5.6 5.6a12 12 0 0 1 0 12.8M18.4 5.6a12 12 0 0 0 0 12.8" />
+  </Icon>
+);
+
 /** Seven boxes: the Series strip. */
 export const IconSeries = (p: IconProps) => (
   <Icon {...p}>

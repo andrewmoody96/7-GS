@@ -212,7 +212,7 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
     <section className="card editor" aria-label="Edit lineup">
       <header className="card__head">
         <h2 className="card__title">Edit lineup</h2>
-        <p className="card__sub">Locks at first pitch.</p>
+        <p className="card__sub">Locks at {vocab.term.lockedAt.toLowerCase()}.</p>
       </header>
 
       <div className="editor__rules">
@@ -221,7 +221,7 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
           value={state.threshold}
           min={1}
           max={LIMITS.thresholdMax}
-          suffix={vocab.terms.runsShort}
+          suffix={vocab.terms.valueShort}
           onChange={(threshold) => setState((s) => ({ ...s, threshold }))}
         />
         <div className="field">

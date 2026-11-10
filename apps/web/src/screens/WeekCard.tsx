@@ -255,7 +255,7 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
     );
 
   const meta: string[] = [vocab.gameLabel(game.gameNumber)];
-  if (game.slot === 2) meta.push(`${vocab.term.doubleheader} nightcap`);
+  if (game.slot === 2) meta.push(`${vocab.term.doubleheader} ${vocab.flavor.secondGame}`);
   if (game.postponed) meta.push(`${vocab.terms.makeup} of ${weekdayShort(game.scheduledDate)}`);
   if (game.suspended) meta.push(vocab.suspension.resumedFrom(weekdayShort(game.scheduledDate)));
 
@@ -296,7 +296,7 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
                 <span className="daylineup__runs">
                   {e.points}
                   <span className="sr-only"> {e.points === 1 ? 'run' : 'runs'}</span>
-                  <span aria-hidden="true"> {vocab.terms.runsShort}</span>
+                  <span aria-hidden="true"> {vocab.terms.valueShort}</span>
                 </span>
                 {e.required || e.pinchHitAt || e.carriedOver || oneOffs.has(e.taskId) || leaving.has(e.taskId) ? (
                   <span className="daylineup__pills">
@@ -414,7 +414,7 @@ function AddToBenchSheet({ game, roster, open, onClose }: { game: GameDto; roste
         </div>
       }
     >
-      <p className="lede">Bench work is optional. It only counts once subbed in for a task that isn’t a must-hit, so runs to win doesn’t change.</p>
+      <p className="lede">Bench work is optional. It only counts once subbed in for a task that isn’t a {vocab.term.required.toLowerCase()}, so {vocab.terms.threshold.toLowerCase()} doesn’t change.</p>
       {addable.length === 0 ? (
         <p className="empty-line">Every active task is already in this game.</p>
       ) : (

@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "theme" text DEFAULT 'baseball' NOT NULL;

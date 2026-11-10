@@ -221,6 +221,7 @@ export class MockBackend {
       if (patch.displayName !== undefined) w.user.displayName = patch.displayName;
       if (patch.timezone !== undefined) w.user.timezone = patch.timezone;
       if (patch.defaultLockTime !== undefined) w.user.defaultLockTime = patch.defaultLockTime;
+      if (patch.theme !== undefined) w.user.theme = patch.theme;
       return engine.toMeDto(w, now);
     },
     startHeadStart: ({ world, now }) => engine.startHeadStart(world(), this.env, now),

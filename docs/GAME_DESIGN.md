@@ -92,6 +92,10 @@ Results:
 - **L (no appeal)**: two or more must-hits missed. Not Rally Cap eligible.
 - **W (rally)**: a loss overturned by a successful Rally Cap.
 
+**No lead until it's earned (live).** While a must-hit is open, the opponent keeps pace,
+so the best you can show is a tie. Finishing the last must-hit breaks it: the opponent
+stops where it was and every task after widens the lead. Your own score only ever goes up.
+
 **The scoreboard never shows a tied final.** Just like baseball, a game can't end 4–4.
 
 - The opponent's score is always one less than your runs to win. Reach your number and
@@ -464,6 +468,35 @@ if they choose). Each is skipped when there's nothing to say, and sent at most o
 Team → History: a career card (lifetime record, win %, series record, longest win streak,
 Rally wins, run differential, best season) and every season so far. Each season lists its
 series; a series opens the same view as the Series tab, with box scores.
+
+### Sport themes
+
+Cosmetic only: a theme changes words, colors and the scoreboard's look, never the rules.
+It's saved on the account (so notifications and emails match) and can be switched at any
+time, mid-season included. A new account picks its sport and Auto / light / dark on first
+sign-in; both stay in Team → Settings.
+
+| | Baseball | Basketball |
+|---|---|---|
+| A task is worth | runs | buckets |
+| Scoreboard | R (runs), H (hits) | PTS (points), FG (made shots) |
+| Required task | Must-hit | Must-make |
+| Added after the week starts | Pinch hitter | Sixth man |
+| Lock | First pitch | Tip-off |
+| Two games a day | Doubleheader | Back-to-back |
+| Comeback appeal | Rally Cap | Coach's challenge |
+| Skip a day | Rainout | Postponement |
+| Task out a while | Injured List | Injury report |
+| Big win | Walk-off W | Buzzer beater |
+| Before the season | Spring Training | Preseason |
+
+**Basketball scores** (rules `displayScore`): each bucket is worth 100 ÷ the day's target
+(rounded), so reaching the target lands near 100. The opponent sits 3–9 points short of
+that (fixed per game), keeps level while a must-make is open, and wins by that margin when
+you lose, so scores read like 101–94. Same winner as baseball every time; your score never
+drops. Season and career point differential add up these converted margins. Planning
+screens keep task values in buckets. Hockey (1–5 goals, shots on goal) is next. A new account picks its
+sport (once there's a choice) and Auto / light / dark on first sign-in.
 
 ## 10. Architecture notes
 

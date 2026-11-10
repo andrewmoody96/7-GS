@@ -113,7 +113,7 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <Stepper label="Worth" value={points} min={1} max={LIMITS.pointsMax} suffix={points === 1 ? 'run' : 'runs'} onChange={setPoints} />
+          <Stepper label="Worth" value={points} min={1} max={LIMITS.pointsMax} suffix={vocab.runs(points).replace(/^\d+ /, '')} onChange={setPoints} />
           <KindPicker value={kind} onChange={setKind} name="addtask-kind" />
 
           {games.length > 0 ? (
@@ -143,10 +143,10 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
                 {game === null
                   ? 'It goes on your task list. You can put it in any day’s lineup later.'
                   : !started
-                    ? `This week hasn’t started, so this is just planning: runs to win stays ${game.threshold}.`
+                    ? `This week hasn’t started, so this is just planning: ${vocab.terms.threshold.toLowerCase()} stays ${game.threshold}.`
                     : isToday
-                      ? `The week has started, so a task added to today is a must-hit. Runs to win goes ${game.threshold} → ${game.threshold + points}.`
-                      : `Runs to win goes ${game.threshold} → ${game.threshold + points}, so the day gets no easier.`}
+                      ? `The week has started, so a task added to today is a ${vocab.term.required.toLowerCase()}. ${vocab.terms.threshold} goes ${game.threshold} → ${game.threshold + points}.`
+                      : `${vocab.terms.threshold} goes ${game.threshold} → ${game.threshold + points}, so the day gets no easier.`}
               </p>
             </div>
           ) : null}

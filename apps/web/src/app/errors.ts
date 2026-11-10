@@ -10,7 +10,7 @@ const suspensionReasons = new Set<string>(SUSPENSION_INELIGIBLE_REASONS);
 export function errorMessage(error: unknown): string {
   if (!isApiError(error)) return 'Something went wrong. Try again.';
   if (error.code === 'NETWORK') return 'You’re offline. Try again when you’re back in range.';
-  if (error.code === 'SERVER') return 'The ballpark’s systems are down. Try again in a minute.';
+  if (error.code === 'SERVER') return vocab.flavor.serverDown;
   if (error.reason && rallyReasons.has(error.reason)) {
     return vocab.rallyReason[error.reason as keyof typeof vocab.rallyReason];
   }

@@ -298,6 +298,14 @@ describe('injured list', () => {
 });
 
 describe('profile and calendar', () => {
+  it('keeps a sport theme on the account, baseball by default', async () => {
+    const { t, token } = await signedUp();
+    expect((await t.ok('getMe', { token })).theme).toBe('baseball');
+    expect((await t.ok('updateMe', { token, body: { theme: 'hockey' } })).theme).toBe('hockey');
+    expect((await t.ok('getMe', { token })).theme).toBe('hockey');
+    expect((await t.fails('updateMe', { token, body: { theme: 'football' } }, 400)).code).toBe('VALIDATION_FAILED');
+  });
+
   it('edits the profile', async () => {
     const { t, token } = await signedUp();
     const me = await t.ok('updateMe', { token, body: { displayName: ' Night Owls ', defaultLockTime: '21:30' } });

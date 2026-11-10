@@ -13,17 +13,21 @@ export function getThemePref(): ThemePref {
   }
 }
 
-/** Page background per scheme (--bg in tokens.css), for the status bar and browser chrome. */
-const BAR_COLOR = { light: '#ece5d3', dark: '#08110c' } as const;
+/** Page background per sport and scheme (--bg in tokens.css), for the status bar and browser chrome. */
+const BAR_COLORS: Record<string, { light: string; dark: string }> = {
+  baseball: { light: '#ece5d3', dark: '#08110c' },
+  basketball: { light: '#efe2c8', dark: '#0c0e13' },
+};
 
 export function applyThemePref(pref: ThemePref): void {
   const root = document.documentElement;
   if (pref === 'system') delete root.dataset.theme;
   else root.dataset.theme = pref;
   // Each theme-color tag answers one system scheme; a forced theme sets both to its color.
+  const bar = BAR_COLORS[root.dataset.sport ?? 'baseball'] ?? BAR_COLORS.baseball!;
   for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"][media]')) {
     const scheme = meta.media.includes('dark') ? 'dark' : 'light';
-    meta.content = BAR_COLOR[pref === 'system' ? scheme : pref];
+    meta.content = bar[pref === 'system' ? scheme : pref];
   }
 }
 

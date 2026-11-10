@@ -92,7 +92,7 @@ function Cell({ game, state, onSelect }: CellProps) {
       ) : (
         <>
           <span className="cell__big cell__big--dim">G{game.gameNumber}</span>
-          <span className="cell__small">{state === 'pending' ? 'Final soon' : `${game.threshold} ${vocab.terms.runsShort}`}</span>
+          <span className="cell__small">{state === 'pending' ? 'Final soon' : `${game.threshold} ${vocab.terms.valueShort}`}</span>
         </>
       )}
     </>
