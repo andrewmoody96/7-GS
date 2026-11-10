@@ -5,7 +5,7 @@ There are two ways to put the app online. They do different jobs:
 | | GitHub Pages | Heroku |
 |---|---|---|
 | What runs | The PWA only, with its built-in demo backend | The PWA **and** the API + Postgres |
-| Accounts / sign-in | None: one demo team per browser | Email magic links |
+| Accounts / sign-in | None: one demo team per browser | Email sign-in code (or link) |
 | Data | Stays in that browser's `localStorage` | Postgres, on every device you sign in from |
 | Games go final at midnight | Simulated in the browser (demo controls) | The server's finalizer, every 15 minutes |
 | Cost | Free | Eco or Basic dyno + Postgres Essential-0 (about $10–$12 a month) |

@@ -101,6 +101,10 @@ export const loginTokens = pgTable('login_tokens', {
   createdAt: instant('created_at').notNull(),
   expiresAt: instant('expires_at').notNull(),
   usedAt: instant('used_at'),
+  /** Hash of the 6-digit code emailed with the link (for the Home Screen app, which can't open links). */
+  codeHash: text('code_hash'),
+  /** Wrong code guesses; the code stops working after CODE_MAX_ATTEMPTS. */
+  codeAttempts: integer('code_attempts').notNull().default(0),
 });
 
 export const sessions = pgTable(

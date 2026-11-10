@@ -268,7 +268,7 @@ for (const theme of ['light', 'dark']) {
   await settle(page);
   await shot(page, '22-sign-in', theme);
   await page.getByLabel('Email').fill('rookie@example.com');
-  await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
+  await page.getByRole('button', { name: 'Email me a sign-in code' }).click();
   await page.getByRole('button', { name: 'Sign in now' }).waitFor();
   await settle(page);
   await shot(page, '23-sign-in-sent', theme);

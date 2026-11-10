@@ -17,8 +17,8 @@ function createGmailMailer(config: Extract<EmailConfig, { provider: 'gmail' }>):
     auth: { user: config.user, pass: config.password },
   });
   const mailer: Mailer = {
-    async sendMagicLink(email, link) {
-      await mailer.sendMessage(email, magicLinkEmail(link));
+    async sendMagicLink(email, link, code) {
+      await mailer.sendMessage(email, magicLinkEmail(link, code));
     },
     async sendMessage(email, { subject, text, html }) {
       try {
@@ -33,24 +33,31 @@ function createGmailMailer(config: Extract<EmailConfig, { provider: 'gmail' }>):
 
 type Fetch = typeof fetch;
 
-export function magicLinkEmail(link: string): { subject: string; text: string; html: string } {
-  const subject = 'Your 7-Game Series sign-in link';
+/**
+ * The sign-in email. The code leads the subject so iOS can offer it above the keyboard
+ * ("From Mail") in the Home Screen app, where the link would open Safari instead.
+ */
+export function magicLinkEmail(link: string, code: string): { subject: string; text: string; html: string } {
+  const subject = `${code} is your 7-Game Series sign-in code`;
   const text = [
-    'Tap the link below to sign in to 7-Game Series. It works once, for 15 minutes.',
+    `Your sign-in code is ${code}`,
+    '',
+    'Enter it in the app (on iPhone, use this in the Home Screen app). Or tap the link to sign in on this device:',
     '',
     link,
     '',
-    "If you didn't ask for this, you can ignore this email.",
+    "The code and link work once, for 15 minutes. If you didn't ask for this, you can ignore this email.",
   ].join('\n');
   const href = link.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#0c1f16;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f4efe1">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center">
 <table role="presentation" width="100%" style="max-width:440px;background:#123d2a;border-radius:12px;padding:28px" cellspacing="0" cellpadding="0"><tr><td>
 <p style="margin:0 0 4px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#f2c14e">7-Game Series</p>
-<h1 style="margin:0 0 12px;font-size:22px;color:#f4efe1">Your ticket to the ballpark</h1>
-<p style="margin:0 0 20px;line-height:1.5">Tap the button to sign in. The link works once, for 15 minutes.</p>
-<p style="margin:0 0 20px"><a href="${href}" style="display:inline-block;background:#f2c14e;color:#0c1f16;font-weight:700;text-decoration:none;padding:12px 20px;border-radius:8px">Sign in</a></p>
-<p style="margin:0;font-size:13px;line-height:1.5;color:#c9c3b2">If you didn't ask for this, you can ignore this email.</p>
+<h1 style="margin:0 0 12px;font-size:22px;color:#f4efe1">Your sign-in code</h1>
+<p style="margin:0 0 20px;font-size:36px;font-weight:700;letter-spacing:.3em;color:#f2c14e">${code}</p>
+<p style="margin:0 0 20px;line-height:1.5">Enter it in the app. On iPhone, use the code in the Home Screen app.</p>
+<p style="margin:0 0 20px;line-height:1.5">Or sign in on this device: <a href="${href}" style="color:#f2c14e">Sign in</a></p>
+<p style="margin:0;font-size:13px;line-height:1.5;color:#c9c3b2">The code and link work once, for 15 minutes. If you didn't ask for this, you can ignore this email.</p>
 </td></tr></table></td></tr></table></body></html>`;
   return { subject, text, html };
 }
@@ -58,8 +65,8 @@ export function magicLinkEmail(link: string): { subject: string; text: string; h
 export function createMailer(config: EmailConfig, fetchImpl: Fetch = fetch): Mailer {
   if (config.provider === 'gmail') return createGmailMailer(config);
   const mailer: Mailer = {
-    async sendMagicLink(email, link) {
-      await mailer.sendMessage(email, magicLinkEmail(link));
+    async sendMagicLink(email, link, code) {
+      await mailer.sendMessage(email, magicLinkEmail(link, code));
     },
     async sendMessage(email, { subject, text, html }) {
       const request: { url: string; headers: Record<string, string>; body: unknown } =
