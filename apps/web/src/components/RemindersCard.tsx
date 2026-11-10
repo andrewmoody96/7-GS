@@ -39,9 +39,6 @@ function Reminders({ settings: s }: { settings: ReminderSettingsDto }) {
         <h2 id="reminders-title" className="card__title">
           Reminders
         </h2>
-        <p className="card__sub">
-          {s.devices === 0 ? 'Not on for any device yet.' : `On for ${s.devices} ${s.devices === 1 ? 'device' : 'devices'}.`}
-        </p>
       </header>
       <ThisDevice pushKey={s.pushKey} />
       <ul className="reminders__kinds">

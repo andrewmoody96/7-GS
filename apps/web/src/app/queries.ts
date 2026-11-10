@@ -161,8 +161,8 @@ export function useSendTestReminder() {
   return useMutation({
     mutationFn: () => api.call('sendTestReminder'),
     onSuccess: ({ devices, email }) => {
-      const where = [devices > 0 ? `${devices} ${devices === 1 ? 'device' : 'devices'}` : null, email ? 'your email' : null].filter(Boolean);
-      notify(where.length > 0 ? `Test sent to ${where.join(' and ')}.` : 'Nothing to send to yet: turn reminders on for this device first.', where.length > 0 ? 'success' : 'error');
+      if (devices === 0 && !email) notify('Nothing to send to yet: turn reminders on for this device first.', 'error');
+      else notify(devices > 0 ? (email ? 'Test sent here and to your email.' : 'Test sent.') : 'Test sent to your email.', 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
   });
