@@ -126,6 +126,9 @@ Like a fantasy lineup, each series is planned as a week.
   must-hits, change runs to win, place one-offs on specific days.
 - **After the week's first pitch** (the earliest lock of any game that week, normally
   Monday's): lineups only grow. **The bar never drops.**
+  - In the app this is the **Add a task** button on Today and on the lineup card (task
+    words first; "pinch hitter" is the flavor). The sheet can also create a brand-new
+    task on the spot.
   - **Pinch hitter:** add a new must-hit to today or any later day, even mid-game. That
     day's runs to win rises by exactly the task's runs, so the cushion between runs to
     win and available runs stays the same. On the scoreboard the opponent "answers back"
@@ -386,6 +389,11 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 4. **Season**: standings, pace vs. goal, streaks, box score history.
 5. **Rally Cap sheet**: shown on a final, eligible L. Odds breakdown and roll.
 6. **Review Week hub**: season review, awards, front-office changes for the next season.
+7. **How it works**: a five-step guide (add tasks → plan the week → win the day → once the
+   week starts, add but don't remove → win the week). It opens by itself on a device's
+   first visit and stays behind the **?** button in the top bar. The Rotation and its
+   starter editor say plainly that they shape future weeks, and point to the lineup card
+   for this week.
 
 **Weekly lineup card on wider screens** (tablets and desktop, 768px+): the week is a
 board of seven equal-width, equal-height day columns in one row, sized to fit the window
@@ -393,7 +401,6 @@ below the header. A busy day scrolls inside its own column (a soft shadow shows 
 more), actions line up along the bottom, and the day being edited widens to fit the
 editor. If the window is too narrow for seven readable columns, the board scrolls sideways
 instead of squeezing them. Phones keep the stacked list.
-
 ## 10. Architecture notes
 
 - **Shared rules package** (TypeScript, pure functions): game result, Rally Cap

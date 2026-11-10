@@ -17,7 +17,7 @@ import {
 } from '../app/queries';
 import { Bench, SubsLog } from '../components/Bench';
 import { Chyron } from '../components/Chyron';
-import { IconCap, IconChevronRight, IconEdit, IconLock, IconPause, IconRain, IconStar } from '../components/icons';
+import { IconCap, IconChevronRight, IconEdit, IconLock, IconPause, IconPlus, IconRain, IconStar } from '../components/icons';
 import { Jumbotron } from '../components/Jumbotron';
 import { Lineup } from '../components/Lineup';
 import { LineupEditor, type EditorState } from '../components/LineupEditor';
@@ -289,7 +289,7 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
             {game.lockTime ? vocab.lock.firstPitchAt(formatTimeOfDay(game.lockTime)) : vocab.lock.firstPitchOnCheckoff}
           </p>
           <p className="callout__hint">
-            {additionsOnly ? `${vocab.week.lockedTitle}: pinch hit or add to the bench. ` : ''}
+            {additionsOnly ? 'The week has started: you can add tasks, not remove them. ' : ''}
             {vocab.lock.firstCheckoffLocks}
           </p>
           <div className="callout__actions">
@@ -324,7 +324,7 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
         <div className="gameactions">
           {additionsOnly ? (
             <button type="button" className="btn" onClick={() => setPinchOpen(true)}>
-              <IconStar width={18} height={18} /> {vocab.pinchHit.action}
+              <IconPlus width={18} height={18} /> {vocab.pinchHit.action}
             </button>
           ) : null}
           <button type="button" className="btn btn--quiet" onClick={() => setSuspendOpen(true)}>

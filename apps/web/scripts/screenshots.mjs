@@ -84,6 +84,8 @@ async function settle(page) {
 }
 
 async function open(page, path, scenario) {
+  // The first-visit guide would cover every shot; mark it seen.
+  await page.addInitScript(() => window.localStorage.setItem('7gs.howItWorksSeen', '1'));
   const url = new URL(path, base);
   if (scenario) url.searchParams.set('demo', scenario);
   await page.goto(url.toString());
@@ -212,11 +214,11 @@ for (const theme of ['light', 'dark']) {
   // Today: send in a pinch hitter (the math shows before confirming).
   await open(page, '/');
   await dismissJumbotron(page);
-  await page.getByRole('button', { name: /^Pinch hit$/ }).click();
+  await page.getByRole('button', { name: /^Add a task$/ }).click();
   await page.getByLabel(/Meal prep/).check();
   await settle(page);
   await shot(page, '42-pinch-hit-sheet', theme, { fullPage: false });
-  await page.getByRole('button', { name: 'Send in' }).click();
+  await page.getByRole('button', { name: 'Add to lineup' }).click();
   await page.waitForSelector('dialog[open]', { state: 'detached' }).catch(() => {});
   await page.waitForFunction(() => document.body.textContent?.includes('+3 pinch hit'));
   await settle(page);

@@ -4,7 +4,8 @@ import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { getMockBackend } from '../api';
 import { isApiError } from '../api/client';
 import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
-import { IconFilmRoom, IconSeason, IconSeries, IconToday } from '../components/icons';
+import { hasSeenHowItWorks, HowItWorksSheet, markHowItWorksSeen } from '../components/HowItWorks';
+import { IconFilmRoom, IconHelp, IconSeason, IconSeries, IconToday } from '../components/icons';
 import { Sheet } from '../components/Sheet';
 import { ErrorPanel } from '../components/States';
 import { formatDate, formatDayTime } from '../lib/format';
@@ -53,6 +54,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
 function TopBar() {
   const me = useMeQuery();
+  // The guide opens by itself the first time on a device, then lives behind the ? button.
+  const [helpOpen, setHelpOpen] = useState(() => !hasSeenHowItWorks());
+  const closeHelp = () => {
+    markHowItWorksSeen();
+    setHelpOpen(false);
+  };
   const queued = useQueuedOps();
   const pos = me.data?.position;
   const meta =
@@ -85,7 +92,11 @@ function TopBar() {
             {meta ? <span className="topbar__phase">{meta}</span> : null}
           </p>
         ) : null}
+        <button type="button" className="icon-btn topbar__help" onClick={() => setHelpOpen(true)} aria-label="How it works">
+          <IconHelp />
+        </button>
       </div>
+      <HowItWorksSheet open={helpOpen} onClose={closeHelp} />
     </header>
   );
 }

@@ -331,7 +331,7 @@ function DayGame({ game, roster }: { game: GameDto; roster: TaskDto[] }) {
           ) : policy === 'additions_only' && !final ? (
             <div className="dayg__actions">
               <button type="button" className="btn btn--small btn--primary" onClick={() => setPinch({ taskId: null })}>
-                <IconStar width={16} height={16} /> {vocab.pinchHit.action}
+                <IconPlus width={16} height={16} /> {vocab.pinchHit.action}
               </button>
               <button type="button" className="btn btn--small" onClick={() => setBenchOpen(true)}>
                 <IconPlus width={16} height={16} /> {vocab.week.addToBench}

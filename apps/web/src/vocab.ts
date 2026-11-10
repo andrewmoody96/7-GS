@@ -318,9 +318,9 @@ export const baseball: Vocab = {
     nextWeek: 'Next week',
     openingWeek: 'Opening Week',
     openingBlurb: 'Opening Week: plan it now. Nothing counts until Opening Day.',
-    lockedTitle: 'Week locked — additions only',
+    lockedTitle: 'Week in progress — add only',
     lockedBlurb:
-      'The week’s first pitch has passed, so lineups only grow: pinch hit, add to the bench, or make a bench task a must-hit. Runs to win never drops.',
+      'This week has started. You can still add tasks to today or any later day, but you can’t remove tasks or lower runs to win. A task you add is a must-hit (a pinch hitter), and that day’s runs to win goes up by its runs. For an optional extra, add it to the bench instead.',
     planningTitle: 'Planning',
     planningBlurb: (firstPitch) =>
       `Anything goes until the week’s first pitch${firstPitch ? ` (${firstPitch})` : ''}: add or remove tasks, reorder, set must-hits and runs to win, and place one-offs on a day.`,
@@ -330,18 +330,18 @@ export const baseball: Vocab = {
     oneOffHint: 'One-offs retire once done. A missed one-off must-hit moves to the next game day as a pinch hitter.',
   },
   pinchHit: {
-    action: 'Pinch hit',
+    action: 'Add a task',
     makeMustHit: 'Make must-hit',
-    title: 'Send in a pinch hitter',
+    title: 'Add a task to this day',
     explainer:
-      'A pinch hitter is a new must-hit. Runs to win rises by exactly its runs, so your cushion stays the same. The opponent answers back with the same runs.',
+      'The week has started, so a task you add now comes in as a pinch hitter: it’s a must-hit, and runs to win goes up by exactly its runs. Your cushion stays the same. For an optional extra, add it to the bench instead.',
     raise: (runs) => `+${runs} pinch hit`,
     thresholdLine: (threshold, raise) => `Runs to win ${threshold}${raise > 0 ? ` · +${raise} pinch hit` : ''}`,
-    confirm: 'Send in',
+    confirm: 'Add to lineup',
     fromBench: 'On the bench',
     fromRoster: 'From your tasks',
     none: 'Every active task is already in this lineup.',
-    done: (name, threshold) => `${name} pinch hits. Runs to win is ${threshold}.`,
+    done: (name, threshold) => `${name} added as a pinch hitter. Runs to win is ${threshold}.`,
   },
   suspension: {
     action: 'Suspend game',

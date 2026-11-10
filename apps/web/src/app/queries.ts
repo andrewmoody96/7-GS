@@ -463,7 +463,7 @@ export function usePutStarter() {
       api.call('putStarter', { params: { weekday: v.weekday }, body: v.body }),
     onSuccess: () => {
       invalidate(qc, qk.starters, ['series']);
-      notify('Starter saved. It applies from the next game not yet built.', 'success');
+      notify('Starter saved. It shapes future weeks. To change a day that’s already on this week’s Lineup card, add tasks there.', 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
   });

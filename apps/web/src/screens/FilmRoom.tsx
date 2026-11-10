@@ -110,8 +110,8 @@ function Rotation() {
   return (
     <section aria-label="Rotation">
       <p className="lede">
-        One {vocab.term.dayTemplate.toLowerCase()} per weekday. Edits apply to every game whose lineup isn’t built yet; lineups are
-        built at the start of each game day.
+        Your default plan for each weekday, used to fill in future weeks. It doesn’t change days already on this week’s{' '}
+        {vocab.week.title}. To add a task to this week, use the <Link to="/film-room">{vocab.week.title}</Link>.
       </p>
       <ol className="rotation">
         {(starters.data ?? []).map((s) => (

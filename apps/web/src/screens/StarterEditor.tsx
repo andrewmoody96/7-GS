@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMeQuery, usePutStarter, useStartersQuery, useTasksQuery } from '../app/queries';
 import { Stepper, Switch } from '../components/Controls';
 import { AddFromRoster, SlotList, Warnings, type EditorSlot } from '../components/LineupEditor';
+import { IconInfo } from '../components/icons';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { formatTimeOfDay } from '../lib/format';
 import { vocab } from '../vocab';
@@ -92,6 +93,17 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           </h1>
         </div>
       </header>
+
+      <aside className="explainer">
+        <IconInfo />
+        <div>
+          <p className="explainer__title">This is your default {dayName}</p>
+          <p>
+            It fills in future weeks. A {dayName} that’s already on your {vocab.week.title} doesn’t change. To add a task to this
+            week, go to the <Link to="/film-room">{vocab.week.title}</Link> and use {vocab.pinchHit.action}.
+          </p>
+        </div>
+      </aside>
 
       <section className="card form">
         <div className="field">
