@@ -84,6 +84,8 @@ async function settle(page) {
 }
 
 async function open(page, path, scenario) {
+  // The first-visit guide would cover every shot; mark it seen.
+  await page.addInitScript(() => window.localStorage.setItem('7gs.howItWorksSeen', '1'));
   const url = new URL(path, base);
   if (scenario) url.searchParams.set('demo', scenario);
   await page.goto(url.toString());
@@ -147,9 +149,9 @@ for (const theme of ['light', 'dark']) {
   await shot(page, '06b-filmroom-rotation', theme);
   await open(page, '/film-room/starters/2');
   await shot(page, '07-starter-editor', theme);
-  await open(page, '/film-room?tab=roster');
+  await open(page, '/film-room?tab=tasks');
   await shot(page, '08-filmroom-roster', theme);
-  await noHorizontalScroll(page, 'roster');
+  await noHorizontalScroll(page, 'tasks');
   await page.getByRole('button', { name: /Guitar practice/ }).click();
   await page.waitForSelector('.il-box');
   await settle(page);
@@ -212,11 +214,11 @@ for (const theme of ['light', 'dark']) {
   // Today: send in a pinch hitter (the math shows before confirming).
   await open(page, '/');
   await dismissJumbotron(page);
-  await page.getByRole('button', { name: /^Pinch hit$/ }).click();
+  await page.getByRole('button', { name: /^Add a task$/ }).click();
   await page.getByLabel(/Meal prep/).check();
   await settle(page);
   await shot(page, '42-pinch-hit-sheet', theme, { fullPage: false });
-  await page.getByRole('button', { name: 'Send in' }).click();
+  await page.getByRole('button', { name: 'Add to lineup' }).click();
   await page.waitForSelector('dialog[open]', { state: 'detached' }).catch(() => {});
   await page.waitForFunction(() => document.body.textContent?.includes('+3 pinch hit'));
   await settle(page);
@@ -269,9 +271,9 @@ for (const theme of ['light', 'dark']) {
   await page.waitForSelector('.addtask');
   await settle(page);
   await shot(page, '24-new-user-roster', theme);
-  await page.getByLabel('Sign a free agent').fill('Haircut for Dad’s inauguration');
+  await page.getByLabel('Add a task').fill('Haircut for Dad’s inauguration');
   await page.getByText('One-off', { exact: true }).click();
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByRole('button', { name: 'Add task', exact: true }).click();
   await page.waitForSelector('.pill--oneoff');
   await settle(page);
   await shot(page, '25-roster-one-off', theme);

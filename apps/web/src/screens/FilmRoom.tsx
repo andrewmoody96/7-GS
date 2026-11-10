@@ -44,7 +44,8 @@ export function AllowanceChips({ allowances }: { allowances: AllowancesDto | und
 export function FilmRoomScreen() {
   const [params, setParams] = useSearchParams();
   const raw = params.get('tab');
-  const tab = raw === 'roster' || raw === 'rotation' ? raw : 'week';
+  // ?tab=roster is the old name for the Tasks tab; keep old links working.
+  const tab = raw === 'tasks' || raw === 'roster' ? 'tasks' : raw === 'rotation' ? raw : 'week';
   const me = useMeQuery();
   return (
     <div className={`screen screen--filmroom${tab === 'week' ? ' screen--board' : ''}`}>
@@ -81,11 +82,11 @@ export function FilmRoomScreen() {
         <button
           type="button"
           role="tab"
-          id="tab-roster"
-          aria-controls="panel-roster"
-          aria-selected={tab === 'roster'}
+          id="tab-tasks"
+          aria-controls="panel-tasks"
+          aria-selected={tab === 'tasks'}
           className="segmented__item"
-          onClick={() => setParams({ tab: 'roster' }, { replace: true })}
+          onClick={() => setParams({ tab: 'tasks' }, { replace: true })}
         >
           {vocab.terms.roster}
         </button>
@@ -109,8 +110,8 @@ function Rotation() {
   return (
     <section aria-label="Rotation">
       <p className="lede">
-        One {vocab.term.dayTemplate.toLowerCase()} per weekday. Edits apply to every game whose lineup isn’t built yet; lineups are
-        built at the start of each game day.
+        Your default plan for each weekday, used to fill in future weeks. It doesn’t change days already on this week’s{' '}
+        {vocab.week.title}. To add a task to this week, use the <Link to="/film-room">{vocab.week.title}</Link>.
       </p>
       <ol className="rotation">
         {(starters.data ?? []).map((s) => (
@@ -165,7 +166,7 @@ function StarterCard({
 function Roster({ today }: { today: LocalDate | null }) {
   const tasks = useTasksQuery();
   const [selected, setSelected] = useState<TaskDto | null>(null);
-  if (tasks.isPending) return <Loading label="Loading the roster" />;
+  if (tasks.isPending) return <Loading label="Loading your tasks" />;
   if (tasks.isError) return <ErrorPanel error={tasks.error} onRetry={() => void tasks.refetch()} />;
   const all = tasks.data;
   const active = all.filter((t) => t.status === 'active');
@@ -177,8 +178,8 @@ function Roster({ today }: { today: LocalDate | null }) {
     <section aria-label={vocab.terms.roster}>
       <AddTaskForm />
       {all.length === 0 ? (
-        <EmptyState title="No one on the roster yet">
-          <p>Add the habits you want to win with. Every task is worth 1 run unless you say otherwise.</p>
+        <EmptyState title="No tasks yet">
+          <p>Add the habits and to-dos you want to get done. Each task is worth 1 run unless you say otherwise.</p>
         </EmptyState>
       ) : null}
       {active.length > 0 ? (
@@ -250,7 +251,7 @@ function TaskGroup({ title, tasks, onSelect }: { title: string; tasks: TaskDto[]
   );
 }
 
-/** Recurring (stays on the roster) or one-off (retires once done). */
+/** Recurring (stays on your task list) or one-off (retires once done). */
 function KindPicker({ value, onChange, name }: { value: TaskKind; onChange: (kind: TaskKind) => void; name: string }) {
   const labelId = useId();
   return (
@@ -269,7 +270,7 @@ function KindPicker({ value, onChange, name }: { value: TaskKind; onChange: (kin
       <p className="field__hint">
         {value === 'one_off'
           ? `Retires once done. Missed as a ${vocab.term.required.toLowerCase()}, it moves to the next game as a ${vocab.terms.pinchHitter.toLowerCase()}.`
-          : 'Stays on the roster, day after day.'}
+          : 'Stays on your task list, day after day.'}
       </p>
     </div>
   );
@@ -298,7 +299,7 @@ function AddTaskForm() {
   return (
     <form className="card addtask" onSubmit={submit}>
       <label htmlFor={inputId} className="field__label">
-        Sign a free agent
+        Add a task
       </label>
       <div className="addtask__row">
         <input
@@ -310,7 +311,7 @@ function AddTaskForm() {
           onChange={(e) => setName(e.target.value)}
         />
         <button type="submit" className="btn btn--primary" disabled={!name.trim() || create.isPending}>
-          <IconPlus /> Add
+          <IconPlus /> Add task
         </button>
       </div>
       <Stepper label="Worth" value={points} min={1} max={LIMITS.pointsMax} suffix={points === 1 ? 'run' : 'runs'} onChange={setPoints} />

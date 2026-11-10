@@ -48,5 +48,5 @@ export async function settleOneOffs(tx: Db, user: UserRow, date: LocalDate, fina
       carried = true;
     }
   }
-  if (carried) await applyCarryoversFrom(tx, user, nextGameDate(user.startDate, date), now);
+  if (carried) await applyCarryoversFrom(tx, user, nextGameDate(user, date), now);
 }

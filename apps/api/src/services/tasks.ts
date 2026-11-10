@@ -212,7 +212,7 @@ export async function placeOnInjuredList(tx: Db, user: UserRow, taskId: string, 
   const start = ilStartDate(today, playsToday);
   const [row] = await tx
     .update(taskDefinitions)
-    .set({ status: 'injured', ilStartedOn: start, ilMinUntil: ilMinUntil(user.startDate, start), updatedAt: now })
+    .set({ status: 'injured', ilStartedOn: start, ilMinUntil: ilMinUntil(user, start), updatedAt: now })
     .where(eq(taskDefinitions.id, task.id))
     .returning();
   if (!row) throw notFound('Task');

@@ -1716,7 +1716,7 @@ button.cell:hover {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  padding: 32px var(--gutter) 40px;
+  padding: calc(32px + var(--safe-top)) var(--gutter) 40px;
 }
 
 .signin__title {

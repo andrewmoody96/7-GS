@@ -1,8 +1,8 @@
-import { calendarPosition, localDateOf } from '@7gs/rules';
+import { calendarPosition, gamesInSeason, HEAD_START_SERIES, localDateOf } from '@7gs/rules';
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { seasons, series, type SeasonRow, type SeriesRow, type UserRow } from '../db/schema';
-import { conflict, notFound } from '../errors';
+import { conflict, notFound, validationFailed } from '../errors';
 import { findSeason, findSeriesByStart } from './calendar';
 
 /**
@@ -10,7 +10,7 @@ import { findSeason, findSeriesByStart } from './calendar';
  * season being reviewed during its Review Week.
  */
 export async function currentSeason(tx: Db, user: UserRow, now: Date): Promise<SeasonRow | undefined> {
-  const pos = calendarPosition(user.startDate, localDateOf(now, user.timezone));
+  const pos = calendarPosition(user, localDateOf(now, user.timezone));
   return findSeason(tx, user.id, pos.seasonNumber);
 }
 
@@ -26,7 +26,7 @@ export async function loadUserSeason(tx: Db, userId: string, seasonId: string, f
 
 /** The series being played today, or null in Spring Training / Review Week. */
 export async function currentSeries(tx: Db, user: UserRow, now: Date): Promise<SeriesRow | undefined> {
-  const pos = calendarPosition(user.startDate, localDateOf(now, user.timezone));
+  const pos = calendarPosition(user, localDateOf(now, user.timezone));
   return pos.phase === 'season' ? findSeriesByStart(tx, user.id, pos.seriesStart) : undefined;
 }
 
@@ -41,12 +41,22 @@ export async function loadUserSeries(tx: Db, userId: string, seriesId: string): 
 
 /**
  * Season goal: only for a season that hasn't started, and only during Spring Training
- * or Review Week (GAME_DESIGN §5 front office). Rejections use OUT_OF_SEASON ("only
- * out of season") with a reason.
+ * or Review Week (GAME_DESIGN §5 front office). A Head Start counts as "hasn't started":
+ * the goal stays open until Opening Day. Rejections use OUT_OF_SEASON ("only out of
+ * season") with a reason.
  */
 export async function setWinGoal(tx: Db, user: UserRow, seasonId: string, winGoal: number, now: Date): Promise<SeasonRow> {
   const season = await loadUserSeason(tx, user.id, seasonId, true);
-  const pos = calendarPosition(user.startDate, localDateOf(now, user.timezone));
+  const total = gamesInSeason(user, season.number);
+  if (winGoal > total) {
+    throw validationFailed([{ path: 'winGoal', message: `This season has ${total} games.` }]);
+  }
+  const pos = calendarPosition(user, localDateOf(now, user.timezone));
+  const headStart = pos.phase === 'season' && pos.seriesNumber === HEAD_START_SERIES;
+  if (headStart && season.number === pos.seasonNumber) {
+    const [row] = await tx.update(seasons).set({ winGoal }).where(eq(seasons.id, season.id)).returning();
+    return row ?? season;
+  }
   if (pos.phase === 'season') {
     throw conflict(
       'OUT_OF_SEASON',

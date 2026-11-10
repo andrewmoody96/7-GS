@@ -20,6 +20,8 @@ export interface UserRow {
   displayName: string;
   timezone: string;
   startDate: LocalDate;
+  /** First day of the Head Start; absent in worlds saved before it existed. */
+  headStartFrom?: LocalDate | null;
   defaultLockTime: string | null;
   createdAt: string;
 }
@@ -196,7 +198,7 @@ export interface MagicLinkRow {
   usedAt: string | null;
 }
 
-export const MOCK_DB_VERSION = 3;
+export const MOCK_DB_VERSION = 4;
 
 export interface MockDb {
   version: typeof MOCK_DB_VERSION;

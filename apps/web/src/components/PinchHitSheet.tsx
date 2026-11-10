@@ -1,11 +1,13 @@
 import type { GameDto, TaskDto } from '@7gs/contracts';
-import { useEffect, useState } from 'react';
-import { useAddPinchHitter, useTasksQuery } from '../app/queries';
+import { LIMITS } from '@7gs/rules';
+import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useAddPinchHitter, useCreateTask, useMeQuery, useTasksQuery } from '../app/queries';
 import { useNotify } from '../app/toast';
 import { weekdayLong } from '../lib/format';
 import { benchOf, pinchHitMath } from '../lib/game';
 import { vocab } from '../vocab';
-import { IconArrowRight } from './icons';
+import { Stepper, Switch } from './Controls';
+import { IconArrowRight, IconPlus } from './icons';
 import { Sheet } from './Sheet';
 
 interface Candidate {
@@ -62,6 +64,58 @@ export function PinchHitMath({ threshold, points }: { threshold: number; points:
   );
 }
 
+/** Make a brand-new task without leaving the sheet; it comes back selected. */
+function NewTaskInline({ onCreated }: { onCreated: (taskId: string) => void }) {
+  const create = useCreateTask();
+  const [name, setName] = useState('');
+  const [points, setPoints] = useState(1);
+  const [oneOff, setOneOff] = useState(true);
+  const nameId = useId();
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!name.trim()) return;
+    create.mutate(
+      { name: name.trim(), points, kind: oneOff ? 'one_off' : 'recurring' },
+      {
+        onSuccess: (task) => {
+          setName('');
+          setPoints(1);
+          onCreated(task.id);
+        },
+      },
+    );
+  };
+  return (
+    <details className="disclosure">
+      <summary>Or create a new task</summary>
+      <form className="newtask" onSubmit={submit}>
+        <label htmlFor={nameId} className="field__label">
+          New task
+        </label>
+        <div className="addtask__row">
+          <input
+            id={nameId}
+            className="input"
+            value={name}
+            maxLength={LIMITS.taskNameMax}
+            placeholder="e.g. Call the dentist"
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button type="submit" className="btn" disabled={!name.trim() || create.isPending}>
+            <IconPlus /> Create
+          </button>
+        </div>
+        <Stepper label="Worth" value={points} min={1} max={LIMITS.pointsMax} suffix={points === 1 ? 'run' : 'runs'} onChange={setPoints} />
+        <label className="radio">
+          <input type="checkbox" checked={oneOff} onChange={(e) => setOneOff(e.target.checked)} />
+          <span className="radio__label">{vocab.taskKind.one_off}: just this once, not a repeating habit</span>
+        </label>
+      </form>
+    </details>
+  );
+}
+
 interface PinchHitSheetProps {
   game: GameDto;
   open: boolean;
@@ -75,10 +129,15 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
   const tasks = useTasksQuery();
   const add = useAddPinchHitter();
   const notify = useNotify();
+  const me = useMeQuery();
   const [taskId, setTaskId] = useState<string | null>(initialTaskId);
+  const [mustHit, setMustHit] = useState(true);
 
   useEffect(() => {
-    if (open) setTaskId(initialTaskId);
+    if (open) {
+      setTaskId(initialTaskId);
+      setMustHit(true);
+    }
   }, [open, initialTaskId]);
 
   const candidates = pinchHitCandidates(game, tasks.data ?? []);
@@ -86,6 +145,10 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
   const bench = candidates.filter((c) => c.onBench);
   const roster = candidates.filter((c) => !c.onBench);
   const promoting = initialTaskId !== null && selected?.onBench === true && selected.taskId === initialTaskId;
+  // A task added to today is always a must-hit; for a later day it's the user's choice.
+  const laterDay = me.data ? game.playedDate > me.data.today : false;
+  const canChoose = laterDay && !promoting;
+  const required = canChoose ? mustHit : true;
 
   const group = (title: string, list: Candidate[]) =>
     list.length === 0 ? null : (
@@ -115,7 +178,7 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
       open={open}
       onClose={onClose}
       kicker={`${vocab.gameLabel(game.gameNumber)} · ${weekdayLong(game.playedDate)} · ${game.starterName}`}
-      title={promoting && selected ? `${vocab.pinchHit.makeMustHit}: ${selected.name}` : vocab.pinchHit.title}
+      title={promoting && selected ? `${vocab.pinchHit.makeMustHit}: ${selected.name}` : `Add a task to ${weekdayLong(game.playedDate)}`}
       footer={
         <div className="actions">
           <button type="button" className="btn btn--quiet" onClick={onClose}>
@@ -128,10 +191,11 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
             onClick={() => {
               if (!selected) return;
               add.mutate(
-                { gameId: game.id, taskId: selected.taskId },
+                { gameId: game.id, taskId: selected.taskId, required },
                 {
                   onSuccess: (updated) => {
-                    notify(vocab.pinchHit.done(selected.name, updated.threshold), 'success');
+                    const message = required ? vocab.pinchHit.done : vocab.pinchHit.doneOptional;
+                    notify(message(selected.name, updated.threshold), 'success');
                     onClose();
                   },
                 },
@@ -143,7 +207,13 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
         </div>
       }
     >
-      <p className="lede">{vocab.pinchHit.explainer}</p>
+      <p className="lede">{canChoose ? vocab.pinchHit.explainerLater : vocab.pinchHit.explainer}</p>
+      {canChoose ? (
+        <div className="field musthit-choice">
+          <Switch label={vocab.pinchHit.mustHitSwitch} checked={mustHit} onChange={setMustHit} />
+          <p className="field__hint">{mustHit ? vocab.pinchHit.mustHitOn : vocab.pinchHit.mustHitOff}</p>
+        </div>
+      ) : null}
       {selected ? (
         <PinchHitMath threshold={game.threshold} points={selected.points} />
       ) : (
@@ -151,12 +221,13 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
           {vocab.terms.threshold} {game.threshold} · pick a {vocab.terms.task.toLowerCase()} to see the raise
         </p>
       )}
-      {tasks.isPending ? <p className="loading-line">Loading the roster…</p> : null}
+      {tasks.isPending ? <p className="loading-line">Loading your tasks…</p> : null}
       {!tasks.isPending && candidates.length === 0 ? <p className="empty-line">{vocab.pinchHit.none}</p> : null}
       {promoting ? null : (
         <>
           {group(vocab.pinchHit.fromBench, bench)}
           {group(vocab.pinchHit.fromRoster, roster)}
+          <NewTaskInline onCreated={setTaskId} />
         </>
       )}
     </Sheet>

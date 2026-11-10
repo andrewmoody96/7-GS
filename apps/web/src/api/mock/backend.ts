@@ -217,6 +217,7 @@ export class MockBackend {
       if (patch.defaultLockTime !== undefined) w.user.defaultLockTime = patch.defaultLockTime;
       return engine.toMeDto(w, now);
     },
+    startHeadStart: ({ world, now }) => engine.startHeadStart(world(), this.env, now),
     deleteMe: ({ world, body }) => {
       const w = world();
       const { confirmEmail } = body as { confirmEmail: string };
@@ -271,7 +272,10 @@ export class MockBackend {
     patchEntry: ({ world, params, body, now }) =>
       engine.setPartial(world(), params.gameId ?? '', params.entryId ?? '', (body as { partial: boolean }).partial, now),
     addPinchHitter: ({ world, params, body, now }) =>
-      engine.pinchHitter(world(), this.env, params.gameId ?? '', (body as { taskId: string }).taskId, now),
+      (() => {
+        const b = body as { taskId: string; required?: boolean };
+        return engine.pinchHitter(world(), this.env, params.gameId ?? '', b.taskId, now, b.required ?? true);
+      })(),
     addToBench: ({ world, params, body, now }) =>
       engine.addToBench(world(), this.env, params.gameId ?? '', (body as { taskId: string }).taskId, now),
     substitute: ({ world, params, body, now }) => {

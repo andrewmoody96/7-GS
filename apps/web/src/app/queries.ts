@@ -17,7 +17,7 @@ import {
   useQueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
-import { addDays, localDateOf, type TaskKind } from '@7gs/rules';
+import { addDays, headStartGames, localDateOf, type TaskKind } from '@7gs/rules';
 import { useTimeZone } from './hooks';
 import { useCallback } from 'react';
 import { isApiError, isRetryable } from '../api/client';
@@ -26,6 +26,7 @@ import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { errorMessage } from './errors';
 import { useNotify } from './toast';
 import { weekdayShort } from '../lib/format';
+import { vocab } from '../vocab';
 
 export const qk = {
   me: ['me'] as const,
@@ -316,11 +317,14 @@ export function useSubstitute() {
   );
 }
 
-/** A new must-hit (or a promoted bench task); runs to win rises by its runs. */
+/**
+ * Add a task to a game (or promote a bench task); runs to win rises by its runs. A
+ * must-hit unless `required` is false, which the server only allows for a later day.
+ */
 export function useAddPinchHitter() {
   const api = useApi();
-  return useGameMutation((v: { gameId: string; taskId: string }) =>
-    api.call('addPinchHitter', { params: { gameId: v.gameId }, body: { taskId: v.taskId } }),
+  return useGameMutation((v: { gameId: string; taskId: string; required?: boolean }) =>
+    api.call('addPinchHitter', { params: { gameId: v.gameId }, body: { taskId: v.taskId, required: v.required ?? true } }),
   );
 }
 
@@ -413,7 +417,7 @@ export function useCreateTask() {
   const api = useApi();
   return useRosterMutation(
     (body: { name: string; points: number; notes?: string | null; kind?: TaskKind }) => api.call('createTask', { body }),
-    (task) => `${task.name} joins the roster.`,
+    (task) => `Task added: ${task.name}.`,
   );
 }
 
@@ -463,7 +467,7 @@ export function usePutStarter() {
       api.call('putStarter', { params: { weekday: v.weekday }, body: v.body }),
     onSuccess: () => {
       invalidate(qc, qk.starters, ['series']);
-      notify('Starter saved. It applies from the next game not yet built.', 'success');
+      notify('Starter saved. It shapes future weeks. To change a day that’s already on this week’s Lineup card, add tasks there.', 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
   });
@@ -479,6 +483,23 @@ export function useUpdateSeasonGoal() {
     onSuccess: (season) => {
       qc.setQueryData(qk.currentSeason, season);
       notify(`Goal set: ${season.winGoal} wins.`, 'success');
+    },
+    onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
+/** Start playing today instead of waiting for Opening Day (Spring Training only). */
+export function useStartHeadStart() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: () => api.call('startHeadStart'),
+    onSuccess: (me) => {
+      qc.setQueryData(qk.me, me);
+      invalidateGameDay(qc);
+      invalidate(qc, qk.calendar);
+      notify(vocab.headStart.started(headStartGames(me)), 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
   });

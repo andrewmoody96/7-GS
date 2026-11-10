@@ -40,6 +40,11 @@ export const endpoints = {
   // Profile & calendar
   getMe: endpoint({ method: 'GET', path: '/v1/me', response: S.Me }),
   updateMe: endpoint({ method: 'PATCH', path: '/v1/me', body: S.MePatch, response: S.Me }),
+  /**
+   * Start playing today instead of waiting for Opening Day (Spring Training only). The
+   * days left this week become the Head Start: games that count toward the season record.
+   */
+  startHeadStart: endpoint({ method: 'POST', path: '/v1/me/head-start', response: S.Me }),
   /** Permanently deletes the account and everything in it, and ends every session. */
   deleteMe: endpoint({ method: 'DELETE', path: '/v1/me', body: S.DeleteAccount, response: S.Ok }),
   getCalendar: endpoint({ method: 'GET', path: '/v1/calendar', response: S.Calendar }),

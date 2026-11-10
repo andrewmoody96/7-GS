@@ -3,7 +3,8 @@
 export const SERIES_LENGTH = 7;
 export const WINS_TO_CLINCH = 4;
 
-export const SERIES_PER_SEASON = 25;
+/** A season is a quarter: 12 series + 1 Review Week = 13 weeks, so 4 seasons fill 52 weeks. */
+export const SERIES_PER_SEASON = 12;
 export const OFFSEASON_WEEKS = 1;
 export const SEASON_WEEKS = SERIES_PER_SEASON + OFFSEASON_WEEKS;
 export const SEASON_DAYS = SEASON_WEEKS * 7;

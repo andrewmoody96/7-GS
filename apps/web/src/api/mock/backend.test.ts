@@ -146,6 +146,37 @@ describe('mock backend seeds', () => {
     expect(seriesStatus(today.series!.games)).toMatchObject({ label: 'Leads 3–1', situation: 'clinch' });
   });
 
+  it('starts early from Spring Training: the days left this week count, but not as a series', async () => {
+    // Demo Thursday; Opening Day is Monday. Thursday to Sunday become the Head Start.
+    const pre = setup('preseason');
+    const me = await pre.api.call('startHeadStart');
+    expect(me.headStartFrom).toBe(me.today);
+    expect(me.position).toMatchObject({ phase: 'season', seasonNumber: 1, seriesNumber: 0, gameNumber: 4 });
+
+    const today = await pre.api.call('getToday');
+    expect(today.games).toHaveLength(1);
+    expect(today.series).toMatchObject({ number: 0, result: null });
+    const weeks = (await pre.api.call('listWeeks')).weeks;
+    expect(weeks[0]).toMatchObject({ label: 'current' });
+    const card = await pre.api.call('getWeek', { params: { startDate: weeks[0]!.startDate } });
+    expect(card.games).toHaveLength(4);
+
+    // 84 + 4 Head Start games; the goal stays open until Opening Day.
+    const season = (await pre.api.call('getCurrentSeason'))!;
+    expect(season).toMatchObject({ status: 'active', startDate: me.today });
+    await expectApiError(pre.api.call('updateSeason', { params: { seasonId: season.id }, body: { winGoal: 89 } }), 'VALIDATION_FAILED');
+    expect((await pre.api.call('updateSeason', { params: { seasonId: season.id }, body: { winGoal: 60 } })).winGoal).toBe(60);
+    await expectApiError(pre.api.call('startHeadStart'), 'NOT_ELIGIBLE', 'NOT_PRESEASON');
+
+    // Monday: Series 1 opens 0–0 and the four Head Start games are in the season record.
+    pre.backend.advance(4 * DAY);
+    expect((await pre.api.call('getToday')).position).toMatchObject({ seriesNumber: 1, gameNumber: 1 });
+    expect(await pre.api.call('getCurrentSeries')).toMatchObject({ number: 1, wins: 0, losses: 0 });
+    const after = (await pre.api.call('getCurrentSeason'))!;
+    expect(after.wins + after.losses + after.noDecisions).toBe(4);
+    expect(after).toMatchObject({ seriesWon: 0, seriesLost: 0 });
+  });
+
   it('preseason and offseason have no games today', async () => {
     const pre = setup('preseason');
     const preToday = await pre.api.call('getToday');
@@ -156,9 +187,9 @@ describe('mock backend seeds', () => {
     const offToday = await off.api.call('getToday');
     expect(offToday).toMatchObject({ games: [], series: null, position: { phase: 'offseason', seasonNumber: 1 } });
     const season = await off.api.call('getCurrentSeason');
-    expect(season).toMatchObject({ status: 'offseason', winGoal: 110 });
-    expect(season!.wins + season!.losses).toBe(175);
-    expect(season!.seriesWon + season!.seriesLost).toBe(25);
+    expect(season).toMatchObject({ status: 'offseason', winGoal: 55 });
+    expect(season!.wins + season!.losses).toBe(84);
+    expect(season!.seriesWon + season!.seriesLost).toBe(12);
   });
 });
 
@@ -342,18 +373,39 @@ describe('mock backend rainouts, Rally Cap and IL', () => {
   it('only sets the win goal outside the season', async () => {
     const mid = setup('midseason');
     const season = (await mid.api.call('getCurrentSeason'))!;
-    await expectApiError(mid.api.call('updateSeason', { params: { seasonId: season.id }, body: { winGoal: 100 } }), 'OUT_OF_SEASON');
+    await expectApiError(mid.api.call('updateSeason', { params: { seasonId: season.id }, body: { winGoal: 50 } }), 'OUT_OF_SEASON');
 
     const pre = setup('preseason');
     const upcoming = (await pre.api.call('getCurrentSeason'))!;
-    const updated = await pre.api.call('updateSeason', { params: { seasonId: upcoming.id }, body: { winGoal: 120 } });
-    expect(updated.winGoal).toBe(120);
+    const updated = await pre.api.call('updateSeason', { params: { seasonId: upcoming.id }, body: { winGoal: 60 } });
+    expect(updated.winGoal).toBe(60);
   });
 });
 
 const HOUR = 60 * 60 * 1000;
 
 describe('mock backend pinch hitters and one-offs', () => {
+  it('adds a regular task to a later day (same raise), but never to today', async () => {
+    const { api } = setup('midseason');
+    const today = (await api.call('getToday')).games[0]!;
+    const yoga = await api.call('createTask', { body: { name: 'Yoga', points: 2 } });
+    await expectApiError(
+      api.call('addPinchHitter', { params: { gameId: today.id }, body: { taskId: yoga.id, required: false } }),
+      'NOT_ELIGIBLE',
+      'TODAY_MUST_HIT',
+    );
+    const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });
+    const later = week.games.find((g) => g.playedDate > today.playedDate && g.status !== 'final')!;
+    const after = await api.call('addPinchHitter', { params: { gameId: later.id }, body: { taskId: yoga.id, required: false } });
+    expect(after.threshold).toBe(later.threshold + 2);
+    expect(after.entries.find((e) => e.taskId === yoga.id)).toMatchObject({ required: false, role: 'lineup' });
+    await expectApiError(
+      api.call('addPinchHitter', { params: { gameId: later.id }, body: { taskId: yoga.id, required: false } }),
+      'CONFLICT',
+      'ALREADY_IN_LINEUP',
+    );
+  });
+
   it('raises runs to win by exactly the pinch hitter’s runs, mid-game', async () => {
     const { api } = setup('midseason');
     const game = (await api.call('getToday')).games[0]!;

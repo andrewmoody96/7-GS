@@ -1,3 +1,5 @@
+# Checks main (production) and the dev branch on every push, plus every pull request,
+# so a dev → main PR shows its result before it's merged.
 name: CI
 
 on:

@@ -1,11 +1,26 @@
 # 7-Game Series
 
 Treat every week like a best-of-7 playoff series. Every day is a game; you win it by
-completing the tasks in that day's lineup. Wins and losses roll up into a season record.
+completing the tasks in that day's lineup. Wins and losses roll up into a season record,
+and a season is a quarter of the year: 12 weeks, then a Review Week.
+
+The point is to win the season, not to be perfect. Nobody finishes everything, and long
+lists set us up to fail. 7-Game Series helps you set reasonable goals and see the value
+in what you did get done: win 4 of 7 and you win the week.
 
 - Game rules: [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)
 - Data model and API: [`docs/DATA_MODEL_AND_API.md`](docs/DATA_MODEL_AND_API.md)
 - Putting it online (GitHub Pages demo, Heroku for real): [`docs/DEPLOY.md`](docs/DEPLOY.md)
+
+## Branches
+
+| Branch | Role |
+|---|---|
+| `claude/7-game-series-brainstorm-8ydzpv` | **Dev.** New work lands here first. CI runs on every push. |
+| `main` | **Production** (the default branch). Heroku and the GitHub Pages demo deploy from it. |
+
+To ship: open a pull request from the dev branch into `main`. Merge it once CI is green,
+and Heroku and Pages pick it up from there. Don't commit straight to `main`.
 
 ## Repository layout
 
@@ -34,8 +49,9 @@ and `package.json`.
    ```sh
    git clone https://github.com/andrewmoody96/7-GS.git
    cd 7-GS
-   git checkout claude/7-game-series-brainstorm-8ydzpv
    ```
+   That gives you `main`, the production code. To work on the latest changes, switch to the dev
+   branch: `git checkout claude/7-game-series-brainstorm-8ydzpv`
 4. Install dependencies: `pnpm install`
 
 ### Demo mode (just the app, with built-in sample data)

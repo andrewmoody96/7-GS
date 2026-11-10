@@ -278,7 +278,7 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
       />
 
       <details className="disclosure">
-        <summary>Add from the {vocab.terms.roster.toLowerCase()}</summary>
+        <summary>Add from your {vocab.terms.roster.toLowerCase()}</summary>
         {oneOffIds.size > 0 ? <p className="fine">{vocab.week.oneOffHint}</p> : null}
         <AddFromRoster
           tasks={tasks}

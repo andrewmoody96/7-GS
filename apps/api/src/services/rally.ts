@@ -67,7 +67,7 @@ async function rallyState(tx: Db, user: UserRow, game: GameRow, now: Date): Prom
   const seasonWinStreak = await seasonWinStreakBefore(tx, game);
   const eligibility = rallyEligibility({
     // No Rally Caps are used during Spring Training or Review Week (GAME_DESIGN §5–6).
-    inSeason: isGameDay(user.startDate, today) && isGameDay(user.startDate, game.playedDate),
+    inSeason: isGameDay(user, today) && isGameDay(user, game.playedDate),
     gameStatus: game.status,
     result: game.result,
     missedRequired: game.missedRequired,

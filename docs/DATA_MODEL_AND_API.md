@@ -58,9 +58,9 @@ Only hashes of tokens and session ids are stored.
 | user_id | uuid FK | |
 | number | int | 1, 2, 3 … |
 | start_date | date | A Monday. |
-| play_end_date | date | `start_date + 25 weeks − 1 day` (a Sunday). |
+| play_end_date | date | Opening Day + 12 weeks − 1 day (a Sunday). |
 | offseason_end_date | date | `play_end_date + 7 days`. Next season starts the day after. |
-| win_goal | int null | User-set target, e.g. 120 of 175. |
+| win_goal | int null | User-set target, e.g. 50 of 84 (up to 84 + the Head Start games in Season 1). |
 | status | enum | `upcoming`, `active`, `offseason`, `complete` |
 | wins, losses, rally_wins | int | Cached aggregates, rebuilt by the finalizer. |
 | series_won, series_lost | int | Cached. |
@@ -73,7 +73,7 @@ Unique: `(user_id, number)`.
 |---|---|---|
 | id | uuid PK | |
 | user_id, season_id | uuid FK | |
-| number | int | 1–25 within the season. |
+| number | int | 1–12 within the season; 0 is the Head Start (a partial week before Opening Day, never scored as a series). |
 | start_date | date | Monday. |
 | opponent_name | text | Generated, e.g. "Snooze City Alarms". |
 | opponent_colors | text[2] | Hex pair. |
@@ -288,6 +288,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 |---|---|---|
 | GET | `/v1/me` | Profile, timezone, current season/series summary, allowances. |
 | PATCH | `/v1/me` | Display name, timezone, default lock time. |
+| POST | `/v1/me/head-start` | Start playing today instead of waiting for Opening Day. Spring Training only (`409 NOT_ELIGIBLE`, reason `NOT_PRESEASON` otherwise). Sets `users.head_start_from`, moves Season 1's start to today and builds today's game. Returns `Me` (with `headStartFrom`). |
 | DELETE | `/v1/me` | Body: `{ confirmEmail }` (must match the account's email, else `400 VALIDATION_FAILED`). Deletes the user, everything they own (FK cascades) and their login links; clears the cookie. |
 | GET | `/v1/calendar` | Spring Training / season / offseason boundaries. |
 
@@ -311,7 +312,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | POST | `/v1/games/:id/entries/:entryId/complete` | Body: `{ clientAt, partial? }`. Idempotent. |
 | DELETE | `/v1/games/:id/entries/:entryId/complete` | Undo a check-off (before midnight only). |
 | PATCH | `/v1/games/:id/entries/:entryId` | Body: `{ partial }`. Mark a must-hit as partly done ("warning track"). |
-| POST | `/v1/games/:id/pinch-hitters` | Body: `{ taskId }`. New must-hit (or promote a bench task); raises runs to win by its points. Until the game is final. |
+| POST | `/v1/games/:id/pinch-hitters` | Body: `{ taskId, required? }`. New must-hit (or promote a bench task); raises runs to win by its points. Until the game is final. `required: false` adds it as a regular lineup task with the same raise, for a later day only (`409 NOT_ELIGIBLE`, reason `TODAY_MUST_HIT` for today's game; `409 CONFLICT`, reason `ALREADY_IN_LINEUP` if it's already batting). |
 | GET | `/v1/games/:id/suspension` | Suspension eligibility and resume dates (empty = no-decision). |
 | POST | `/v1/games/:id/suspension` | Body: `{ resumeDate | null }`. Uses a Rainout allowance. |
 | GET | `/v1/weeks` | Plannable weeks: current, plus next from Friday (labels `current`, `next`, or `opening` for Opening Week during Spring Training). |

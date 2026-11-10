@@ -57,7 +57,17 @@ function chronological(games: readonly SeriesGameState[]): SeriesGameState[] {
   });
 }
 
-export function seriesStatus(games: readonly SeriesGameState[]): SeriesStatus {
+export interface SeriesStatusOptions {
+  /**
+   * A Head Start: a partial week whose games count toward the season record but which
+   * isn't scored as a series. No result, no clinch or elimination; complete when every
+   * game it has is final.
+   */
+  unscored?: boolean;
+}
+
+export function seriesStatus(games: readonly SeriesGameState[], options: SeriesStatusOptions = {}): SeriesStatus {
+  if (options.unscored) return unscoredStatus(games);
   let wins = 0;
   let losses = 0;
   let result: SeriesResult | null = null;
@@ -124,6 +134,34 @@ export function seriesStatus(games: readonly SeriesGameState[]): SeriesStatus {
     comeback: result === 'won' && trailedBadly,
     noDecisions,
     label,
+  };
+}
+
+function unscoredStatus(games: readonly SeriesGameState[]): SeriesStatus {
+  let wins = 0;
+  let losses = 0;
+  let noDecisions = 0;
+  for (const game of games) {
+    if (game.noDecision) noDecisions++;
+    if (game.result === 'W') wins++;
+    else if (game.result === 'L') losses++;
+  }
+  const played = wins + losses;
+  const remaining = Math.max(0, games.length - played - noDecisions);
+  const complete = games.length > 0 && remaining === 0;
+  return {
+    wins,
+    losses,
+    played,
+    remaining,
+    result: null,
+    decidedAfter: null,
+    complete,
+    situation: complete ? 'complete' : 'normal',
+    sweepWatch: false,
+    comeback: false,
+    noDecisions,
+    label: `Head Start ${wins}–${losses}`,
   };
 }
 

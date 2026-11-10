@@ -3,7 +3,7 @@
 // "hold") so activation puts the task back exactly where it was.
 
 import { IL_MIN_DAYS } from './constants';
-import { isGameDay } from './calendar';
+import { isGameDay, type SeasonAnchor } from './calendar';
 import { addDays, compareDates, type LocalDate } from './dates';
 
 /**
@@ -11,11 +11,11 @@ import { addDays, compareDates, type LocalDate } from './dates';
  * Days without games (Spring Training, Review Week) don't count, so a stint pauses
  * through the offseason. In season this is `start + 3 days`.
  */
-export function ilMinUntil(signupDate: LocalDate, start: LocalDate): LocalDate {
+export function ilMinUntil(anchor: SeasonAnchor, start: LocalDate): LocalDate {
   let day = start;
   let counted = 0;
   for (let i = 0; i < 400 && counted < IL_MIN_DAYS; i++) {
-    if (isGameDay(signupDate, day)) counted++;
+    if (isGameDay(anchor, day)) counted++;
     day = addDays(day, 1);
   }
   return day;
