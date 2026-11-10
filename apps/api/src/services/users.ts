@@ -1,5 +1,5 @@
 import type { CalendarDto, MeDto, MePatchDto } from '@7gs/contracts';
-import { addDays, calendarPosition, localDateOf, seasonWindow } from '@7gs/rules';
+import { addDays, calendarPosition, isTheme, localDateOf, seasonWindow } from '@7gs/rules';
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { seasons, users, type UserRow } from '../db/schema';
@@ -61,6 +61,7 @@ export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
     startDate: user.startDate,
     headStartFrom: user.headStartFrom,
     defaultLockTime: user.defaultLockTime,
+    theme: isTheme(user.theme) ? user.theme : 'baseball',
     today,
     position: calendarPosition(user, today),
     allowances: await allowancesView(tx, user.id, today),
@@ -77,6 +78,7 @@ export async function updateMe(tx: Db, user: UserRow, patch: MePatchDto): Promis
   if (patch.displayName !== undefined) set.displayName = patch.displayName;
   if (patch.timezone !== undefined) set.timezone = patch.timezone;
   if (patch.defaultLockTime !== undefined) set.defaultLockTime = patch.defaultLockTime;
+  if (patch.theme !== undefined) set.theme = patch.theme;
   if (Object.keys(set).length === 0) return user;
   const [row] = await tx.update(users).set(set).where(eq(users.id, user.id)).returning();
   return row ?? user;

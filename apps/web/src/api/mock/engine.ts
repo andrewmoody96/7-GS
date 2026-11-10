@@ -955,6 +955,7 @@ export function toMeDto(world: UserWorld, now: Date): MeDto {
     startDate: user.startDate,
     headStartFrom: headStartFrom(user),
     defaultLockTime: user.defaultLockTime,
+    theme: user.theme ?? 'baseball',
     today,
     position: calendarPosition(user, today),
     allowances: allowancesOf(world, now),

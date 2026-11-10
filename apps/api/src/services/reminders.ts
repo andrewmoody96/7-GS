@@ -9,7 +9,7 @@
 // - plan_fri / plan_sun: Friday when next week's card opens; Sunday evening if it's unopened
 
 import type { ReminderPrefsDto, ReminderSettingsDto } from '@7gs/contracts';
-import { addDays, calendarPosition, localDateOf, localTimeOf, weekday, type LocalDate } from '@7gs/rules';
+import { addDays, calendarPosition, isTheme, localDateOf, localTimeOf, THEME_TERMS, weekday, type LocalDate } from '@7gs/rules';
 import { and, count, eq, gt, inArray, isNotNull, or } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { games, pushSubscriptions, rallyRolls, reminderSends, series, users, type UserRow } from '../db/schema';
@@ -36,6 +36,7 @@ const SUNDAY_WINDOW = ['18:00', '22:00'] as const;
 
 const between = (time: string, from: string, to: string) => time >= from && time < to;
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function listNames(names: readonly string[]): string {
   if (names.length <= 1) return names[0] ?? '';
@@ -107,6 +108,8 @@ export async function removePushSubscription(tx: Db, user: UserRow, endpoint: st
 // ── What's due ───────────────────────────────────────────────────────────────
 
 export async function dueReminders(tx: Db, user: UserRow, now: Date): Promise<DueReminder[]> {
+  // Wording follows the account's sport theme; the rules don't.
+  const words = THEME_TERMS[isTheme(user.theme) ? user.theme : 'baseball'];
   const today = localDateOf(now, user.timezone);
   const time = localTimeOf(now, user.timezone);
   const due: DueReminder[] = [];
@@ -122,8 +125,8 @@ export async function dueReminders(tx: Db, user: UserRow, now: Date): Promise<Du
 
       if (user.remindEvening && between(time, user.remindEveningAt, '23:00') && ev.result !== 'W') {
         const needs: string[] = [];
-        if (ev.runsNeeded > 0) needs.push(plural(ev.runsNeeded, 'more run', 'more runs'));
-        if (openMusts.length > 0) needs.push(plural(openMusts.length, 'must-hit', 'must-hits'));
+        if (ev.runsNeeded > 0) needs.push(words.points(ev.runsNeeded).replace(/^(\d+) /, '$1 more '));
+        if (openMusts.length > 0) needs.push(plural(openMusts.length, words.required, words.requiredPlural));
         if (ev.tasksNeeded > 0) needs.push(plural(ev.tasksNeeded, 'more task', 'more tasks'));
         due.push({
           kind: 'evening',
@@ -142,7 +145,7 @@ export async function dueReminders(tx: Db, user: UserRow, now: Date): Promise<Du
           key: `${today}:${game.slot}`,
           message: {
             title: 'Last call',
-            body: `${listNames(openMusts.map((e) => e.taskName))} ${openMusts.length === 1 ? 'is' : 'are'} still open. Must-hits close at midnight.`,
+            body: `${listNames(openMusts.map((e) => e.taskName))} ${openMusts.length === 1 ? 'is' : 'are'} still open. ${capitalize(words.requiredPlural)} close at midnight.`,
             url: '/',
             tag: `lastcall-${today}`,
           },
@@ -182,8 +185,8 @@ export async function dueReminders(tx: Db, user: UserRow, now: Date): Promise<Du
           kind: 'rally',
           key: game.id,
           message: {
-            title: 'Rally Cap available',
-            body: `Game ${game.gameNumber} went down as an L, but you can still appeal it. Roll a Rally Cap before noon.`,
+            title: `${words.comebackToken} available`,
+            body: `Game ${game.gameNumber} went down as an L, but you can still appeal it. ${words.comebackAction} before noon.`,
             url: '/',
             tag: `rally-${game.id}`,
           },
@@ -202,7 +205,7 @@ export async function dueReminders(tx: Db, user: UserRow, now: Date): Promise<Du
           key: nextMonday,
           message: {
             title: 'Next week’s lineups are open',
-            body: 'Plan the week while it’s free: set each day’s lineup, must-hits and runs to win before Monday’s first pitch.',
+            body: `Plan the week while it’s free: set each day’s lineup and ${words.requiredPlural} before the week starts on Monday.`,
             url: '/team/lineups',
             tag: `plan-${nextMonday}`,
           },

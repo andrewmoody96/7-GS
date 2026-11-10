@@ -7,13 +7,18 @@ import { useApi } from '../app/context';
 import { useReminderDevice, useRemindersQuery, useSendTestReminder, useUpdateReminders } from '../app/queries';
 import { useNotify } from '../app/toast';
 import { pushState, subscribeDevice, unsubscribeDevice, type PushState } from '../lib/push';
+import { vocab } from '../vocab';
 import { Switch } from './Controls';
 import { ErrorPanel, Loading } from './States';
 
-const KINDS: { key: Exclude<keyof ReminderPrefsDto, 'eveningAt' | 'email'>; label: string; hint: string }[] = [
+type Text = string | (() => string);
+const text = (t: Text) => (typeof t === 'function' ? t() : t);
+
+// Labels that use theme words are functions, so they follow a theme switch.
+const KINDS: { key: Exclude<keyof ReminderPrefsDto, 'eveningAt' | 'email'>; label: Text; hint: Text }[] = [
   { key: 'evening', label: 'Evening check-in', hint: 'Only if today’s game isn’t won yet.' },
-  { key: 'lastCall', label: 'Last call', hint: 'Around 10:30 p.m., only if a must-hit is still open.' },
-  { key: 'rally', label: 'Rally Cap available', hint: 'The morning after a loss you can still appeal.' },
+  { key: 'lastCall', label: 'Last call', hint: () => `Around 10:30 p.m., only if a ${vocab.term.required.toLowerCase()} is still open.` },
+  { key: 'rally', label: () => `${vocab.term.comebackToken} available`, hint: 'The morning after a loss you can still appeal.' },
   { key: 'plan', label: 'Plan next week', hint: 'Friday when next week opens, and Sunday evening if you haven’t planned it.' },
 ];
 
@@ -42,8 +47,8 @@ function Reminders({ settings: s }: { settings: ReminderSettingsDto }) {
       <ul className="reminders__kinds">
         {KINDS.map(({ key, label, hint }) => (
           <li key={key}>
-            <Switch label={label} checked={s[key]} onChange={(on) => update.mutate({ [key]: on })} />
-            <p className="field__hint">{hint}</p>
+            <Switch label={text(label)} checked={s[key]} onChange={(on) => update.mutate({ [key]: on })} />
+            <p className="field__hint">{text(hint)}</p>
             {key === 'evening' && s.evening ? (
               <div className="reminders__time">
                 <label htmlFor={timeId} className="field__label">

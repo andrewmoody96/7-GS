@@ -19,15 +19,15 @@ export function StarterEditorScreen() {
   const tasks = useTasksQuery();
   const me = useMeQuery();
 
-  if (starters.isPending || tasks.isPending) return <Loading label="Loading the starter" />;
+  if (starters.isPending || tasks.isPending) return <Loading label={`Loading the ${vocab.term.dayTemplate.toLowerCase()}`} />;
   if (starters.isError) return <ErrorPanel error={starters.error} onRetry={() => void starters.refetch()} />;
   if (tasks.isError) return <ErrorPanel error={tasks.error} onRetry={() => void tasks.refetch()} />;
   const starter = starters.data.find((s) => s.weekday === day);
   if (!starter) {
     return (
       <div className="screen">
-        <EmptyState title="No such starter">
-          <Link to="/team/rotation">Back to the rotation</Link>
+        <EmptyState title={`No such ${vocab.term.dayTemplate.toLowerCase()}`}>
+          <Link to="/team/rotation">Back to the {vocab.flavor.rotation.toLowerCase()}</Link>
         </EmptyState>
       </div>
     );
@@ -86,7 +86,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       <header className="screen__head">
         <div>
           <p className="screen__kicker">
-            <Link to="/team">Team</Link> / <Link to="/team/rotation">Rotation</Link> / {dayName}
+            <Link to="/team">Team</Link> / <Link to="/team/rotation">{vocab.flavor.rotation}</Link> / {dayName}
           </p>
           <h1 className="screen__title">
             {dayName} {vocab.term.dayTemplate}
@@ -139,7 +139,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           ) : (
             <p className="field__hint">
               {defaultLockTime
-                ? `Uses your default first pitch, ${formatTimeOfDay(defaultLockTime)}, or your first check-off if earlier.`
+                ? `Uses your default ${vocab.term.lockedAt.toLowerCase()}, ${formatTimeOfDay(defaultLockTime)}, or your first check-off if earlier.`
                 : `${vocab.lock.firstPitchOnCheckoff}.`}
             </p>
           )}

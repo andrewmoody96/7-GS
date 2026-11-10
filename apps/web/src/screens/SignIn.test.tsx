@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, type ApiClient } from '../api/client';
 import { createMockApi } from '../api/mock';
@@ -34,13 +34,17 @@ function emailingApi() {
   return { api, calls };
 }
 
+function Landing() {
+  return <p>Today screen{useLocation().search}</p>;
+}
+
 function renderSignIn(api: ApiClient) {
   render(
     <AppProviders api={api} queue={new CheckoffQueue()} queryClient={createQueryClient()}>
       <MemoryRouter initialEntries={['/sign-in']}>
         <Routes>
           <Route path="/sign-in" element={<SignInScreen />} />
-          <Route path="/" element={<p>Today screen</p>} />
+          <Route path="/" element={<Landing />} />
         </Routes>
       </MemoryRouter>
     </AppProviders>,
@@ -72,7 +76,8 @@ describe('sign-in code', () => {
 
     // Pasted with spaces (as copied from an email): digits only, then straight in.
     fireEvent.change(field, { target: { value: '482 913' } });
-    expect(await screen.findByText('Today screen')).toBeInTheDocument();
+    // A brand-new account lands on the welcome setup.
+    expect(await screen.findByText('Today screen?welcome=start')).toBeInTheDocument();
     expect(calls.filter((c) => c === 'verifyLoginCode')).toHaveLength(2);
   });
 

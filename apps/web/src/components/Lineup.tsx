@@ -21,7 +21,7 @@ interface LineupProps {
 export function Lineup({ game, final, onToggle, onPartial, oneOffIds, leavingIds, onEditTask }: LineupProps) {
   const lineup = lineupOf(game);
   if (lineup.length === 0) {
-    return <p className="empty-line">The lineup is empty. Add tasks before first pitch.</p>;
+    return <p className="empty-line">The lineup is empty. Add tasks before {vocab.term.lockedAt.toLowerCase()}.</p>;
   }
   return (
     <ol className="lineup" aria-label={vocab.terms.lineup}>

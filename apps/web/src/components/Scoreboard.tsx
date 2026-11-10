@@ -17,10 +17,20 @@ interface ScoreboardProps {
   note?: string;
 }
 
-/** Ballpark scoreboard. The opponent sits one run below your runs to win; finals never tie. */
+/**
+ * Ballpark scoreboard. The opponent sits one run below your runs to win and keeps pace
+ * while a must-hit is open; your score only goes up; finals never tie.
+ */
 export function Scoreboard({ game, opponent, teamName, status, ev, note }: ScoreboardProps) {
   const final = game.status === 'final';
-  const line = scoreline({ result: final ? game.result : null, resultDetail: game.resultDetail, runs: final ? game.runs : ev.runs, threshold: game.threshold });
+  const line = scoreline({
+    result: final ? game.result : null,
+    resultDetail: game.resultDetail,
+    runs: final ? game.runs : ev.runs,
+    threshold: game.threshold,
+    // Live: an open must-hit keeps the opponent level, so a lead is only ever earned.
+    entries: final ? undefined : game.entries,
+  });
   const runs = line.us;
   const hits = final ? game.tasksDone : ev.tasksDone;
   const oppName = opponent?.name ?? vocab.term.opponent;

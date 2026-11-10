@@ -13,6 +13,7 @@ import {
   SEASON_STATUSES,
   SERIES_LENGTH,
   SERIES_PER_SEASON,
+  THEMES,
   SERIES_RESULTS,
   STARTER_WARNINGS,
   SUSPENSION_INELIGIBLE_REASONS,
@@ -98,6 +99,8 @@ export const Me = z.object({
   /** First day of the Head Start, when the user chose to play before Opening Day. */
   headStartFrom: LocalDate.nullable(),
   defaultLockTime: TimeOfDay.nullable(),
+  /** Sport theme: words and look only, never the rules. */
+  theme: z.enum(THEMES),
   today: LocalDate,
   position: CalendarPosition,
   allowances: Allowances,
@@ -108,6 +111,7 @@ export const MePatch = z
     displayName: z.string().trim().min(1).max(40),
     timezone: TimeZone,
     defaultLockTime: TimeOfDay.nullable(),
+    theme: z.enum(THEMES),
   })
   .partial();
 

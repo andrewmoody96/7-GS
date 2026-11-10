@@ -14,14 +14,15 @@ import { Tile } from '../components/Tile';
 import { formatTimeOfDay, formatWinPct, signed } from '../lib/format';
 import { vocab } from '../vocab';
 
-const STATUS_LABEL: Record<SeasonDto['status'], string> = {
+// A function, not a constant: the labels follow the account's theme.
+const statusLabel = (): Record<SeasonDto['status'], string> => ({
   upcoming: vocab.term.preseason,
   active: 'In progress',
   offseason: vocab.term.offseason,
   complete: 'Complete',
-};
+});
 
-export const SEASON_STATUS_LABEL = STATUS_LABEL;
+export const seasonStatusLabel = (status: SeasonDto['status']) => statusLabel()[status];
 
 /** The season's game count (more in Season 1 after a Head Start) and whether a Head Start is on. */
 export function seasonTotals(me: MeDto | undefined, season: SeasonDto): { total: number; headStart: boolean } {
@@ -254,7 +255,7 @@ export function Clubhouse({ me }: { me: MeDto }) {
           <dd>{me.timezone}</dd>
         </div>
         <div>
-          <dt>Default first pitch</dt>
+          <dt>Default {vocab.term.lockedAt.toLowerCase()}</dt>
           <dd>{me.defaultLockTime ? formatTimeOfDay(me.defaultLockTime) : 'First check-off'}</dd>
         </div>
       </dl>
@@ -275,7 +276,7 @@ export function Clubhouse({ me }: { me: MeDto }) {
                   setThemePref(pref);
                 }}
               />
-              {pref === 'system' ? 'Auto' : pref === 'light' ? 'Day game' : 'Night game'}
+              {pref === 'system' ? 'Auto' : pref === 'light' ? vocab.flavor.light : vocab.flavor.dark}
             </label>
           ))}
         </div>
@@ -346,7 +347,7 @@ function DeleteAccountSheet({
       }
     >
       <p>
-        This permanently deletes every season, series and game, your tasks and rotation, and your Rally Caps and
+        This permanently deletes every season, series and game, your tasks and {vocab.flavor.rotation.toLowerCase()}, and your {vocab.terms.comebackTokens} and
         Rainouts. It signs you out on every device. <strong>It can’t be undone.</strong>
       </p>
       <p className="fine">You can sign up again later with the same email, but you’ll start from scratch.</p>

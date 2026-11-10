@@ -58,3 +58,39 @@ describe('scoreline', () => {
     }
   });
 });
+
+describe('live scoreboard: no lead until every must-hit is in', () => {
+  const t = (minute: number) => `2026-10-05T14:${String(minute).padStart(2, '0')}:00Z`;
+  const entry = (points: number, required: boolean, at: number | null) => ({
+    points,
+    required,
+    role: 'lineup' as const,
+    completedAt: at === null ? null : t(at),
+  });
+
+  it('sits at its baseline when the game has no must-hits, or you are short of it', () => {
+    expect(scoreline({ result: null, runs: 5, threshold: 4, entries: [entry(5, false, 1)] })).toMatchObject({ us: 5, them: 3 });
+    expect(scoreline({ result: null, runs: 1, threshold: 4, entries: [entry(1, false, 1), entry(1, true, null)] })).toMatchObject({ us: 1, them: 3 });
+  });
+
+  it('keeps pace while a must-hit is open: tied at best', () => {
+    const entries = [entry(1, false, 1), entry(1, false, 2), entry(1, false, 3), entry(1, false, 4), entry(1, true, null)];
+    expect(scoreline({ result: null, runs: 4, threshold: 4, entries })).toMatchObject({ us: 4, them: 4 });
+  });
+
+  it('stops where it was when the last must-hit goes in, and the lead grows from there', () => {
+    const done = [entry(1, false, 1), entry(1, false, 2), entry(1, false, 3), entry(1, false, 4), entry(1, true, 5)];
+    expect(scoreline({ result: null, runs: 5, threshold: 4, entries: done })).toMatchObject({ us: 5, them: 4 });
+    const more = [...done, entry(2, false, 6)];
+    expect(scoreline({ result: null, runs: 7, threshold: 4, entries: more })).toMatchObject({ us: 7, them: 4 });
+  });
+
+  it('shows the plain lead when the must-hits went in before the target', () => {
+    const entries = [entry(1, true, 1), entry(1, false, 2), entry(1, false, 3), entry(1, false, 4)];
+    expect(scoreline({ result: null, runs: 4, threshold: 4, entries })).toMatchObject({ us: 4, them: 3 });
+  });
+
+  it('never lets your score drop at the final: a missed must-hit puts the opponent one ahead', () => {
+    expect(scoreline({ result: 'L', resultDetail: 'forfeit', runs: 4, threshold: 4 })).toMatchObject({ us: 4, them: 5 });
+  });
+});

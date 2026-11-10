@@ -48,12 +48,12 @@ export function Bench({ game, locked, final }: BenchProps) {
         </h2>
         <p className="card__sub">
           {canSub
-            ? 'Sub in for a task that isn’t a must-hit and hasn’t scored.'
+            ? `Sub in for a task that isn’t a ${vocab.term.required.toLowerCase()} and hasn’t scored.`
             : final
               ? 'Didn’t play.'
               : canPromote
-                ? `Optional. Subs open at first pitch; ${vocab.pinchHit.makeMustHit.toLowerCase()} raises runs to win.`
-                : 'Subs open at first pitch.'}
+                ? `Optional. Subs open at ${vocab.term.lockedAt.toLowerCase()}; ${vocab.pinchHit.makeMustHit.toLowerCase()} raises ${vocab.terms.threshold.toLowerCase()}.`
+                : `Subs open at ${vocab.term.lockedAt.toLowerCase()}.`}
         </p>
       </header>
       {bench.length === 0 ? <p className="empty-line">No one on the bench yet.</p> : null}
@@ -142,7 +142,7 @@ export function Bench({ game, locked, final }: BenchProps) {
         }
       >
         {outs.length === 0 ? (
-          <p className="empty-line">No eligible spot: must-hits and tasks that already scored stay in.</p>
+          <p className="empty-line">No eligible spot: {vocab.term.required.toLowerCase()}s and tasks that already scored stay in.</p>
         ) : (
           <fieldset className="radios">
             <legend className="sr-only">Task to sub out</legend>

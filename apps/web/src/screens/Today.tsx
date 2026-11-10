@@ -92,7 +92,7 @@ export function TodayScreen() {
                   {g.postponed ? ` · ${vocab.terms.makeup}` : g.suspended ? ` · ${vocab.terms.suspended}` : ''}
                 </span>
                 <span className="dh-tab__name">{g.starterName}</span>
-                <span className="dh-tab__score">{gameScore(g.status === 'final' ? g : { runs: line.runs, threshold: g.threshold, result: null })}</span>
+                <span className="dh-tab__score">{gameScore(g.status === 'final' ? g : { runs: line.runs, threshold: g.threshold, result: null, entries: g.entries })}</span>
               </button>
             );
           })}
@@ -353,7 +353,7 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
             <h2 id={`lineup-${game.id}`} className="card__title">
               {vocab.terms.lineup}
             </h2>
-            <p className="card__sub">{final ? vocab.term.final : 'Batting order'}</p>
+            <p className="card__sub">{final ? vocab.term.final : vocab.flavor.lineupOrder}</p>
             {raise > 0 ? (
               <p className="raiseline">
                 <IconStar width={14} height={14} />
@@ -393,7 +393,7 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
       <Jumbotron
         open={celebrate}
         headline={vocab.jumbotron.inHand}
-        detail={`${gameScore({ runs: ev.runs, threshold: game.threshold, result: null })} · ${vocab.jumbotron.finalAtMidnight}`}
+        detail={`${gameScore({ runs: ev.runs, threshold: game.threshold, result: null, entries: game.entries })} · ${vocab.jumbotron.finalAtMidnight}`}
         onClose={() => setCelebrate(false)}
       />
     </article>
@@ -498,7 +498,7 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
         </button>
         <Link to="/team/rotation" className="todo__item">
           <span>
-            <strong>Build the rotation</strong>
+            <strong>Build the {vocab.flavor.rotation.toLowerCase()}</strong>
             <small>One {vocab.term.dayTemplate.toLowerCase()} per weekday: lineup, {vocab.term.required.toLowerCase()}s, runs to win.</small>
           </span>
           <IconChevronRight />
@@ -546,8 +546,8 @@ function ReviewWeek({ position }: { position: Extract<CalendarPosition, { phase:
         </Link>
         <Link to="/team/rotation" className="todo__item">
           <span>
-            <strong>Reset the rotation</strong>
-            <small>Rebuild your weekday starters for next season.</small>
+            <strong>Reset the {vocab.flavor.rotation.toLowerCase()}</strong>
+            <small>Rebuild your weekday {vocab.terms.starters.toLowerCase()} for next season.</small>
           </span>
           <IconChevronRight />
         </Link>

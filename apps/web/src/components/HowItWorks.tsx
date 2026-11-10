@@ -1,4 +1,5 @@
-import { vocab } from '../vocab';
+import { THEME_TERMS } from '@7gs/rules';
+import { activeTheme, vocab } from '../vocab';
 import { Sheet } from './Sheet';
 
 const SEEN_KEY = '7gs.howItWorksSeen';
@@ -20,9 +21,11 @@ export function markHowItWorksSeen(): void {
   }
 }
 
-/** Why the game exists and how it works in six steps: plain task words first, the baseball name second. */
+/** Why the game exists and how it works in six steps: plain task words first, the sport's name second. */
 export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const must = vocab.term.required.toLowerCase();
+  const target = vocab.terms.threshold.toLowerCase();
+  const points = vocab.term.points.toLowerCase();
   return (
     <Sheet
       open={open}
@@ -38,7 +41,7 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
       }
     >
       <p className="lede">
-        A task list you play like a baseball season. Every day is a game, every week is a best-of-7 series, and the goal is to win
+        A task list you play like a {THEME_TERMS[activeTheme()].name.toLowerCase()} season. Every day is a game, every week is a best-of-7 series, and the goal is to win
         the season.
       </p>
       <aside className="howto__why">
@@ -74,7 +77,7 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
         <li>
           <h3>Win the day</h3>
           <p>
-            Check off tasks to score runs. You get the W when you reach that day’s <strong>runs to win</strong> and finish every{' '}
+            Check off tasks to score {points}. You get the W when you reach that day’s <strong>{target}</strong> and finish every{' '}
             <strong>{must}</strong> (a task you’ve marked as required). The day ends at midnight.
           </p>
         </li>
@@ -82,15 +85,15 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
           <h3>Once the week starts: add, don’t remove</h3>
           <p>
             The week starts with your first check-off (or first pitch time) of the week. From then on you can’t remove tasks, drop
-            a {must} or lower runs to win.
+            a {must} or lower {target}.
           </p>
           <p>
             You <strong>can still add tasks</strong> to today or any later day, with + {vocab.tabs.addTask} or from the lineups:
           </p>
           <ul>
             <li>
-              <strong>{vocab.pinchHit.action}</strong> puts it in the lineup, and runs to win goes up by its runs. Added to
-              today, it’s a {must} (a “pinch hitter”). Added to a later day, you choose whether it’s a {must}.
+              <strong>{vocab.pinchHit.action}</strong> puts it in the lineup, and {target} goes up by its {points}. Added to
+              today, it’s a {must} (a “{vocab.terms.pinchHitter.toLowerCase()}”). Added to a later day, you choose whether it’s a {must}.
             </li>
             <li>
               <strong>{vocab.week.addToBench}</strong> makes it an optional extra. It can sub in for a task that isn’t a {must}.

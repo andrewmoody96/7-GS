@@ -2,6 +2,7 @@
 // Every game-concept string a component renders comes from here, so a future sport
 // skin only has to provide another `Vocab`.
 
+import type { Theme } from '@7gs/rules';
 import type {
   GameStatus,
   Phase,
@@ -68,6 +69,21 @@ export type SituationKey = 'clinch' | 'elimination' | 'game7' | 'sweepWatch' | '
 
 export interface Vocab {
   app: { name: string; shortName: string; tagline: string };
+  /** Theme flavor: words that only make sense in this sport. */
+  flavor: {
+    /** The weekday defaults as a set ("Rotation"). */
+    rotation: string;
+    /** How a lineup is ordered ("Batting order"). */
+    lineupOrder: string;
+    /** Second game of a doubleheader ("nightcap"). */
+    secondGame: string;
+    welcome: string;
+    signingIn: string;
+    serverDown: string;
+    /** Appearance choices: light and dark ("Day game" / "Night game"). */
+    light: string;
+    dark: string;
+  };
   /** One label per generic concept (the §3 glossary). */
   term: Record<GenericTerm, string>;
   /** Plural or short forms the UI needs alongside `term`. */
@@ -267,6 +283,16 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 export const baseball: Vocab = {
   app: { name: '7-Game Series', shortName: '7GS', tagline: 'Win the day. Win the week. Win the season.' },
+  flavor: {
+    rotation: 'Rotation',
+    lineupOrder: 'Batting order',
+    secondGame: 'nightcap',
+    welcome: 'Welcome to the ballpark',
+    signingIn: 'Checking your ticket…',
+    serverDown: 'The ballpark’s systems are down. Try again in a minute.',
+    light: 'Day game',
+    dark: 'Night game',
+  },
   term: {
     season: 'Season',
     offseason: 'Review Week',
@@ -549,5 +575,32 @@ export const baseball: Vocab = {
   },
 };
 
-/** The active skin. */
-export const vocab: Vocab = baseball;
+/**
+ * Each sport's wording. Basketball and hockey use baseball's until their own are written
+ * (phases 2 and 3 of the theme plan).
+ */
+const VOCABS: Record<Theme, Vocab> = { baseball, basketball: baseball, hockey: baseball };
+
+/**
+ * The active theme's words. A live object: applyTheme swaps its contents, and the app
+ * redraws below AuthGate, so everything reads the new words at render time.
+ */
+export const vocab: Vocab = { ...baseball };
+
+/** Themes that have their own words yet (the first-login sport question lists these). */
+export const AVAILABLE_THEMES: readonly Theme[] = (Object.keys(VOCABS) as Theme[]).filter(
+  (t) => t === 'baseball' || VOCABS[t] !== baseball,
+);
+let active: Theme = 'baseball';
+
+export function activeTheme(): Theme {
+  return active;
+}
+
+/** Switch the words to `theme`. Returns whether anything changed. */
+export function applyTheme(theme: Theme): boolean {
+  if (theme === active) return false;
+  Object.assign(vocab, VOCABS[theme]);
+  active = theme;
+  return true;
+}

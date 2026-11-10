@@ -8,6 +8,7 @@ import { errorMessage } from '../app/errors';
 import { deviceTimeZone } from '../app/hooks';
 import { qk, useMeQuery } from '../app/queries';
 import { Tile } from '../components/Tile';
+import { WELCOME_PARAM } from '../components/WelcomeSetup';
 import { vocab } from '../vocab';
 
 export function SignInScreen() {
@@ -32,7 +33,8 @@ export function SignInScreen() {
   const signedIn = (session: SessionDto) => {
     qc.clear();
     qc.setQueryData(qk.me, session.me);
-    navigate('/', { replace: true });
+    // A brand-new account starts with the welcome setup (sport, then look).
+    navigate(session.isNewUser ? `/?${WELCOME_PARAM}=start` : '/', { replace: true });
   };
   const verify = useMutation({
     // The device's zone becomes the account's zone on first sign-in.
@@ -62,7 +64,7 @@ export function SignInScreen() {
   return (
     <main className="signin">
       <section className="board board--hero" aria-label={vocab.app.name}>
-        <p className="board__eyebrow">Welcome to the ballpark</p>
+        <p className="board__eyebrow">{vocab.flavor.welcome}</p>
         <div className="hero-tiles" aria-hidden="true">
           <Tile value="7" size="l" />
           <span className="hero-tiles__word">Game Series</span>
@@ -71,7 +73,7 @@ export function SignInScreen() {
         <p className="signin__sub">Win the day by finishing your lineup. First to four takes the week.</p>
       </section>
 
-      {verify.isPending ? <p className="loading-line">Checking your ticket…</p> : null}
+      {verify.isPending ? <p className="loading-line">{vocab.flavor.signingIn}</p> : null}
       {verify.isError ? <p className="notice notice--error">{errorMessage(verify.error)}</p> : null}
 
       {sent ? (

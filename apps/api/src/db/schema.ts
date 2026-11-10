@@ -83,6 +83,8 @@ export const users = pgTable('users', {
   /** First day of the Head Start (playing before Opening Day); null = wait for Opening Day. */
   headStartFrom: localDate('head_start_from'),
   defaultLockTime: timeOfDay('default_lock_time'),
+  /** Sport theme (rules THEMES): cosmetic only. */
+  theme: text('theme').notNull().default('baseball'),
   /** Last local date fully settled by the finalizer. Starts the day before sign-up. */
   finalizedThrough: localDate('finalized_through').notNull(),
   createdAt: instant('created_at').notNull(),

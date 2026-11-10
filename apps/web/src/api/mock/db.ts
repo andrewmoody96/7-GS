@@ -2,6 +2,7 @@
 // docs/DATA_MODEL_AND_API.md §3 (camelCased), keeping only what the mock needs.
 
 import type { ReminderPrefsDto } from '@7gs/contracts';
+import type { Theme } from '@7gs/rules';
 import type {
   GameResult,
   GameStatus,
@@ -24,6 +25,8 @@ export interface UserRow {
   /** First day of the Head Start; absent in worlds saved before it existed. */
   headStartFrom?: LocalDate | null;
   defaultLockTime: string | null;
+  /** Sport theme; absent in worlds saved before themes. */
+  theme?: Theme;
   createdAt: string;
 }
 

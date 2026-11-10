@@ -92,6 +92,10 @@ Results:
 - **L (no appeal)**: two or more must-hits missed. Not Rally Cap eligible.
 - **W (rally)**: a loss overturned by a successful Rally Cap.
 
+**No lead until it's earned (live).** While a must-hit is open, the opponent keeps pace,
+so the best you can show is a tie. Finishing the last must-hit breaks it: the opponent
+stops where it was and every task after widens the lead. Your own score only ever goes up.
+
 **The scoreboard never shows a tied final.** Just like baseball, a game can't end 4–4.
 
 - The opponent's score is always one less than your runs to win. Reach your number and
@@ -464,6 +468,15 @@ if they choose). Each is skipped when there's nothing to say, and sent at most o
 Team → History: a career card (lifetime record, win %, series record, longest win streak,
 Rally wins, run differential, best season) and every season so far. Each season lists its
 series; a series opens the same view as the Series tab, with box scores.
+
+### Sport themes
+
+Cosmetic only: a theme changes words, colors and the scoreboard's look, never the rules.
+It's saved on the account (so notifications and emails match) and can be switched at any
+time, mid-season included. Baseball is built; basketball and hockey are next, each with
+its own display conversion (basketball scores near 100, hockey 1–5 goals) that keeps the
+same winner and never shows a lead before every must-hit is in. A new account picks its
+sport (once there's a choice) and Auto / light / dark on first sign-in.
 
 ## 10. Architecture notes
 
