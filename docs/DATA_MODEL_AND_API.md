@@ -281,7 +281,7 @@ bodies are defined as Zod schemas in `packages/contracts`.
 |---|---|---|
 | POST | `/v1/auth/magic-link` | Body: `{ email }`. Emails a link to `APP_URL/sign-in?token=…` and a 6-digit code (Gmail, Resend or Postmark). Without an email provider (dev, or `ALLOW_DEV_LOGIN=true`) the response includes `devToken` instead. With `ALLOWED_EMAILS` set, other addresses get `403 NOT_ELIGIBLE` (reason `NOT_INVITED`), and existing sessions of addresses no longer on the list get `401`. In production, 5 per address and 20 per client per 15 minutes (`429 RATE_LIMITED`). |
 | POST | `/v1/auth/verify` | Body: `{ token, timezone }`. Creates the account on first sign-in and sets an httpOnly session cookie. |
-| POST | `/v1/auth/code` | Body: `{ email, code, timezone }`. Signs in with the 6-digit code from the same email (subject: "123456 is your 7-Game Series sign-in code"). Only the newest unused email's code counts; it's single use (the link and code are one sign-in), lasts 15 minutes, and is spent after 5 wrong tries (`401`, with tries left in the message). |
+| POST | `/v1/auth/code` | Body: `{ email, code, timezone }`. Signs in with the 6-digit code from the same email (subject: "123456 is your 7-Game Series 6-digit code"). Only the newest unused email's code counts; it's single use (the link and code are one sign-in), lasts 15 minutes, and is spent after 5 wrong tries (`401`, with tries left in the message). |
 | POST | `/v1/auth/logout` | Ends the session. |
 
 ### Profile & calendar

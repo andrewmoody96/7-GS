@@ -5,6 +5,7 @@ import { getMockBackend } from '../api';
 import { isApiError } from '../api/client';
 import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
 import { hasSeenHowItWorks, HowItWorksSheet, markHowItWorksSeen } from '../components/HowItWorks';
+import { InstallHint } from '../components/InstallHint';
 import { useWelcomeStep, WelcomeSetup } from '../components/WelcomeSetup';
 import { IconBasketball, IconHelp, IconHockey, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
 import { Sheet } from '../components/Sheet';
@@ -252,6 +253,7 @@ function Shell() {
       <DemoBar />
       <TopBar />
       <main id="main" className="app__main" tabIndex={-1}>
+        <InstallHint />
         <Outlet />
       </main>
       <nav className="tabbar" aria-label="Main">

@@ -10,6 +10,7 @@ import { qk, useMeQuery } from '../app/queries';
 import { Tile } from '../components/Tile';
 import { WELCOME_PARAM } from '../components/WelcomeSetup';
 import { vocab } from '../vocab';
+import { InstallHint } from '../components/InstallHint';
 
 export function SignInScreen() {
   const api = useApi();
@@ -73,6 +74,7 @@ export function SignInScreen() {
         <p className="signin__sub">Win the day by finishing your lineup. First to four takes the week.</p>
       </section>
 
+      <InstallHint />
       {verify.isPending ? <p className="loading-line">{vocab.flavor.signingIn}</p> : null}
       {verify.isError ? <p className="notice notice--error">{errorMessage(verify.error)}</p> : null}
 
@@ -228,7 +230,7 @@ function CodeEntry({
           {isApiError(check.error) && check.error.code === 'UNAUTHORIZED' ? check.error.message : errorMessage(check.error)}
         </p>
       ) : null}
-      <p className="fine">The code works once, for 15 minutes. You can also tap the link in the email to sign in on that device.</p>
+      <p className="fine">The code works once, for 15 minutes. In a web browser, you can tap Sign in with browser in the email instead.</p>
       <button type="button" className="btn btn--quiet" disabled={wait > 0 || resending} onClick={onResend}>
         {resending ? 'Sending…' : wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}
       </button>
