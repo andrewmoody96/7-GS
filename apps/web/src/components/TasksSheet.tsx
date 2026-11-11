@@ -4,10 +4,11 @@
 // task to edit it, retire it or put it on the IL.
 
 import type { GameDto, TaskDto } from '@7gs/contracts';
-import { LIMITS, type TaskKind } from '@7gs/rules';
+import { LIMITS, pinchHitThreshold, type TaskKind } from '@7gs/rules';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { everyWeekLabel, useAddTask, useMeQuery, useTasksQuery, useWeekQuery, useWeeksQuery } from '../app/queries';
 import { weekdayShort } from '../lib/format';
+import { lineupRunsOf } from '../lib/game';
 import { isLeaving } from '../lib/tasks';
 import { vocab } from '../vocab';
 import { Stepper, Switch } from './Controls';
@@ -158,8 +159,8 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
                   : !started
                     ? `This week hasn’t started, so this is just planning: ${vocab.terms.threshold.toLowerCase()} stays ${game.threshold}.`
                     : isToday
-                      ? `The week has started, so a task added to today is a ${vocab.term.required.toLowerCase()}. ${vocab.terms.threshold} goes ${game.threshold} → ${game.threshold + points}.`
-                      : `${vocab.terms.threshold} goes ${game.threshold} → ${game.threshold + points}, so the day gets no easier.`}
+                      ? `The week has started, so a task added to today is a ${vocab.term.required.toLowerCase()}. ${vocab.terms.threshold} goes ${game.threshold} → ${pinchHitThreshold(game.threshold, points, lineupRunsOf(game))}.`
+                      : `${vocab.terms.threshold} goes ${game.threshold} → ${pinchHitThreshold(game.threshold, points, lineupRunsOf(game))}, so the day gets no easier.`}
               </p>
             </div>
           ) : null}

@@ -56,6 +56,14 @@ describe('weekly lineup card', () => {
 
   it('raises runs to win by exactly a pinch hitter’s runs', () => {
     expect(pinchHitThreshold(4, 2)).toBe(6);
+    expect(pinchHitThreshold(4, 2, 10)).toBe(6);
+  });
+
+  it('never carries an out-of-reach day forward: doing every task wins', () => {
+    // An empty day that needs 1 run: the first pinch hitter sets the bar to its own runs.
+    expect(pinchHitThreshold(1, 2, 0)).toBe(2);
+    // Runs to win 9 from an 8-run lineup: the bar restarts from 8.
+    expect(pinchHitThreshold(9, 2, 8)).toBe(10);
   });
 
   it('carries one-offs to the next game day, skipping Review Week', () => {

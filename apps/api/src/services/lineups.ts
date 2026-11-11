@@ -27,6 +27,7 @@ import {
   type GameRow,
   type TaskRow,
   type UserRow,
+  ilHolds,
 } from '../db/schema';
 import { conflict, notFound } from '../errors';
 import { uuidv7 } from '../ids';
@@ -220,7 +221,8 @@ export type PinchHitOutcome = 'added' | 'promoted' | 'required' | 'already_requi
 /**
  * Make `task` a must-hit in `game` as a pinch hitter (GAME_DESIGN §4a): a new lineup
  * entry at the end of the batting order, or a bench entry promoted. Runs to win rises by
- * exactly its points (rules.pinchHitThreshold), because those runs are new to the lineup.
+ * exactly its points (rules.pinchHitThreshold), because those runs are new to the lineup;
+ * a day that was already out of reach restarts from what its lineup could score.
  * A non-required lineup entry just becomes required: its runs were already available, so
  * runs to win stays put and the cushion is unchanged. An entry
  * that is already a must-hit is left as it is (only marked `carriedOver` when asked), so
@@ -250,6 +252,9 @@ export async function addPinchHit(
   }
 
   const nextPosition = Math.max(0, ...entries.filter((e) => e.role === 'lineup').map((e) => e.position)) + 1;
+  // What the lineup could score, counting spots held for tasks on the IL (they come back).
+  const held = await tx.select({ points: ilHolds.points }).from(ilHolds).where(and(eq(ilHolds.gameId, game.id), eq(ilHolds.role, 'lineup')));
+  const lineupRuns = [...entries.filter((e) => e.role === 'lineup'), ...held].reduce((sum, e) => sum + e.points, 0);
   const points = existing?.points ?? task.points;
   let outcome: PinchHitOutcome;
   if (!existing) {
@@ -286,7 +291,7 @@ export async function addPinchHit(
       })
       .where(eq(lineupEntries.id, existing.id));
   }
-  const threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(game.threshold ?? 1, points));
+  const threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(game.threshold ?? 1, points, lineupRuns));
   const [row] = await tx.update(games).set({ threshold }).where(eq(games.id, game.id)).returning();
   return { game: await refreshScore(tx, row ?? (await reloadGame(tx, game.id))), outcome };
 }

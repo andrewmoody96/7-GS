@@ -514,7 +514,11 @@ function addPinchHit(
     return;
   }
   const lastPosition = Math.max(0, ...game.entries.filter((e) => e.role === 'lineup').map((e) => e.position));
-  snapshot.threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(snapshot.threshold, task.points));
+  const lineupRuns = [...game.entries.filter((e) => e.role === 'lineup'), ...game.ilHolds.filter((h) => h.role === 'lineup')].reduce(
+    (sum, e) => sum + e.points,
+    0,
+  );
+  snapshot.threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(snapshot.threshold, task.points, lineupRuns));
   if (existing) {
     // Promote from the bench.
     existing.position = lastPosition + 1;

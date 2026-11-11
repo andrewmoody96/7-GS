@@ -151,6 +151,11 @@ Like a fantasy lineup, each series is planned as a week.
     day's runs to win rises by exactly the task's runs, so the cushion between runs to
     win and available runs stays the same. On the scoreboard the opponent "answers back"
     with the same number of runs.
+    **Exception, an out-of-reach day:** if runs to win was already above everything the
+    lineup could score (an empty default day still needs 1 run, or a target set too
+    high), the raise starts from what the lineup could score instead, so doing every task
+    always wins. Spots held for tasks on the IL count as scoreable. Migration 0008
+    repaired unfinished days the old rule had left out of reach.
   - **Regular task, later days only:** when adding to tomorrow or any later day, the user
     chooses whether the task is a must-hit. Left off, it joins the lineup as a regular
     task: it scores runs when done and skipping it doesn't lose the day by itself. Runs to
