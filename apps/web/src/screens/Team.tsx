@@ -1,5 +1,7 @@
-// Team: the season at a glance (record, pace, goal) and the sections that run the team:
-// this week's lineups, the weekday rotation, the Injured List and settings.
+// Team: the season at a glance (record, pace, goal) and the sections that run the team.
+// Management (Coaching in basketball and hockey) holds the planning: This Week (only this
+// week's days), Default Lineups (what every new week starts with) and Injuries. Then Team
+// History and Settings.
 
 import type { StarterDto, TaskDto } from '@7gs/contracts';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -14,7 +16,7 @@ import {
   useTasksQuery,
 } from '../app/queries';
 import { useTasksModal } from '../app/tasksModal';
-import { IconChevronRight, IconWarning } from '../components/icons';
+import { IconChevronRight, IconInfo, IconWarning } from '../components/icons';
 import { RemindersCard } from '../components/RemindersCard';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { AllowanceChips, IlExplainer, TaskGroup, TaskSheet } from '../components/TaskViews';
@@ -27,14 +29,10 @@ import { WeekCardView } from './WeekCard';
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 export const TEAM_SECTIONS = {
-  lineups: 'This week’s lineups',
-  get rotation() {
-    return vocab.flavor.rotation;
-  },
-  get il() {
-    return vocab.term.paused;
-  },
-  history: 'History',
+  lineups: 'This Week',
+  rotation: 'Default Lineups',
+  il: 'Injuries',
+  history: 'Team History',
   settings: 'Settings',
 } as const;
 
@@ -78,16 +76,25 @@ export function TeamScreen() {
         <AllowanceChips allowances={me.data?.allowances} />
       </header>
       {s && totals ? <Standings season={s} total={totals.total} /> : null}
-      <nav className="todo teamnav" aria-label={vocab.tabs.team}>
-        <TeamLink to="/team/lineups" title={TEAM_SECTIONS.lineups} sub="Plan each day and add to days already under way." />
-        <TeamLink to="/team/rotation" title={TEAM_SECTIONS.rotation} sub="Your default lineup for each weekday." />
-        <TeamLink
-          to="/team/il"
-          title={TEAM_SECTIONS.il}
-          sub={injured > 0 ? `${injured} ${injured === 1 ? 'task' : 'tasks'} sitting out.` : 'Rest a task without lowering the bar.'}
-        />
-        <TeamLink to="/team/history" title={TEAM_SECTIONS.history} sub="Every past series and season, and your career stats." />
-        <TeamLink to="/team/settings" title={TEAM_SECTIONS.settings} sub="Team name, theme, reminders, sign out and your account." />
+      <nav className="teamnav" aria-label={vocab.tabs.team}>
+        <h2 className="teamnav__head">{vocab.flavor.management}</h2>
+        <div className="todo">
+          <TeamLink to="/team/lineups" title={TEAM_SECTIONS.lineups} sub="This week’s days, one by one. Changes here don’t repeat." />
+          <TeamLink to="/team/rotation" title={TEAM_SECTIONS.rotation} sub="What each weekday starts with, every new week." />
+          <TeamLink
+            to="/team/il"
+            title={TEAM_SECTIONS.il}
+            sub={
+              injured > 0
+                ? `${injured} ${injured === 1 ? 'task' : 'tasks'} on hold.`
+                : 'Put a task on hold without it costing you games.'
+            }
+          />
+        </div>
+        <div className="todo teamnav__more">
+          <TeamLink to="/team/history" title={TEAM_SECTIONS.history} sub="Past series and seasons, and your career stats." />
+          <TeamLink to="/team/settings" title={TEAM_SECTIONS.settings} sub="Name, sport, look, reminders and account." />
+        </div>
       </nav>
       {s && totals ? (
         <>
@@ -120,6 +127,16 @@ function TeamLink({ to, title, sub }: { to: string; title: string; sub: string }
 export function LineupsScreen() {
   return (
     <SubPage title={TEAM_SECTIONS.lineups} className="screen--board">
+      <aside className="explainer explainer--plan">
+        <IconInfo />
+        <div>
+          <p className="explainer__title">Only this week</p>
+          <p>
+            Changes here are for these days only and don’t repeat. Next week’s days open here on Friday. For a task you want
+            every week, add it to <Link to="/team/rotation">{TEAM_SECTIONS.rotation}</Link>.
+          </p>
+        </div>
+      </aside>
       <WeekCardView />
     </SubPage>
   );
@@ -320,10 +337,17 @@ function Rotation() {
   const byId = new Map((tasks.data ?? []).map((t) => [t.id, t]));
   return (
     <section aria-label={vocab.flavor.rotation}>
-      <p className="lede">
-        Your default plan for each weekday, used to fill in future weeks. It doesn’t change days already on this week’s{' '}
-        {vocab.week.title}. To add a task to this week, use <strong>+ Add task</strong> or <Link to="/team/lineups">{TEAM_SECTIONS.lineups}</Link>.
-      </p>
+      <aside className="explainer explainer--plan">
+        <IconInfo />
+        <div>
+          <p className="explainer__title">Every week starts here</p>
+          <p>
+            A new week copies these when it opens (next week opens Friday). When you save a day, it also updates that day on
+            weeks already open, unless the week has started. To change one day only, use{' '}
+            <Link to="/team/lineups">{TEAM_SECTIONS.lineups}</Link>.
+          </p>
+        </div>
+      </aside>
       <ol className="rotation">
         {(starters.data ?? []).map((s) => (
           <li key={s.weekday}>

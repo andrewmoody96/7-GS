@@ -32,7 +32,15 @@ export function StarterEditorScreen() {
       </div>
     );
   }
-  return <StarterForm key={starter.weekday} starter={starter} tasks={tasks.data} defaultLockTime={me.data?.defaultLockTime ?? null} />;
+  return (
+    <StarterForm
+      key={starter.weekday}
+      starter={starter}
+      tasks={tasks.data}
+      defaultLockTime={me.data?.defaultLockTime ?? null}
+      today={me.data?.today ?? null}
+    />
+  );
 }
 
 function toSlot(taskId: string, required: boolean, tasks: Map<string, TaskDto>): EditorSlot {
@@ -40,7 +48,17 @@ function toSlot(taskId: string, required: boolean, tasks: Map<string, TaskDto>):
   return { taskId, name: task?.name ?? 'Unknown task', points: task?.points ?? 1, required, status: task?.status };
 }
 
-function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto; tasks: TaskDto[]; defaultLockTime: string | null }) {
+function StarterForm({
+  starter,
+  tasks,
+  defaultLockTime,
+  today,
+}: {
+  starter: StarterDto;
+  tasks: TaskDto[];
+  defaultLockTime: string | null;
+  today: string | null;
+}) {
   const navigate = useNavigate();
   const put = usePutStarter();
   const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
@@ -50,6 +68,7 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
   const [lockTime, setLockTime] = useState<string | null>(starter.lockTime);
   const [lineup, setLineup] = useState<EditorSlot[]>(() => starter.lineup.map((s) => toSlot(s.taskId, s.required, byId)));
   const [bench, setBench] = useState<EditorSlot[]>(() => starter.bench.map((s) => toSlot(s.taskId, false, byId)));
+  const [alsoThisWeek, setAlsoThisWeek] = useState(true);
   const nameId = useId();
   const timeId = useId();
 
@@ -77,6 +96,10 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
           lineup: lineup.map((s, i) => ({ taskId: s.taskId, position: i + 1, required: s.required })),
           bench: bench.map((s, i) => ({ taskId: s.taskId, position: i + 1 })),
         },
+        alsoThisWeek:
+          alsoThisWeek && today
+            ? { today, activeIds: new Set(tasks.filter((t) => t.status === 'active').map((t) => t.id)) }
+            : undefined,
       },
       { onSuccess: () => navigate('/team/rotation') },
     );
@@ -86,10 +109,10 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       <header className="screen__head">
         <div>
           <p className="screen__kicker">
-            <Link to="/team">Team</Link> / <Link to="/team/rotation">{vocab.flavor.rotation}</Link> / {dayName}
+            <Link to="/team">{vocab.tabs.team}</Link> / <Link to="/team/rotation">{vocab.flavor.rotation}</Link> /
           </p>
           <h1 className="screen__title">
-            {dayName} {vocab.term.dayTemplate}
+            {dayName}
           </h1>
         </div>
       </header>
@@ -97,10 +120,10 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
       <aside className="explainer">
         <IconInfo />
         <div>
-          <p className="explainer__title">This is your default {dayName}</p>
+          <p className="explainer__title">Your default {dayName}</p>
           <p>
-            It fills in future weeks. A {dayName} that’s already on your {vocab.week.title} doesn’t change. To add a task to this
-            week, use <strong>+ Add task</strong> or <Link to="/team/lineups">this week’s lineups</Link>.
+            Every new week’s {dayName} starts with this lineup. To change just one {dayName}, edit it on{' '}
+            <Link to="/team/lineups">This Week</Link> instead.
           </p>
         </div>
       </aside>
@@ -186,6 +209,15 @@ function StarterForm({ starter, tasks, defaultLockTime }: { starter: StarterDto;
             }}
           />
         </details>
+      </section>
+
+      <section className="card form">
+        <Switch label={`Also update ${dayName} on This Week`} checked={alsoThisWeek} onChange={setAlsoThisWeek} />
+        <p className="field__hint">
+          {alsoThisWeek
+            ? `Any ${dayName} already open on This Week gets this lineup too, unless its week has started.`
+            : `Only weeks that open from now on use this. ${dayName}s already open on This Week keep their lineup.`}
+        </p>
       </section>
 
       <div className="actions actions--sticky">

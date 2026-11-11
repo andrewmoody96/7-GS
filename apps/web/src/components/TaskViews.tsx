@@ -261,7 +261,7 @@ export function TaskSheet({ task, today, onClose }: { task: TaskDto; today: Loca
           {confirmRetire ? (
             <>
               <p>
-                <strong>Delete “{task.name}”?</strong> It comes off your task list, your Rotation and any day you haven’t started.
+                <strong>Delete “{task.name}”?</strong> It comes off your task list, your Default Lineups and any day you haven’t started.
                 {task.lockedThrough
                   ? ` It stays in this week’s lineups through ${weekdayLong(task.lockedThrough)} and still counts there.`
                   : ''}{' '}

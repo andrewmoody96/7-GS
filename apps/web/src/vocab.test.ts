@@ -17,11 +17,14 @@ describe('sport themes', () => {
     expect(vocab.terms.runsShort).toBe('G');
     expect(vocab.runs(2)).toBe('2 shots');
     expect(document.documentElement.dataset.sport).toBe('hockey');
+    expect(vocab.flavor.management).toBe('Coaching');
     applyTheme('basketball');
     expect(vocab.term.required).toBe('Must-make');
+    expect(vocab.flavor.management).toBe('Coaching');
     expect(vocab.jumbotron.walkOff).toBe('Buzzer beater');
     applyTheme('baseball');
     expect(vocab.term.required).toBe('Must-hit');
     expect(vocab.jumbotron.walkOff).toBe('Walk-off W');
+    expect(vocab.flavor.management).toBe('Management');
   });
 });

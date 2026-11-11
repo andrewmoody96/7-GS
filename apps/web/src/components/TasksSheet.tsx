@@ -1,11 +1,12 @@
 // The Add task window, opened from the + in the tab bar on any screen. Add a task and,
-// if you like, put it straight into today or a later day this week. Your full task list
-// lives here too: tap a task to edit it, retire it or put it on the IL.
+// if you like, put it on a day this week (that day only) and, for a repeating task, on
+// weekdays every week (its Default Lineups). Your full task list lives here too: tap a
+// task to edit it, retire it or put it on the IL.
 
 import type { GameDto, TaskDto } from '@7gs/contracts';
 import { LIMITS, type TaskKind } from '@7gs/rules';
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { useAddTask, useMeQuery, useTasksQuery, useWeekQuery, useWeeksQuery } from '../app/queries';
+import { everyWeekLabel, useAddTask, useMeQuery, useTasksQuery, useWeekQuery, useWeeksQuery } from '../app/queries';
 import { weekdayShort } from '../lib/format';
 import { isLeaving } from '../lib/tasks';
 import { vocab } from '../vocab';
@@ -13,6 +14,8 @@ import { Stepper, Switch } from './Controls';
 import { IconPlus } from './icons';
 import { Sheet } from './Sheet';
 import { KindPicker, TaskGroup, TaskSheet } from './TaskViews';
+
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 /** Games still open to additions this week, today first. */
 function schedulableGames(games: readonly GameDto[], today: string): GameDto[] {
@@ -42,8 +45,10 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const [kind, setKind] = useState<TaskKind>('recurring');
   const [gameId, setGameId] = useState<string | null>(null);
   const [mustHit, setMustHit] = useState(true);
+  const [repeatDays, setRepeatDays] = useState<number[]>([]);
   const nameId = useId();
   const whenId = useId();
+  const repeatId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -52,6 +57,7 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
     setKind('recurring');
     setGameId(null);
     setMustHit(true);
+    setRepeatDays([]);
   }, [open]);
 
   const today = me.data?.today ?? '';
@@ -59,9 +65,12 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const game = games.find((g) => g.id === gameId) ?? null;
   const started = game?.editPolicy === 'additions_only';
   const isToday = game?.playedDate === today;
+  const repeating = kind === 'recurring' ? repeatDays : [];
   // Once the week has started, a task added to today is always a must-hit.
-  const canChoose = game !== null && !(started && isToday);
+  const canChoose = (game !== null && !(started && isToday)) || repeating.length > 0;
   const required = started && isToday ? true : mustHit;
+  const toggleDay = (day: number) =>
+    setRepeatDays((days) => (days.includes(day) ? days.filter((d) => d !== day) : [...days, day].sort((a, b) => a - b)));
 
   const all = tasks.data ?? [];
   const active = all.filter((t) => t.status === 'active');
@@ -75,7 +84,11 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
     e?.preventDefault();
     if (!name.trim() || add.isPending) return;
     add.mutate(
-      { body: { name: name.trim(), points, kind }, schedule: game ? { game, required } : null },
+      {
+        body: { name: name.trim(), points, kind },
+        schedule: game ? { game, required } : null,
+        everyWeek: repeating.length > 0 && today ? { weekdays: repeating, required: mustHit, today } : null,
+      },
       { onSuccess: onClose },
     );
   };
@@ -119,12 +132,12 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
           {games.length > 0 ? (
             <div className="field">
               <span className="field__label" id={whenId}>
-                Put it in a lineup
+                This week
               </span>
               <div className="daychips" role="radiogroup" aria-labelledby={whenId}>
                 <label className={`daychip${gameId === null ? ' is-selected' : ''}`}>
                   <input type="radio" name="addtask-when" className="sr-only" checked={gameId === null} onChange={() => setGameId(null)} />
-                  Not yet
+                  No day
                 </label>
                 {games.map((g) => (
                   <label key={g.id} className={`daychip${gameId === g.id ? ' is-selected' : ''}`}>
@@ -141,12 +154,33 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
               </div>
               <p className="field__hint">
                 {game === null
-                  ? 'It goes on your task list. You can put it in any day’s lineup later.'
+                  ? 'Pick a day to add it to that day only.'
                   : !started
                     ? `This week hasn’t started, so this is just planning: ${vocab.terms.threshold.toLowerCase()} stays ${game.threshold}.`
                     : isToday
                       ? `The week has started, so a task added to today is a ${vocab.term.required.toLowerCase()}. ${vocab.terms.threshold} goes ${game.threshold} → ${game.threshold + points}.`
                       : `${vocab.terms.threshold} goes ${game.threshold} → ${game.threshold + points}, so the day gets no easier.`}
+              </p>
+            </div>
+          ) : null}
+
+          {kind === 'recurring' ? (
+            <div className="field">
+              <span className="field__label" id={repeatId}>
+                Every week
+              </span>
+              <div className="daychips" role="group" aria-labelledby={repeatId}>
+                {WEEKDAYS.map((label, i) => (
+                  <label key={label} className={`daychip${repeatDays.includes(i + 1) ? ' is-selected' : ''}`}>
+                    <input type="checkbox" className="sr-only" checked={repeatDays.includes(i + 1)} onChange={() => toggleDay(i + 1)} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <p className="field__hint">
+                {repeating.length === 0
+                  ? 'Pick weekdays to put it in your Default Lineups, so every week starts with it.'
+                  : `Every ${everyWeekLabel(repeating)} starts with it, including days already open this week that haven’t started. ${vocab.terms.threshold} doesn’t change.`}
               </p>
             </div>
           ) : null}
