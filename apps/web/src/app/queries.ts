@@ -576,8 +576,6 @@ export function usePutStarter() {
             await api.call('patchLineup', {
               params: { gameId: game.id },
               body: {
-                threshold: v.body.threshold,
-                minTasks: v.body.minTasks,
                 entries: [
                   ...usable(v.body.lineup).map((s) => ({ ...s, role: 'lineup' as const })),
                   ...usable(v.body.bench).map((s) => ({ ...s, required: false, role: 'bench' as const })),
@@ -666,8 +664,6 @@ export function useAddTask() {
             params: { weekday: day },
             body: {
               name: s.name,
-              threshold: s.threshold,
-              minTasks: s.minTasks,
               lockTime: s.lockTime,
               lineup: [...s.lineup, { taskId: task.id, position: s.lineup.length + 1, required }],
               bench: s.bench,

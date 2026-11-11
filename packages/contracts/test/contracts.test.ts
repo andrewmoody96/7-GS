@@ -23,17 +23,17 @@ describe('primitives and schemas', () => {
     expect(TaskCreate.safeParse({ name: 'x', points: 0 }).success).toBe(false);
   });
 
-  it('requires a threshold of at least 1', () => {
-    const starter = { name: 'Gym Day', threshold: 0, minTasks: null, lockTime: null, lineup: [], bench: [] };
-    expect(StarterPut.safeParse(starter).success).toBe(false);
-    expect(StarterPut.safeParse({ ...starter, threshold: 1 }).success).toBe(true);
+  it('takes no runs to win or minimum: both come from the lineup', () => {
+    const starter = { name: 'Gym Day', lockTime: null, lineup: [], bench: [] };
+    const parsed = StarterPut.parse({ ...starter, threshold: 9, minTasks: 3 });
+    expect(parsed).toEqual(starter);
+    expect(LineupPatch.parse({ threshold: 2, entries: [] })).toEqual({ entries: [] });
   });
 
   it('validates times and dates', () => {
-    const ok = { name: 'A', threshold: 1, minTasks: null, lockTime: '09:00', lineup: [], bench: [] };
+    const ok = { name: 'A', lockTime: '09:00', lineup: [], bench: [] };
     expect(StarterPut.safeParse(ok).success).toBe(true);
     expect(StarterPut.safeParse({ ...ok, lockTime: '24:00' }).success).toBe(false);
-    expect(LineupPatch.safeParse({ threshold: 2 }).success).toBe(true);
   });
 
   it('accepts rules output where the contract embeds it', () => {

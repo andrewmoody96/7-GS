@@ -9,7 +9,7 @@ import { rallyRolls, seasons, type EntryRow, type GameRow, type SeasonRow, type 
 import { iso, slotOf, sortEntries, toEntryDto, toRallyRollDto } from './dto';
 import { loadEntries } from './lineups';
 import { seasonFinalGames, seasonWinStreaks, seriesGames } from './standings';
-import { ensureStarters, projectStarter, type StarterProjection } from './starters';
+import { ensureStarters, projectStarter, startersThresholds, type StarterProjection } from './starters';
 import { editPolicyOf, weekLocks } from './weeks';
 import { holdsByGame } from './ilHolds';
 
@@ -21,12 +21,14 @@ async function projections(
 ): Promise<Map<string, StarterProjection>> {
   const unbuilt = rows.filter((r) => !r.lineupBuiltAt);
   if (unbuilt.length === 0) return new Map();
-  const starters = new Map((await ensureStarters(tx, user, now)).map((s) => [s.weekday, s]));
+  const all = await ensureStarters(tx, user, now);
+  const thresholds = await startersThresholds(tx, user.id, all);
+  const starters = new Map(all.map((s) => [s.weekday, s]));
   return new Map(
     unbuilt.map((r) => {
       const starter = starters.get(weekday(r.scheduledDate));
       if (!starter) throw new Error(`No starter for ${r.scheduledDate}`);
-      return [r.id, projectStarter(starter, user)];
+      return [r.id, projectStarter(starter, user, thresholds.get(starter.id) ?? 1)];
     }),
   );
 }

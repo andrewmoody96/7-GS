@@ -271,8 +271,6 @@ function GameCard({ game, series, teamName, timeZone, doubleheader }: GameCardPr
       {
         gameId: game.id,
         patch: {
-          threshold: state.threshold,
-          minTasks: state.minTasks,
           entries: [
             ...state.lineup.map((s, i) => ({ taskId: s.taskId, position: i + 1, required: s.required, role: 'lineup' as const })),
             ...state.bench.map((s, i) => ({ taskId: s.taskId, position: i + 1, required: false, role: 'bench' as const })),

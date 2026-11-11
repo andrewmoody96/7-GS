@@ -1,9 +1,9 @@
 import type { GameDto, TaskDto } from '@7gs/contracts';
-import { LIMITS, starterWarnings } from '@7gs/rules';
+import { lineupThreshold, starterWarnings } from '@7gs/rules';
 import { useMemo, useState } from 'react';
 import { benchOf, lineupOf } from '../lib/game';
 import { vocab } from '../vocab';
-import { Stepper, Switch } from './Controls';
+import { Switch } from './Controls';
 import { IconDown, IconPlus, IconUp, IconWarning, IconX } from './icons';
 
 export interface EditorSlot {
@@ -18,8 +18,6 @@ export interface EditorSlot {
 export interface EditorState {
   lineup: EditorSlot[];
   bench: EditorSlot[];
-  threshold: number;
-  minTasks: number | null;
 }
 
 export function editorStateFromGame(game: GameDto): EditorState {
@@ -32,8 +30,6 @@ export function editorStateFromGame(game: GameDto): EditorState {
   return {
     lineup: lineupOf(game).map(slot),
     bench: benchOf(game).map(slot),
-    threshold: game.threshold,
-    minTasks: game.minTasks,
   };
 }
 
@@ -194,7 +190,30 @@ interface LineupEditorProps {
   onCancel: () => void;
 }
 
-/** Pre-first-pitch editing: order, add/remove, must-hits, threshold and minimum. */
+/**
+ * Runs to win as the lineup works it out (rules.lineupThreshold): every must-hit's runs plus
+ * half the rest, rounded up. Tasks on the IL keep their spot, so they count.
+ */
+export function RunsToWinLine({ lineup }: { lineup: readonly Pick<EditorSlot, 'points' | 'required'>[] }) {
+  const threshold = lineupThreshold(lineup);
+  const total = lineup.reduce((sum, s) => sum + s.points, 0);
+  const must = lineup.filter((s) => s.required).reduce((sum, s) => sum + s.points, 0);
+  return (
+    <div className="field runstowin">
+      <p className="runstowin__line">
+        <span className="field__label">{vocab.terms.threshold}</span>{' '}
+        <strong>{threshold}</strong> <span className="muted">of {vocab.runs(total)}</span>
+      </p>
+      <p className="field__hint">
+        {lineup.length === 0
+          ? `An empty day needs 1 ${vocab.runs(1).replace(/^1 /, '')} and can’t be won. Add a task to give it a chance.`
+          : `Your ${vocab.term.required.toLowerCase()}s (${must}) plus half of everything else, rounded up. It updates as you change the lineup.`}
+      </p>
+    </div>
+  );
+}
+
+/** Pre-first-pitch editing: order, add/remove and must-hits. Runs to win follows the lineup. */
 export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEditorProps) {
   const [state, setState] = useState<EditorState>(() => editorStateFromGame(game));
   const used = useMemo(() => new Set([...state.lineup, ...state.bench].map((s) => s.taskId)), [state]);
@@ -204,8 +223,8 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
       ...state.lineup.map((s) => ({ taskId: s.taskId, points: s.points, role: 'lineup' as const })),
       ...state.bench.map((s) => ({ taskId: s.taskId, points: s.points, role: 'bench' as const })),
     ],
-    state.threshold,
-    state.minTasks,
+    lineupThreshold(state.lineup),
+    null,
   );
 
   return (
@@ -215,32 +234,7 @@ export function LineupEditor({ game, tasks, saving, onSave, onCancel }: LineupEd
         <p className="card__sub">Locks at {vocab.term.lockedAt.toLowerCase()}.</p>
       </header>
 
-      <div className="editor__rules">
-        <Stepper
-          label={vocab.terms.threshold}
-          value={state.threshold}
-          min={1}
-          max={LIMITS.thresholdMax}
-          suffix={vocab.terms.valueShort}
-          onChange={(threshold) => setState((s) => ({ ...s, threshold }))}
-        />
-        <div className="field">
-          <Switch
-            label={vocab.terms.minTasks}
-            checked={state.minTasks !== null}
-            onChange={(on) => setState((s) => ({ ...s, minTasks: on ? Math.max(1, s.lineup.length) : null }))}
-          />
-          {state.minTasks !== null ? (
-            <Stepper
-              label={`${vocab.terms.minTasks} (tasks done)`}
-              value={state.minTasks}
-              min={1}
-              max={LIMITS.minTasksMax}
-              onChange={(minTasks) => setState((s) => ({ ...s, minTasks }))}
-            />
-          ) : null}
-        </div>
-      </div>
+      <RunsToWinLine lineup={state.lineup} />
 
       <Warnings warnings={warnings} />
 

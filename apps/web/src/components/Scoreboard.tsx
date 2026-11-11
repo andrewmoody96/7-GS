@@ -89,7 +89,7 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
               <Tile value={line.them} />
             </td>
             <td>
-              <Tile value={game.minTasks ?? '–'} label={game.minTasks === null ? 'No minimum' : undefined} />
+              <Tile value="–" />
             </td>
             {result ? <td /> : null}
           </tr>

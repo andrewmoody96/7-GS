@@ -10,6 +10,7 @@ import {
   endOfLocalDay,
   evaluateGame,
   LIMITS,
+  lineupThreshold,
   pinchHitThreshold,
   startOfLocalDay,
   weekday,
@@ -33,6 +34,8 @@ import { conflict, notFound } from '../errors';
 import { uuidv7 } from '../ids';
 import { starterFor } from './starters';
 import { recordHolds, type HeldSpot } from './ilHolds';
+import { seriesGames } from './standings';
+import { weekLockOf } from './weeks';
 
 export async function loadUserGame(
   tx: Db,
@@ -134,7 +137,7 @@ export async function refreshScore(tx: Db, game: GameRow): Promise<GameRow> {
 }
 
 /**
- * Snapshot the starter into the game (rules.buildLineup) — threshold, minimum, lock time
+ * Snapshot the starter into the game (rules.buildLineup) — runs to win from its lineup, lock time
  * (falling back to the user's default) and the time zone — even if the day is past
  * (the finalizer builds never-opened games before deciding them).
  */
@@ -168,13 +171,22 @@ export async function buildLineupNow(tx: Db, user: UserRow, game: GameRow, now: 
     roster,
   );
 
+  // Runs to win from the lineup (rules.lineupThreshold). Spots held for tasks on the IL
+  // count, so the IL never lowers the bar.
+  const threshold = lineupThreshold(
+    slots
+      .filter((s) => s.role === 'lineup')
+      .map((s) => ({ slot: s, task: roster.find((t) => t.id === s.taskId) }))
+      .filter((x) => x.task && (x.task.status === 'active' || x.task.status === 'injured'))
+      .map((x) => ({ points: x.task!.points, required: x.slot.required })),
+  );
   const [claimed] = await tx
     .update(games)
     .set({
       templateId: starter.id,
       starterName: starter.name,
-      threshold: starter.threshold,
-      minTasks: starter.minTasks,
+      threshold,
+      minTasks: null,
       lockTime: starter.lockTime ?? user.defaultLockTime,
       timeZone: user.timezone,
       lineupBuiltAt: now,
@@ -229,18 +241,23 @@ export type PinchHitOutcome = 'added' | 'promoted' | 'required' | 'already_requi
  * a task is never in a game twice. Callers check the game is still open.
  *
  * With `required: false` the task joins (or comes off the bench) as a regular lineup
- * task instead: not a must-hit, but runs to win still rises by its points, so the day
- * gets no easier. Callers only allow that for a later day, and never for a task that is
+ * task instead. Callers only allow that for a later day, and never for a task that is
  * already batting.
+ *
+ * Before the week's first pitch (`weekLocked: false`) the day is still being planned, so
+ * runs to win is simply worked out again from the lineup (rules.lineupThreshold). Once the
+ * week is locked, only a new must-hit raises it (rules.pinchHitThreshold); a regular task
+ * or an existing task becoming a must-hit leaves it where it is.
  */
 export async function addPinchHit(
   tx: Db,
   game: GameRow,
   task: Pick<TaskRow, 'id' | 'name' | 'points'>,
   now: Date,
-  options: { carriedOver?: boolean; required?: boolean } = {},
+  options: { carriedOver?: boolean; required?: boolean; weekLocked: boolean },
 ): Promise<{ game: GameRow; outcome: PinchHitOutcome }> {
   const carriedOver = options.carriedOver ?? false;
+  const weekLocked = options.weekLocked;
   const required = options.required ?? true;
   const entries = await loadEntries(tx, [game.id]);
   const existing = entries.find((e) => e.taskId === task.id);
@@ -276,7 +293,8 @@ export async function addPinchHit(
       .update(lineupEntries)
       .set({ required: true, carriedOver: existing.carriedOver || carriedOver })
       .where(eq(lineupEntries.id, existing.id));
-    return { game: await refreshScore(tx, game), outcome: 'required' };
+    if (weekLocked) return { game: await refreshScore(tx, game), outcome: 'required' };
+    outcome = 'required';
   } else {
     outcome = 'promoted';
     await tx
@@ -291,9 +309,30 @@ export async function addPinchHit(
       })
       .where(eq(lineupEntries.id, existing.id));
   }
-  const threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(game.threshold ?? 1, points, lineupRuns));
+  const threshold = !weekLocked
+    ? await plannedThreshold(tx, game.id)
+    : required
+      ? Math.min(LIMITS.thresholdMax, pinchHitThreshold(game.threshold ?? 1, points, lineupRuns))
+      : (game.threshold ?? 1);
   const [row] = await tx.update(games).set({ threshold }).where(eq(games.id, game.id)).returning();
   return { game: await refreshScore(tx, row ?? (await reloadGame(tx, game.id))), outcome };
+}
+
+/** Runs to win for a day still being planned: from its lineup, IL-held spots included. */
+export async function plannedThreshold(tx: Db, gameId: string): Promise<number> {
+  const entries = (await loadEntries(tx, [gameId])).filter((e) => e.role === 'lineup');
+  const held = await tx
+    .select({ points: ilHolds.points, required: ilHolds.required })
+    .from(ilHolds)
+    .where(and(eq(ilHolds.gameId, gameId), eq(ilHolds.role, 'lineup')));
+  return Math.min(LIMITS.thresholdMax, lineupThreshold([...entries, ...held]));
+}
+
+/** Whether `game`'s week has had its first pitch (then lineups only grow). */
+export async function isWeekLocked(tx: Db, user: UserRow, game: GameRow, now: Date): Promise<boolean> {
+  if (game.lockedAt) return true;
+  const siblings = (await seriesGames(tx, game.seriesId)).map((g) => (g.id === game.id ? game : g));
+  return weekLockOf(siblings, user, now) !== null;
 }
 
 /**
@@ -310,7 +349,10 @@ export async function applyCarryovers(tx: Db, user: UserRow, game: GameRow, now:
   let current = game;
   for (const task of pending) {
     if (task.status === 'injured') continue;
-    if (task.status === 'active') current = (await addPinchHit(tx, current, task, now, { carriedOver: true })).game;
+    if (task.status === 'active') {
+      const weekLocked = await isWeekLocked(tx, user, current, now);
+      current = (await addPinchHit(tx, current, task, now, { carriedOver: true, weekLocked })).game;
+    }
     await tx.update(taskDefinitions).set({ carryover: false, updatedAt: now }).where(eq(taskDefinitions.id, task.id));
   }
   return current;

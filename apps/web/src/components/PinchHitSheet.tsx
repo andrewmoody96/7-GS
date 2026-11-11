@@ -4,7 +4,7 @@ import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useAddPinchHitter, useCreateTask, useMeQuery, useTasksQuery } from '../app/queries';
 import { useNotify } from '../app/toast';
 import { weekdayLong } from '../lib/format';
-import { benchOf, lineupRunsOf, pinchHitMath } from '../lib/game';
+import { addMath, benchOf } from '../lib/game';
 import { vocab } from '../vocab';
 import { Stepper, Switch } from './Controls';
 import { IconArrowRight, IconPlus } from './icons';
@@ -36,8 +36,8 @@ export function pinchHitCandidates(game: GameDto, tasks: readonly TaskDto[]): Ca
 }
 
 /** "Runs to win 4 → 6": the raise, shown before confirming. */
-export function PinchHitMath({ threshold, points, lineupRuns }: { threshold: number; points: number; lineupRuns: number }) {
-  const math = pinchHitMath(threshold, points, lineupRuns);
+export function PinchHitMath({ game, add }: { game: GameDto; add: { taskId: string; points: number; required: boolean } }) {
+  const math = addMath(game, add);
   return (
     <div className="phmath" aria-live="polite">
       <p className="phmath__row">
@@ -59,7 +59,9 @@ export function PinchHitMath({ threshold, points, lineupRuns }: { threshold: num
           <strong className="phmath__to">{math.opponentAfter}</strong>
         </span>
       </p>
-      <p className="phmath__note">{vocab.pinchHit.raise(points)}</p>
+      <p className="phmath__note">
+        {math.after > math.before ? vocab.pinchHit.raise(math.after - math.before) : `${vocab.terms.threshold} doesn’t change`}
+      </p>
     </div>
   );
 }
@@ -215,7 +217,7 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
         </div>
       ) : null}
       {selected ? (
-        <PinchHitMath threshold={game.threshold} points={selected.points} lineupRuns={lineupRunsOf(game)} />
+        <PinchHitMath game={game} add={{ taskId: selected.taskId, points: selected.points, required }} />
       ) : (
         <p className="phmath phmath--empty">
           {vocab.terms.threshold} {game.threshold} · pick a {vocab.terms.task.toLowerCase()} to see the raise

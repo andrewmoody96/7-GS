@@ -3,6 +3,8 @@
 
 import type { GameDto, GameSummaryDto, LineupEntryDto, SeriesDto } from '@7gs/contracts';
 import {
+  LIMITS,
+  lineupThreshold,
   effectiveLockedAt,
   evaluateGame,
   opponentScore,
@@ -94,9 +96,9 @@ export function statusOfSeries(series: Pick<SeriesDto, 'games' | 'number'>): Ser
   return seriesStatus(seriesGameStates(series.games), { unscored: series.number === HEAD_START_SERIES });
 }
 
-/** Runs to win added by pinch hitters (each raised it by exactly its runs). */
+/** Runs to win added by pinch hitters: the must-hits added after the week started. */
 export function pinchHitRaise(game: Pick<GameDto, 'entries'>): number {
-  return game.entries.filter((e) => e.pinchHitAt !== null && e.role === 'lineup').reduce((sum, e) => sum + e.points, 0);
+  return game.entries.filter((e) => e.pinchHitAt !== null && e.role === 'lineup' && e.required).reduce((sum, e) => sum + e.points, 0);
 }
 
 /** Everything the lineup could score: every task batting, plus spots held for tasks on the IL. */
@@ -105,6 +107,37 @@ export function lineupRunsOf(game: Pick<GameDto, 'entries' | 'ilHolds'>): number
     (sum, e) => sum + e.points,
     0,
   );
+}
+
+/**
+ * Runs to win once a task joins `game`'s lineup, as the server will set it. While the week
+ * is still being planned it's worked out from the new lineup (rules.lineupThreshold); once
+ * it has started, only a new must-hit raises it (rules.pinchHitThreshold).
+ */
+export function thresholdAfterAdding(
+  game: Pick<GameDto, 'entries' | 'ilHolds' | 'threshold' | 'editPolicy'>,
+  add: { taskId: string; points: number; required: boolean },
+): number {
+  if (game.editPolicy === 'free') {
+    const lineup = [
+      ...game.entries.filter((e) => e.role === 'lineup' && e.taskId !== add.taskId),
+      ...game.ilHolds.filter((h) => h.role === 'lineup'),
+      { points: add.points, required: add.required },
+    ];
+    return Math.min(LIMITS.thresholdMax, lineupThreshold(lineup));
+  }
+  const batting = game.entries.some((e) => e.taskId === add.taskId && e.role === 'lineup');
+  if (batting || !add.required) return game.threshold;
+  return Math.min(LIMITS.thresholdMax, pinchHitThreshold(game.threshold, add.points, lineupRunsOf(game)));
+}
+
+/** "Runs to win 4 → 6" (and the opponent's answer) before a task is added. */
+export function addMath(
+  game: Pick<GameDto, 'entries' | 'ilHolds' | 'threshold' | 'editPolicy'>,
+  add: { taskId: string; points: number; required: boolean },
+) {
+  const after = thresholdAfterAdding(game, add);
+  return { before: game.threshold, after, opponentBefore: opponentScore(game.threshold), opponentAfter: opponentScore(after) };
 }
 
 /** The math shown before sending in a pinch hitter: "Runs to win 4 → 6". */

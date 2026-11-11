@@ -82,6 +82,10 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
             Check off tasks to score {points}. You get the W when you reach that day’s <strong>{target}</strong> and finish every{' '}
             <strong>{must}</strong> (a task you’ve marked as required). The day ends at midnight.
           </p>
+          <p>
+            {vocab.terms.threshold} comes from the day’s lineup: every {must}’s {points} plus half of everything else, rounded
+            up. You never have to do it all, and a day with tasks can always be won.
+          </p>
         </li>
         <li className="howto__key">
           <h3>Once the week starts: add, don’t remove</h3>
@@ -94,8 +98,10 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
           </p>
           <ul>
             <li>
-              <strong>{vocab.pinchHit.action}</strong> puts it in the lineup, and {target} goes up by its {points}. Added to
-              today, it’s a {must} (a “{vocab.terms.pinchHitter.toLowerCase()}”). Added to a later day, you choose whether it’s a {must}.
+              <strong>{vocab.pinchHit.action}</strong> puts it in the lineup. Added to today, it’s a {must}{' '}
+              (a “{vocab.terms.pinchHitter.toLowerCase()}”) and {target} goes up by exactly its {points}. Added to a later day, you
+              choose: a {must} raises {target} the same way, a regular task leaves it alone. Added to a day that was empty, the
+              first {must} sets {target} to its own {points}, so a perfect day still wins it.
             </li>
             <li>
               <strong>{vocab.week.addToBench}</strong> makes it an optional extra. It can sub in for a task that isn’t a {must}.

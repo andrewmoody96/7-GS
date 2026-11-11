@@ -107,7 +107,7 @@ Unique: `(season_id, number)`.
 | weekday | int 1–7 | 1 = Monday. Unique per user (fixed rotation). |
 | name | text | e.g. "Gym Day". |
 | threshold | int ≥ 1 | "Runs to win." The opponent's scoreboard score is one less (see `rules.scoreline`). At least 1, so an empty lineup can't win. |
-| min_tasks | int null | |
+| min_tasks | int null | Unused: always null (minimum task counts were dropped). |
 | lock_time | time null | Overrides the user default. |
 
 ### `day_template_tasks`
@@ -303,14 +303,14 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | POST | `/v1/tasks/:id/injured-list` | Place on IL (3-day minimum). |
 | DELETE | `/v1/tasks/:id/injured-list` | Activate (only after `il_min_until`). |
 | GET | `/v1/starters` | All 7 weekday templates. |
-| PUT | `/v1/starters/:weekday` | Replace a template (name, threshold, min, lineup, bench). Applies to future games only. |
+| PUT | `/v1/starters/:weekday` | Replace a template (name, lock time, lineup, bench). Runs to win comes from the lineup; there's no minimum. Applies to future games only. |
 
 ### Games
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/v1/today` | Today's game(s) with lineups and live scoreboard. |
 | GET | `/v1/games/:id` | Box score. |
-| PATCH | `/v1/games/:id/lineup` | Pre-lock edits: order, add/remove tasks, required flags, threshold. |
+| PATCH | `/v1/games/:id/lineup` | Pre-lock edits: order, add/remove tasks, required flags. Runs to win is worked out from the new lineup (`rules.lineupThreshold`). |
 | POST | `/v1/games/:id/lock` | Lock manually (also happens automatically). |
 | POST | `/v1/games/:id/entries/:entryId/complete` | Body: `{ clientAt, partial? }`. Idempotent. |
 | DELETE | `/v1/games/:id/entries/:entryId/complete` | Undo a check-off (before midnight only). |

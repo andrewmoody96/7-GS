@@ -2,7 +2,7 @@
 // lineup is not built yet; built games keep their snapshot.
 
 import type { StarterDto, StarterPutDto } from '@7gs/contracts';
-import { starterWarnings, type StarterWarning } from '@7gs/rules';
+import { lineupThreshold, starterWarnings, type StarterWarning } from '@7gs/rules';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import {
@@ -67,11 +67,12 @@ export interface StarterProjection {
   lockTime: string | null;
 }
 
-export function projectStarter(starter: StarterRow, user: UserRow): StarterProjection {
+/** `threshold` is the starter's runs to win from its lineup (startersThresholds). */
+export function projectStarter(starter: StarterRow, user: UserRow, threshold: number): StarterProjection {
   return {
     starterName: starter.name,
-    threshold: starter.threshold,
-    minTasks: starter.minTasks,
+    threshold,
+    minTasks: null,
     lockTime: starter.lockTime ?? user.defaultLockTime,
   };
 }
@@ -80,14 +81,15 @@ function toStarterDto(
   starter: StarterRow,
   slots: readonly Pick<StarterSlotRow, 'taskId' | 'position' | 'required' | 'role'>[],
   warnings: StarterWarning[],
+  threshold: number,
 ): StarterDto {
   const byRole = (role: 'lineup' | 'bench') =>
     slots.filter((s) => s.role === role).sort((a, b) => a.position - b.position);
   return {
     weekday: starter.weekday,
     name: starter.name,
-    threshold: starter.threshold,
-    minTasks: starter.minTasks,
+    threshold,
+    minTasks: null,
     lockTime: starter.lockTime,
     lineup: byRole('lineup').map((s) => ({ taskId: s.taskId, position: s.position, required: s.required })),
     bench: byRole('bench').map((s) => ({ taskId: s.taskId, position: s.position })),
@@ -106,6 +108,23 @@ async function taskPoints(tx: Db, userId: string, taskIds: string[]): Promise<Ma
   return new Map(rows.filter((r) => r.status !== 'retired').map((r) => [r.id, r.points]));
 }
 
+/** Runs to win for one starter's lineup slots, given its tasks' runs (retired tasks are skipped). */
+function slotsThreshold(slots: readonly Pick<StarterSlotRow, 'taskId' | 'required' | 'role'>[], points: Map<string, number>): number {
+  return lineupThreshold(
+    slots.filter((s) => s.role === 'lineup' && points.has(s.taskId)).map((s) => ({ points: points.get(s.taskId)!, required: s.required })),
+  );
+}
+
+/** Each starter's runs to win, worked out from its lineup (rules.lineupThreshold). */
+export async function startersThresholds(tx: Db, userId: string, starters: readonly StarterRow[]): Promise<Map<string, number>> {
+  const slots = await loadSlots(
+    tx,
+    starters.map((s) => s.id),
+  );
+  const points = await taskPoints(tx, userId, [...new Set(slots.map((s) => s.taskId))]);
+  return new Map(starters.map((s) => [s.id, slotsThreshold(slots.filter((x) => x.templateId === s.id), points)]));
+}
+
 export async function listStarters(tx: Db, user: UserRow, now: Date): Promise<StarterDto[]> {
   const starters = await ensureStarters(tx, user, now);
   const slots = await loadSlots(
@@ -115,12 +134,13 @@ export async function listStarters(tx: Db, user: UserRow, now: Date): Promise<St
   const points = await taskPoints(tx, user.id, [...new Set(slots.map((s) => s.taskId))]);
   return starters.map((starter) => {
     const own = slots.filter((s) => s.templateId === starter.id && points.has(s.taskId));
+    const threshold = slotsThreshold(own, points);
     const warnings = starterWarnings(
       own.map((s) => ({ taskId: s.taskId, points: points.get(s.taskId) ?? 1, role: s.role })),
-      starter.threshold,
-      starter.minTasks,
+      threshold,
+      null,
     );
-    return toStarterDto(starter, own, warnings);
+    return toStarterDto(starter, own, warnings, threshold);
   });
 }
 
@@ -158,12 +178,6 @@ export async function putStarter(
   }
   if (issues.length > 0) throw validationFailed(issues);
 
-  const warnings = starterWarnings(
-    requested.map((r) => ({ taskId: r.taskId, points: byId.get(r.taskId)?.points ?? 1, role: r.role })),
-    body.threshold,
-    body.minTasks,
-  );
-
   const seen = new Set<string>();
   const kept = requested.filter((r) => (seen.has(r.taskId) ? false : (seen.add(r.taskId), true)));
   const slots = (['lineup', 'bench'] as const).flatMap((role) =>
@@ -179,12 +193,20 @@ export async function putStarter(
       })),
   );
 
+  // Runs to win comes from the lineup (rules.lineupThreshold); there's no minimum task count.
+  const points = new Map(tasks.map((t) => [t.id, t.points]));
+  const threshold = slotsThreshold(slots, points);
+  const warnings = starterWarnings(
+    requested.map((r) => ({ taskId: r.taskId, points: byId.get(r.taskId)?.points ?? 1, role: r.role })),
+    threshold,
+    null,
+  );
   const [updated] = await tx
     .update(dayTemplates)
     .set({
       name: body.name,
-      threshold: body.threshold,
-      minTasks: body.minTasks,
+      threshold,
+      minTasks: null,
       lockTime: body.lockTime,
       updatedAt: now,
     })
@@ -192,5 +214,5 @@ export async function putStarter(
     .returning();
   await tx.delete(dayTemplateTasks).where(eq(dayTemplateTasks.templateId, starter.id));
   if (slots.length > 0) await tx.insert(dayTemplateTasks).values(slots);
-  return toStarterDto(updated ?? starter, slots, warnings);
+  return toStarterDto(updated ?? starter, slots, warnings, threshold);
 }

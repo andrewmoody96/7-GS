@@ -2013,3 +2013,15 @@ button.cell:hover {
 .input--code.is-invalid {
   border-color: var(--danger, #b3261e);
 }
+
+.runstowin__line {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.runstowin__line strong {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}

@@ -205,7 +205,8 @@ export const Starter = z.object({
   warnings: z.array(z.enum(STARTER_WARNINGS)),
 });
 
-export const StarterPut = Starter.omit({ weekday: true, warnings: true }).extend({
+/** Runs to win comes from the lineup and there's no minimum task count, so neither is sent. */
+export const StarterPut = Starter.omit({ weekday: true, warnings: true, threshold: true, minTasks: true }).extend({
   name: z.string().trim().min(1).max(LIMITS.starterNameMax),
 });
 
@@ -359,10 +360,9 @@ export const Week = z.object({
  */
 export const PinchHitter = z.object({ taskId: Id, required: z.boolean().optional() });
 
+/** Runs to win isn't sent: it's worked out from the lineup (rules.lineupThreshold). */
 export const LineupPatch = z
   .object({
-    threshold: Threshold,
-    minTasks: MinTasks,
     /** Replaces the whole lineup and bench. Only before first pitch. */
     entries: z.array(
       z.object({

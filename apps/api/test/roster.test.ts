@@ -117,7 +117,7 @@ describe('starters', () => {
     expect(starters[6]?.name).toBe('Sunday Starter');
   });
 
-  it('replaces a starter and returns rules.starterWarnings', async () => {
+  it('replaces a starter, working out runs to win from its lineup', async () => {
     const { t, token } = await signedUp();
     const ids = await createTasks(t, token, [{ name: 'Gym', points: 2 }, { name: 'Read' }, { name: 'Walk' }]);
     const starter = await t.ok('putStarter', {
@@ -135,18 +135,20 @@ describe('starters', () => {
         bench: [{ taskId: ids.Walk!, position: 1 }],
       },
     });
+    // A runs to win or minimum sent by an old client is ignored: Gym 2 (must-hit) plus
+    // half of Read's 1, rounded up = 3, and there's no minimum.
     expect(starter).toEqual({
       weekday: 1,
       name: 'Gym Day',
-      threshold: 5,
-      minTasks: 3,
+      threshold: 3,
+      minTasks: null,
       lockTime: '09:00',
       lineup: [
         { taskId: ids.Read, position: 1, required: false },
         { taskId: ids.Gym, position: 2, required: true },
       ],
       bench: [{ taskId: ids.Walk, position: 1 }],
-      warnings: ['THRESHOLD_UNREACHABLE', 'MIN_TASKS_UNREACHABLE'],
+      warnings: [],
     });
     const listed = (await t.ok('listStarters', { token })).starters[0];
     expect(listed).toEqual(starter);
@@ -199,8 +201,6 @@ describe('starters', () => {
     expect((await t.fails('putStarter', { token, params: { weekday: 'mon' }, body: body(ids.Old!) }, 400)).code).toBe(
       'VALIDATION_FAILED',
     );
-    const zero = await t.fails('putStarter', { token, params: { weekday: 1 }, body: { ...body(ids.Old!), threshold: 0 } }, 400);
-    expect(zero.issues?.[0]?.path).toBe('threshold');
   });
 
   it('drops a retired task from every starter', async () => {
