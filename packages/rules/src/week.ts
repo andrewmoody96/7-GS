@@ -39,6 +39,18 @@ export function lineupEditPolicy(input: { weekLocked: boolean; gameFinal: boolea
 }
 
 /**
+ * Runs to win, worked out from a day's lineup (bench tasks don't count): every must-hit's
+ * runs plus half of the other tasks' runs, rounded up. It never exceeds what the lineup
+ * can score, so a day with tasks always starts winnable. An empty day still needs 1 run:
+ * leave it empty and the loss stands; add to it and the first task sets the bar.
+ */
+export function lineupThreshold(lineup: readonly { points: number; required: boolean }[]): number {
+  const must = lineup.filter((e) => e.required).reduce((sum, e) => sum + e.points, 0);
+  const other = lineup.filter((e) => !e.required).reduce((sum, e) => sum + e.points, 0);
+  return Math.max(1, must + Math.ceil(other / 2));
+}
+
+/**
  * A pinch hitter is a new must-hit; runs to win rises by exactly its runs. But a day
  * that was already out of reach (runs to win above everything in the lineup, as on an
  * empty day that needs 1 run) doesn't carry that shortfall forward: the raise starts

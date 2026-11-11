@@ -4,11 +4,11 @@
 // task to edit it, retire it or put it on the IL.
 
 import type { GameDto, TaskDto } from '@7gs/contracts';
-import { LIMITS, pinchHitThreshold, type TaskKind } from '@7gs/rules';
+import { LIMITS, type TaskKind } from '@7gs/rules';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { everyWeekLabel, useAddTask, useMeQuery, useTasksQuery, useWeekQuery, useWeeksQuery } from '../app/queries';
 import { weekdayShort } from '../lib/format';
-import { lineupRunsOf } from '../lib/game';
+import { thresholdAfterAdding } from '../lib/game';
 import { isLeaving } from '../lib/tasks';
 import { vocab } from '../vocab';
 import { Stepper, Switch } from './Controls';
@@ -70,6 +70,7 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
   // Once the week has started, a task added to today is always a must-hit.
   const canChoose = (game !== null && !(started && isToday)) || repeating.length > 0;
   const required = started && isToday ? true : mustHit;
+  const after = game ? thresholdAfterAdding(game, { taskId: '', points, required }) : 0;
   const toggleDay = (day: number) =>
     setRepeatDays((days) => (days.includes(day) ? days.filter((d) => d !== day) : [...days, day].sort((a, b) => a - b)));
 
@@ -157,10 +158,12 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
                 {game === null
                   ? 'Pick a day to add it to that day only.'
                   : !started
-                    ? `This week hasn’t started, so this is just planning: ${vocab.terms.threshold.toLowerCase()} stays ${game.threshold}.`
+                    ? `This week hasn’t started, so this is just planning: ${vocab.terms.threshold.toLowerCase()} becomes ${after} (${vocab.term.required.toLowerCase()}s plus half the rest).`
                     : isToday
-                      ? `The week has started, so a task added to today is a ${vocab.term.required.toLowerCase()}. ${vocab.terms.threshold} goes ${game.threshold} → ${pinchHitThreshold(game.threshold, points, lineupRunsOf(game))}.`
-                      : `${vocab.terms.threshold} goes ${game.threshold} → ${pinchHitThreshold(game.threshold, points, lineupRunsOf(game))}, so the day gets no easier.`}
+                      ? `The week has started, so a task added to today is a ${vocab.term.required.toLowerCase()}. ${vocab.terms.threshold} goes ${game.threshold} → ${after}.`
+                      : required
+                        ? `${vocab.terms.threshold} goes ${game.threshold} → ${after}.`
+                        : `A regular task: ${vocab.terms.threshold.toLowerCase()} stays ${game.threshold}. Only a ${vocab.term.required.toLowerCase()} raises it.`}
               </p>
             </div>
           ) : null}
@@ -181,7 +184,7 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
               <p className="field__hint">
                 {repeating.length === 0
                   ? 'Pick weekdays to put it in your Default Lineups, so every week starts with it.'
-                  : `Every ${everyWeekLabel(repeating)} starts with it, including days already open this week that haven’t started. ${vocab.terms.threshold} doesn’t change.`}
+                  : `Every ${everyWeekLabel(repeating)} starts with it, including days already open this week that haven’t started. Their ${vocab.terms.threshold.toLowerCase()} follows their lineup.`}
               </p>
             </div>
           ) : null}

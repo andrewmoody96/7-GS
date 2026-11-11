@@ -378,7 +378,7 @@ export const baseball: Vocab = {
       'This week has started. You can still add tasks to today or any later day, but you can’t remove tasks or lower runs to win. A task you add is a must-hit (a pinch hitter), and that day’s runs to win goes up by its runs. For an optional extra, add it to the bench instead.',
     planningTitle: 'Planning',
     planningBlurb: (firstPitch) =>
-      `Anything goes until the week’s first pitch${firstPitch ? ` (${firstPitch})` : ''}: add or remove tasks, reorder, set must-hits and runs to win, and place one-offs on a day.`,
+      `Anything goes until the week’s first pitch${firstPitch ? ` (${firstPitch})` : ''}: add or remove tasks, reorder, set must-hits (runs to win follows the lineup), and place one-offs on a day.`,
     nextOpensFriday: 'Next week’s card opens Friday.',
     editDay: 'Edit day',
     addToBench: 'Add to bench',
@@ -399,7 +399,7 @@ export const baseball: Vocab = {
     done: (name, threshold) => `${name} added as a pinch hitter. Runs to win is ${threshold}.`,
     doneOptional: (name, threshold) => `${name} added to the lineup. Runs to win is ${threshold}.`,
     explainerLater:
-      'This day hasn’t started, so you choose: a must-hit, or a regular task you can skip without losing the day. Either way runs to win goes up by exactly its runs, so the day gets no easier.',
+      'This day hasn’t started, so you choose: a must-hit, or a regular task you can skip without losing the day. A must-hit raises runs to win by exactly its runs; a regular task leaves it where it is.',
     mustHitSwitch: 'Make it a must-hit',
     mustHitOn: 'Miss it and you lose that day.',
     mustHitOff: 'A regular task: it scores runs when you do it, and skipping it won’t sink the day by itself.',
@@ -646,7 +646,7 @@ export const basketball: Vocab = overlay(baseball, {
     lockedBlurb:
       'This week has started. You can still add tasks to today or any later day, but you can’t remove tasks or lower buckets to win. A task you add is a must-make (your sixth man), and that day’s buckets to win goes up by its buckets. For an optional extra, add it to the bench instead.',
     planningBlurb: (tipOff) =>
-      `Anything goes until the week’s first tip-off${tipOff ? ` (${tipOff})` : ''}: add or remove tasks, reorder, set must-makes and buckets to win, and place one-offs on a day.`,
+      `Anything goes until the week’s first tip-off${tipOff ? ` (${tipOff})` : ''}: add or remove tasks, reorder, set must-makes (buckets to win follows the lineup), and place one-offs on a day.`,
     oneOffHint: 'One-offs retire once done. A missed one-off must-make moves to the next game day off the bench.',
   },
   pinchHit: {
@@ -658,7 +658,7 @@ export const basketball: Vocab = overlay(baseball, {
     done: (name, threshold) => `${name} comes in as your sixth man. Buckets to win is ${threshold}.`,
     doneOptional: (name, threshold) => `${name} added to the lineup. Buckets to win is ${threshold}.`,
     explainerLater:
-      'This day hasn’t started, so you choose: a must-make, or a regular task you can skip without losing the day. Either way buckets to win goes up by exactly its buckets, so the day gets no easier.',
+      'This day hasn’t started, so you choose: a must-make, or a regular task you can skip without losing the day. A must-make raises buckets to win by exactly its buckets; a regular task leaves it where it is.',
     mustHitSwitch: 'Make it a must-make',
     mustHitOff: 'A regular task: it scores when you do it, and skipping it won’t sink the day by itself.',
   },
@@ -794,7 +794,7 @@ export const hockey: Vocab = overlay(baseball, {
     lockedBlurb:
       'This week has started. You can still add tasks to today or any later day, but you can’t remove tasks or lower shots to win. A task you add is a must-score (an extra skater), and that day’s shots to win goes up by its shots. For an optional extra, add it to the bench instead.',
     planningBlurb: (puckDrop) =>
-      `Anything goes until the week’s first puck drop${puckDrop ? ` (${puckDrop})` : ''}: add or remove tasks, reorder, set must-scores and shots to win, and place one-offs on a day.`,
+      `Anything goes until the week’s first puck drop${puckDrop ? ` (${puckDrop})` : ''}: add or remove tasks, reorder, set must-scores (shots to win follows the lineup), and place one-offs on a day.`,
     oneOffHint: 'One-offs retire once done. A missed one-off must-score moves to the next game day as an extra skater.',
   },
   pinchHit: {
@@ -806,7 +806,7 @@ export const hockey: Vocab = overlay(baseball, {
     done: (name, threshold) => `${name} comes over the boards as an extra skater. Shots to win is ${threshold}.`,
     doneOptional: (name, threshold) => `${name} added to the lineup. Shots to win is ${threshold}.`,
     explainerLater:
-      'This day hasn’t started, so you choose: a must-score, or a regular task you can skip without losing the day. Either way shots to win goes up by exactly its shots, so the day gets no easier.',
+      'This day hasn’t started, so you choose: a must-score, or a regular task you can skip without losing the day. A must-score raises shots to win by exactly its shots; a regular task leaves it where it is.',
     mustHitSwitch: 'Make it a must-score',
     mustHitOff: 'A regular task: it counts when you do it, and skipping it won’t sink the day by itself.',
   },

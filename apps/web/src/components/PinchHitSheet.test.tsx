@@ -46,7 +46,7 @@ describe('Today: pinch hitters', () => {
     const { api } = renderWithApp(<TodayScreen />);
 
     // The carried-over one-off already raised today's bar by 1.
-    expect(await screen.findByText('Runs to win 6 · +1 pinch hit')).toBeInTheDocument();
+    expect(await screen.findByText('Runs to win 8 · +1 pinch hit')).toBeInTheDocument();
     expect(screen.getByText('Carried over')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^Add a task$/ }));
@@ -55,13 +55,13 @@ describe('Today: pinch hitters', () => {
     expect(within(dialog).getByRole('button', { name: 'Add to lineup' })).toBeDisabled();
 
     await user.click(within(dialog).getByLabelText(/Meal prep/));
-    expect(within(dialog).getByText('Runs to win 6 → 8')).toBeInTheDocument();
+    expect(within(dialog).getByText('Runs to win 8 → 10')).toBeInTheDocument();
     expect(within(dialog).getByText('+2 pinch hit')).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Add to lineup' }));
-    expect(await screen.findByText('Runs to win 8 · +3 pinch hit')).toBeInTheDocument();
+    expect(await screen.findByText('Runs to win 10 · +3 pinch hit')).toBeInTheDocument();
     const today = await api.call('getToday');
-    expect(today.games[0]!.threshold).toBe(8);
+    expect(today.games[0]!.threshold).toBe(10);
     expect(today.games[0]!.entries.find((e) => e.taskName === 'Meal prep')).toMatchObject({ required: true, role: 'lineup' });
   });
 
@@ -76,7 +76,7 @@ describe('Today: pinch hitters', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Create' }));
 
     // The new task comes back selected, with the raise shown before confirming.
-    expect(await within(dialog).findByText('Runs to win 6 → 7')).toBeInTheDocument();
+    expect(await within(dialog).findByText('Runs to win 8 → 9')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Add to lineup' }));
     await waitFor(async () => {
       const today = await api.call('getToday');
@@ -92,9 +92,9 @@ describe('Today: pinch hitters', () => {
     await user.click(makeMustHit[0]!);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: 'Make must-hit: Practice Spanish' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Runs to win 6 → 7')).toBeInTheDocument();
+    expect(within(dialog).getByText('Runs to win 8 → 9')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Make must-hit' }));
-    expect(await screen.findByText('Runs to win 7 · +2 pinch hit')).toBeInTheDocument();
+    expect(await screen.findByText('Runs to win 9 · +2 pinch hit')).toBeInTheDocument();
   });
 });
 
@@ -112,6 +112,8 @@ describe('Lineups: adding to a later day', () => {
     expect(within(dialog).getByText(/skipping it won’t sink the day/)).toBeInTheDocument();
 
     await user.click(within(dialog).getByLabelText(/Inbox zero/));
+    // The week has started, so a regular task leaves runs to win where it is.
+    expect(within(dialog).getByText('Runs to win doesn’t change')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Add to lineup' }));
     await waitFor(async () => {
       const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });
@@ -154,8 +156,10 @@ describe('Add task window', () => {
     await user.type(within(dialog).getByLabelText('Task'), 'Book flights');
     // Friday demo: the week has started. Saturday is a doubleheader; pick its first game.
     await user.click((await within(dialog).findAllByText(/^Sat/))[0]!);
-    expect(within(dialog).getByText(/so the day gets no easier/)).toBeInTheDocument();
+    // A must-hit (the default) raises runs to win; a regular task doesn't.
+    expect(within(dialog).getByText(/Runs to win goes \d+ → \d+\./)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('switch', { name: 'Make it a must-hit' }));
+    expect(within(dialog).getByText(/A regular task: runs to win stays \d+/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: /Add task/ }));
     await waitFor(async () => {
       const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });

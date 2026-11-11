@@ -80,7 +80,7 @@ describe('today', () => {
       postponed: false,
       starterName: 'Gym Day',
       threshold: 3,
-      minTasks: 2,
+      minTasks: null,
       lockTime: null,
       status: 'scheduled',
       lockedAt: null,
@@ -203,18 +203,24 @@ describe('lineup edits and locking', () => {
     expect(locked).toMatchObject({ status: 'live', lockedAt: '2026-10-05T13:30:00.000Z' });
     t.at('2026-10-05', '08:45', CHICAGO);
     expect((await t.ok('lockGame', { token, params: { gameId: game.id } })).lockedAt).toBe('2026-10-05T13:30:00.000Z');
-    const rejected = await t.fails('patchLineup', { token, params: { gameId: game.id }, body: { threshold: 1 } }, 409);
+    const rejected = await t.fails('patchLineup', { token, params: { gameId: game.id }, body: { entries: [] } }, 409);
     expect(rejected.code).toBe('GAME_LOCKED');
   });
 
   it('locks at the scheduled lock time even if nobody calls /lock', async () => {
-    const { t, token } = await setup({ lockTime: '09:00' });
+    const { t, token, ids } = await setup({ lockTime: '09:00' });
     const game = await mondayGame(t, token, '08:59');
     expect(game).toMatchObject({ lockTime: '09:00', status: 'scheduled', lockedAt: null });
-    await t.ok('patchLineup', { token, params: { gameId: game.id }, body: { threshold: 4 } });
+    // Making Dishes a must-hit too: runs to win follows the lineup, 2 + 1 + half of 1 = 4.
+    const lineup = (required: boolean) => [
+      { taskId: ids.Gym!, position: 1, required: true, role: 'lineup' as const },
+      { taskId: ids.Read!, position: 2, required: false, role: 'lineup' as const },
+      { taskId: ids.Dishes!, position: 3, required, role: 'lineup' as const },
+    ];
+    await t.ok('patchLineup', { token, params: { gameId: game.id }, body: { entries: lineup(true) } });
 
     t.at('2026-10-05', '09:00', CHICAGO);
-    expect((await t.fails('patchLineup', { token, params: { gameId: game.id }, body: { threshold: 3 } }, 409)).code).toBe(
+    expect((await t.fails('patchLineup', { token, params: { gameId: game.id }, body: { entries: lineup(false) } }, 409)).code).toBe(
       'GAME_LOCKED',
     );
     expect(await t.ok('getGame', { token, params: { gameId: game.id } })).toMatchObject({

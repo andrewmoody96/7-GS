@@ -42,7 +42,7 @@ you'd do. (Playoffs at the end of a season are planned, not built: see §11.)
 | 15 | Rally Cap window | **DECIDED** — Until 11:59 a.m. the day after the game. |
 | 16 | Weekly lineups | **DECIDED** — Each week is planned on a lineup card. Free edits until the week's first pitch; after that, lineups only grow (§4a). |
 | 17 | Pinch hitters | **DECIDED** — A must-hit added after the week locks raises that day's runs to win by exactly its runs (§4a). |
-| 23 | Adding to a later day | **DECIDED** — Added to today, a task is always a must-hit. Added to a later day, the user chooses; either way runs to win rises by its runs (§4a). |
+| 23 | Adding to a later day | **DECIDED** — Added to today, a task is always a must-hit. Added to a later day, the user chooses; only a must-hit raises runs to win (§4a). |
 | 18 | Non-required work | **DECIDED** — Lives on the bench. Promoting a bench task to must-hit makes it a pinch hitter. |
 | 19 | One-off tasks | **DECIDED** — Retire when completed. A missed one-off must-hit moves to the next game day automatically (§4a). |
 | 20 | Next week's card | **DECIDED** — Opens on Friday. |
@@ -63,7 +63,7 @@ future sport skins possible.
 | Game | `game` | One scheduled day's contest. |
 | Doubleheader | `game.slot = 2` | A made-up game played on the same day as another game. |
 | Opponent | `opponent` | Generated team name. Their scoreboard score is one less than your runs to win. |
-| Runs to win | `threshold` | The runs you need for a W, set per starter. |
+| Runs to win | `threshold` | The runs you need for a W, worked out from the day's lineup (see below). |
 | Tasks | `task_definition` | All of a user's tasks/habits. Plain task-app wording on purpose: you **add a task** first, and the baseball layer starts once it's in a lineup. |
 | Starter | `day_template` | Fixed weekday theme: default lineup, must-hits, threshold. |
 | Lineup | `lineup_entry` | Tasks scheduled for a game, in priority (batting) order. |
@@ -82,12 +82,23 @@ A game is a **W** when all of the following are true at 23:59:59 local time:
 
 1. Every must-hit in the lineup is complete.
 2. Runs ≥ the runs to win (the threshold).
-3. Completed task count ≥ the minimum (if the starter sets one).
+
+**Runs to win comes from the lineup** (`rules.lineupThreshold`), never typed in: every
+must-hit's runs plus half of the other lineup tasks' runs, rounded up (bench tasks don't
+count). So it never exceeds what the lineup can score: **a day with tasks is always
+winnable.** An empty day still needs 1 run: leave it empty and the L stands; add to it
+and the first must-hit sets runs to win to its own runs, so a perfect day saves it.
+While a week is still being planned (before its first pitch), runs to win follows every
+lineup edit. Once it has started, **only a new must-hit raises it**, by exactly that
+task's runs (capped as above); a regular task, or a batting task becoming a must-hit,
+leaves it where it is. There is no minimum task count (dropped: a light day shouldn't
+need padding to be winnable). Spots held for tasks on the IL count toward what the
+lineup can score, so the IL never lowers the bar.
 
 Results:
 
 - **W**: all conditions met.
-- **L**: runs or minimum not met, all must-hits done. Rally Cap eligible.
+- **L**: runs to win not reached, all must-hits done. Rally Cap eligible.
 - **L (forfeit)**: exactly one must-hit missed. Rally Cap eligible. (Stored as
   `forfeit`. On screen every L, whatever the reason, just reads "Loss".)
 - **L (no appeal)**: two or more must-hits missed. Not Rally Cap eligible.
@@ -159,9 +170,8 @@ Like a fantasy lineup, each series is planned as a week.
   - **Regular task, later days only:** when adding to tomorrow or any later day, the user
     chooses whether the task is a must-hit. Left off, it joins the lineup as a regular
     task: it scores runs when done and skipping it doesn't lose the day by itself. Runs to
-    win still rises by exactly its runs, so the day gets no easier (padding a day with
-    small optional tasks can't lower the bar). A task added to **today** is always a
-    must-hit; today's "maybe" belongs on the bench.
+    win stays where it is: once the week has started, only a must-hit raises it. A task
+    added to **today** is always a must-hit; today's "maybe" belongs on the bench.
   - **Bench:** add any task to a day's bench. Bench work is optional; it only counts once
     subbed in for a non-must-hit.
   - **Promote:** turning a bench task into a must-hit makes it a pinch hitter (same rule:

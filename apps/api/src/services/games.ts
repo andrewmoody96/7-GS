@@ -11,6 +11,8 @@ import { uuidv7 } from '../ids';
 import {
   addPinchHit,
   assertBuilt,
+  isWeekLocked,
+  plannedThreshold,
   assertNotFinal,
   gameTimeZone,
   loadEntries,
@@ -78,17 +80,13 @@ export async function patchLineup(
     );
   }
 
-  const set: Partial<typeof games.$inferInsert> = {};
-  if (patch.threshold !== undefined) set.threshold = patch.threshold;
-  if (patch.minTasks !== undefined) set.minTasks = patch.minTasks;
-  if (Object.keys(set).length > 0) {
-    const [row] = await tx.update(games).set(set).where(eq(games.id, game.id)).returning();
-    if (row) game = row;
-  }
   if (patch.entries !== undefined) {
     await replaceEntries(tx, user, game, patch.entries);
     // The day was re-planned while a task was on the IL: the user's plan stands.
     await dropHoldsForGame(tx, game.id);
+    // Runs to win follows the new lineup (rules.lineupThreshold).
+    const [row] = await tx.update(games).set({ threshold: await plannedThreshold(tx, game.id), minTasks: null }).where(eq(games.id, game.id)).returning();
+    if (row) game = row;
   }
   return refreshScore(tx, game);
 }
@@ -359,9 +357,10 @@ export async function pinchHit(
       throw conflict('CONFLICT', 'That task is already in this lineup.', 'ALREADY_IN_LINEUP');
     }
   }
-  const raises = existing?.role !== 'lineup';
+  const weekLocked = await isWeekLocked(tx, user, game, now);
+  const raises = weekLocked && required && existing?.role !== 'lineup';
   if (raises && pinchHitThreshold(game.threshold ?? 1, existing?.points ?? task.points) > LIMITS.thresholdMax) {
     throw conflict('CONFLICT', `Runs to win can't go above ${LIMITS.thresholdMax}.`, 'THRESHOLD_MAX');
   }
-  return (await addPinchHit(tx, game, task, now, { required })).game;
+  return (await addPinchHit(tx, game, task, now, { required, weekLocked })).game;
 }

@@ -60,14 +60,14 @@ describe('weekly lineup card', () => {
       token,
       params: { gameId: wednesday.id },
       body: {
-        threshold: 5,
         entries: [
           { taskId: ids.Dishes!, position: 1, required: true, role: 'lineup' },
           { taskId: ids.Read!, position: 2, required: false, role: 'lineup' },
         ],
       },
     });
-    expect(edited).toMatchObject({ threshold: 5, editPolicy: 'free' });
+    // Runs to win follows the new lineup: Dishes 3 (must-hit) plus half of Read's 1 = 4.
+    expect(edited).toMatchObject({ threshold: 4, editPolicy: 'free' });
     expect(edited.entries.map((e) => e.taskName)).toEqual(['Dishes', 'Read']);
 
     // Starter edits only reach lineups that aren't built yet.
@@ -76,7 +76,7 @@ describe('weekly lineup card', () => {
       params: { weekday: 3 },
       body: { name: 'Changed', threshold: 9, minTasks: null, lockTime: null, lineup: [], bench: [] },
     });
-    expect(await t.ok('getGame', { token, params: { gameId: wednesday.id } })).toMatchObject({ starterName: 'Day 3', threshold: 5 });
+    expect(await t.ok('getGame', { token, params: { gameId: wednesday.id } })).toMatchObject({ starterName: 'Day 3', threshold: 4 });
 
     // Opening the card again keeps the plan.
     const again = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
@@ -85,7 +85,7 @@ describe('weekly lineup card', () => {
     // Game day uses the planned lineup.
     t.at('2026-10-07', '08:00', CHICAGO);
     const [today] = (await t.ok('getToday', { token })).games;
-    expect(today).toMatchObject({ id: wednesday.id, threshold: 5 });
+    expect(today).toMatchObject({ id: wednesday.id, threshold: 4 });
   });
 
   it("locks at the week's first pitch: then lineups only grow (GAME_LOCKED / WEEK_LOCKED)", async () => {
@@ -382,15 +382,16 @@ describe('pinch hitters', () => {
       await t.fails('addPinchHitter', { token, params: { gameId: monday!.id }, body: { taskId: ids.Dishes!, required: false } }, 409),
     ).toMatchObject({ code: 'NOT_ELIGIBLE', reason: 'TODAY_MUST_HIT' });
 
-    // Wednesday: a regular task. Runs to win still rises by its 3 runs (3 → 6).
+    // Wednesday: a regular task. The week is locked, so only a new must-hit would raise runs
+    // to win; it stays at 3.
     const added = await t.ok('addPinchHitter', { token, params: { gameId: wednesday!.id }, body: { taskId: ids.Dishes!, required: false } });
-    expect(added.threshold).toBe(6);
+    expect(added.threshold).toBe(3);
     expect(entry(added, 'Dishes')).toMatchObject({ role: 'lineup', required: false, points: 3 });
     expect(entry(added, 'Dishes').pinchHitAt).not.toBeNull();
 
-    // A bench task can come in the same way (6 → 7); one already batting can't be "added".
+    // A bench task can come in the same way (still 3); one already batting can't be "added".
     const promoted = await t.ok('addPinchHitter', { token, params: { gameId: wednesday!.id }, body: { taskId: ids.Walk!, required: false } });
-    expect(promoted.threshold).toBe(7);
+    expect(promoted.threshold).toBe(3);
     expect(entry(promoted, 'Walk')).toMatchObject({ role: 'lineup', required: false });
     expect(
       await t.fails('addPinchHitter', { token, params: { gameId: wednesday!.id }, body: { taskId: ids.Read!, required: false } }, 409),
@@ -413,7 +414,7 @@ describe('pinch hitters', () => {
       resultDetail: 'short',
       missedRequired: 0,
       runs: 2,
-      threshold: 7,
+      threshold: 3,
     });
   });
 });

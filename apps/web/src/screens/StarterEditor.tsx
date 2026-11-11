@@ -1,10 +1,10 @@
 import type { StarterDto, TaskDto } from '@7gs/contracts';
-import { LIMITS, starterWarnings } from '@7gs/rules';
+import { LIMITS, lineupThreshold, starterWarnings } from '@7gs/rules';
 import { useId, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMeQuery, usePutStarter, useStartersQuery, useTasksQuery } from '../app/queries';
-import { Stepper, Switch } from '../components/Controls';
-import { AddFromRoster, SlotList, Warnings, type EditorSlot } from '../components/LineupEditor';
+import { Switch } from '../components/Controls';
+import { AddFromRoster, RunsToWinLine, SlotList, Warnings, type EditorSlot } from '../components/LineupEditor';
 import { IconInfo } from '../components/icons';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { formatTimeOfDay } from '../lib/format';
@@ -63,8 +63,6 @@ function StarterForm({
   const put = usePutStarter();
   const byId = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
   const [name, setName] = useState(starter.name);
-  const [threshold, setThreshold] = useState(starter.threshold);
-  const [minTasks, setMinTasks] = useState<number | null>(starter.minTasks);
   const [lockTime, setLockTime] = useState<string | null>(starter.lockTime);
   const [lineup, setLineup] = useState<EditorSlot[]>(() => starter.lineup.map((s) => toSlot(s.taskId, s.required, byId)));
   const [bench, setBench] = useState<EditorSlot[]>(() => starter.bench.map((s) => toSlot(s.taskId, false, byId)));
@@ -78,10 +76,9 @@ function StarterForm({
       ...lineup.map((s) => ({ taskId: s.taskId, points: s.points, role: 'lineup' as const })),
       ...bench.map((s) => ({ taskId: s.taskId, points: s.points, role: 'bench' as const })),
     ],
-    threshold,
-    minTasks,
+    lineupThreshold(lineup),
+    null,
   );
-  const maxRuns = lineup.filter((s) => s.status !== 'injured').reduce((sum, s) => sum + s.points, 0);
   const dayName = WEEKDAY_NAMES[starter.weekday - 1] ?? '';
 
   const save = () =>
@@ -90,8 +87,6 @@ function StarterForm({
         weekday: starter.weekday,
         body: {
           name: name.trim(),
-          threshold,
-          minTasks,
           lockTime,
           lineup: lineup.map((s, i) => ({ taskId: s.taskId, position: i + 1, required: s.required })),
           bench: bench.map((s, i) => ({ taskId: s.taskId, position: i + 1 })),
@@ -136,21 +131,7 @@ function StarterForm({
           </label>
           <input id={nameId} className="input" value={name} maxLength={LIMITS.starterNameMax} onChange={(e) => setName(e.target.value)} />
         </div>
-        <Stepper
-          label={vocab.terms.threshold}
-          value={threshold}
-          min={1}
-          max={LIMITS.thresholdMax}
-          suffix={vocab.terms.valueShort}
-          onChange={setThreshold}
-          hint={`Your full lineup is worth ${vocab.runs(maxRuns)}.`}
-        />
-        <div className="field">
-          <Switch label={`${vocab.terms.minTasks} (tasks done)`} checked={minTasks !== null} onChange={(on) => setMinTasks(on ? Math.max(1, lineup.length - 1) : null)} />
-          {minTasks !== null ? (
-            <Stepper label={vocab.terms.minTasks} value={minTasks} min={1} max={LIMITS.minTasksMax} onChange={setMinTasks} />
-          ) : null}
-        </div>
+        <RunsToWinLine lineup={lineup} />
         <div className="field">
           <Switch label={`Set a ${vocab.terms.lockTime.toLowerCase()}`} checked={lockTime !== null} onChange={(on) => setLockTime(on ? '09:00' : null)} />
           {lockTime !== null ? (

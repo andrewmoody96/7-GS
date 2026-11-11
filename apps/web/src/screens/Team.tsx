@@ -397,7 +397,6 @@ function StarterCard({
         <span className="starter-card__meta">
           {vocab.terms.threshold} {starter.threshold} · {starter.lineup.length} in {vocab.terms.lineup.toLowerCase()} · {musts}{' '}
           {musts === 1 ? vocab.term.required.toLowerCase() : `${vocab.term.required.toLowerCase()}s`}
-          {starter.minTasks !== null ? ` · min ${starter.minTasks}` : ''}
         </span>
         <span className="starter-card__meta">
           {lock ? vocab.lock.firstPitchAt(formatTimeOfDay(lock)) : vocab.lock.firstPitchOnCheckoff}

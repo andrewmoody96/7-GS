@@ -1,4 +1,4 @@
-import { evaluateGame, scoreline, seriesStatus, type LineupRole } from '@7gs/rules';
+import { evaluateGame, lineupThreshold, scoreline, seriesStatus, type LineupRole } from '@7gs/rules';
 import { describe, expect, it } from 'vitest';
 import { ApiError, withResponseValidation, type ApiClient } from '../client';
 import { createMockApi } from './index';
@@ -90,8 +90,9 @@ describe('mock backend seeds', () => {
     expect(today.games).toHaveLength(1);
 
     const game = today.games[0]!;
-    // Runs to win 5, plus 1 for Thursday's missed one-off, carried over as a pinch hitter.
-    expect(game).toMatchObject({ status: 'live', starterName: 'Friday Finisher', threshold: 6, runs: 3, editPolicy: 'additions_only' });
+    // Runs to win 7 (must-hits 5 plus half of the other 3, rounded up), plus 1 for Thursday's
+    // missed one-off, carried over as a pinch hitter.
+    expect(game).toMatchObject({ status: 'live', starterName: 'Friday Finisher', threshold: 8, runs: 3, editPolicy: 'additions_only' });
     expect(game.lockedAt).not.toBeNull();
     expect(game.entries.find((e) => e.taskName === 'Renew passport')).toMatchObject({
       role: 'lineup',
@@ -101,7 +102,7 @@ describe('mock backend seeds', () => {
     });
     expect(game.entries.find((e) => e.taskName === 'Renew passport')?.pinchHitAt).not.toBeNull();
     const projection = project(game);
-    expect(projection).toMatchObject({ runsNeeded: 3, missedRequired: 2, result: 'L' });
+    expect(projection).toMatchObject({ runsNeeded: 5, missedRequired: 2, result: 'L' });
 
     const series = today.series!;
     const byNumber = (n: number) => series.games.find((g) => g.gameNumber === n)!;
@@ -113,8 +114,8 @@ describe('mock backend seeds', () => {
 
     const thursday = await api.call('getGame', { params: { gameId: byNumber(4).id } });
     // Short and the one-off missed: 20 − 5 (missed must-hit) = 15%.
-    expect(thursday.rally).toMatchObject({ hit: true, roll: 7, oddsPct: 15 });
-    expect(thursday).toMatchObject({ threshold: 4, missedRequired: 1 });
+    expect(thursday.rally).toMatchObject({ hit: true, roll: 7, oddsPct: 10 });
+    expect(thursday).toMatchObject({ threshold: 6, missedRequired: 1 });
 
     // Saturday's bench bat was promoted after the week locked: runs to win 4 → 5.
     const saturday = await api.call('getGame', { params: { gameId: byNumber(6).id } });
@@ -209,7 +210,14 @@ describe('mock backend game day', () => {
       body: { clientAt: backend.now().toISOString() },
     });
     expect(after.runs).toBe(7);
-    expect(project(after)).toMatchObject({ result: 'W', runsNeeded: 0, missedRequired: 0 });
+    expect(project(after)).toMatchObject({ result: 'L', runsNeeded: 1, missedRequired: 0 });
+    const walk = game.entries.find((e) => e.taskName === 'Evening walk')!;
+    const won = await api.call('completeEntry', {
+      params: { gameId: game.id, entryId: walk.id },
+      body: { clientAt: backend.now().toISOString() },
+    });
+    expect(won.runs).toBe(8);
+    expect(project(won)).toMatchObject({ result: 'W', runsNeeded: 0, missedRequired: 0 });
 
     // Repeating a check-off is idempotent.
     const again = await api.call('completeEntry', {
@@ -225,7 +233,7 @@ describe('mock backend game day', () => {
     expect((await api.call('getGame', { params: { gameId: game.id } })).status).toBe('live');
     tick(40 * 60 * 1000);
     const final = await api.call('getGame', { params: { gameId: game.id } });
-    expect(final).toMatchObject({ status: 'final', result: 'W', resultDetail: 'clean', runs: 7 });
+    expect(final).toMatchObject({ status: 'final', result: 'W', resultDetail: 'clean', runs: 8 });
     // The one-off was done in a game that went final, so it retires.
     expect((await api.call('listTasks')).tasks.find((t) => t.name === 'Renew passport')).toMatchObject({ status: 'retired', carryover: false });
     // Noon the next day, Chicago time.
@@ -266,9 +274,12 @@ describe('mock backend game day', () => {
     const reordered = [...lineup].reverse().map((e, i) => ({ taskId: e.taskId, position: i + 1, required: e.required, role: 'lineup' as const }));
     const patched = await api.call('patchLineup', {
       params: { gameId: wednesday.id },
-      body: { threshold: 3, entries: reordered },
+      body: { entries: reordered },
     });
-    expect(patched.threshold).toBe(3);
+    // Runs to win follows the lineup: must-hits plus half the rest, rounded up.
+    expect(patched.threshold).toBe(
+      lineupThreshold(reordered.map((e) => ({ required: e.required, points: lineup.find((l) => l.taskId === e.taskId)!.points }))),
+    );
     expect(patched.entries.filter((e) => e.role === 'lineup').map((e) => e.taskId)).toEqual(reordered.map((e) => e.taskId));
     expect(patched.entries.filter((e) => e.role === 'bench')).toHaveLength(0);
 
@@ -279,7 +290,7 @@ describe('mock backend game day', () => {
     expect(locked.lockedAt).toBe('2026-10-05T14:00:00.000Z');
     expect(locked.games.find((g) => g.id === wednesday.id)?.editPolicy).toBe('additions_only');
     await expectApiError(
-      api.call('patchLineup', { params: { gameId: wednesday.id }, body: { threshold: 1 } }),
+      api.call('patchLineup', { params: { gameId: wednesday.id }, body: { entries: [] } }),
       'GAME_LOCKED',
       'WEEK_LOCKED',
     );
@@ -348,7 +359,7 @@ describe('mock backend rainouts, Rally Cap and IL', () => {
 
     const quote = await api.call('getRallyQuote', { params: { gameId: thursday.id } });
     expect(quote).toMatchObject({ eligible: true, seasonWinStreak: 4, tokensAvailable: 1 });
-    expect(quote.odds).toMatchObject({ base: 31, closeness: -5, missedMustHit: -5, warningTrack: 4, runCushion: 0, pct: 25 });
+    expect(quote.odds).toMatchObject({ base: 31, closeness: -10, missedMustHit: -5, warningTrack: 4, runCushion: 0, pct: 20 });
 
     await expectApiError(api.call('rollRally', { params: { gameId: thursday.id } }), 'VALIDATION_FAILED');
     const first = await api.call('rollRally', { params: { gameId: thursday.id }, headers: { 'Idempotency-Key': 'k1' } });
@@ -442,7 +453,7 @@ describe('mock backend editing and deleting tasks mid-week', () => {
 });
 
 describe('mock backend pinch hitters and one-offs', () => {
-  it('adds a regular task to a later day (same raise), but never to today', async () => {
+  it('adds a regular task to a later day of a locked week (no raise), but never to today', async () => {
     const { api } = setup('midseason');
     const today = (await api.call('getToday')).games[0]!;
     const yoga = await api.call('createTask', { body: { name: 'Yoga', points: 2 } });
@@ -454,7 +465,8 @@ describe('mock backend pinch hitters and one-offs', () => {
     const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });
     const later = week.games.find((g) => g.playedDate > today.playedDate && g.status !== 'final')!;
     const after = await api.call('addPinchHitter', { params: { gameId: later.id }, body: { taskId: yoga.id, required: false } });
-    expect(after.threshold).toBe(later.threshold + 2);
+    // Once the week is locked, only a new must-hit raises runs to win.
+    expect(after.threshold).toBe(later.threshold);
     expect(after.entries.find((e) => e.taskId === yoga.id)).toMatchObject({ required: false, role: 'lineup' });
     await expectApiError(
       api.call('addPinchHitter', { params: { gameId: later.id }, body: { taskId: yoga.id, required: false } }),
@@ -466,24 +478,24 @@ describe('mock backend pinch hitters and one-offs', () => {
   it('raises runs to win by exactly the pinch hitter’s runs, mid-game', async () => {
     const { api } = setup('midseason');
     const game = (await api.call('getToday')).games[0]!;
-    expect(game).toMatchObject({ threshold: 6, runs: 3, editPolicy: 'additions_only' });
-    expect(scoreline({ result: null, runs: game.runs, threshold: game.threshold }).them).toBe(5);
+    expect(game).toMatchObject({ threshold: 8, runs: 3, editPolicy: 'additions_only' });
+    expect(scoreline({ result: null, runs: game.runs, threshold: game.threshold }).them).toBe(7);
 
     const yoga = await api.call('createTask', { body: { name: 'Yoga', points: 2 } });
     const after = await api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: yoga.id } });
-    expect(after.threshold).toBe(8);
+    expect(after.threshold).toBe(10);
     expect(after.runs).toBe(3);
     const entry = after.entries.find((e) => e.taskId === yoga.id)!;
     expect(entry).toMatchObject({ role: 'lineup', required: true, carriedOver: false, points: 2 });
     expect(entry.pinchHitAt).not.toBeNull();
     expect(entry.position).toBe(after.entries.filter((e) => e.role === 'lineup').length);
     // The opponent answers back with the same number of runs.
-    expect(scoreline({ result: null, runs: after.runs, threshold: after.threshold }).them).toBe(7);
+    expect(scoreline({ result: null, runs: after.runs, threshold: after.threshold }).them).toBe(9);
 
     // Promoting a bench task to must-hit is the same rule.
     const spanish = after.entries.find((e) => e.role === 'bench' && e.taskName === 'Practice Spanish')!;
     const promoted = await api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: spanish.taskId } });
-    expect(promoted.threshold).toBe(9);
+    expect(promoted.threshold).toBe(11);
     expect(promoted.entries.find((e) => e.id === spanish.id)).toMatchObject({ role: 'lineup', required: true });
     expect(promoted.entries.filter((e) => e.role === 'bench').map((e) => e.position)).toEqual([1]);
 
@@ -492,7 +504,7 @@ describe('mock backend pinch hitters and one-offs', () => {
     const inbox = game.entries.find((e) => e.taskName === 'Inbox zero')!;
     expect(inbox).toMatchObject({ role: 'lineup', required: false });
     const required = await api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: inbox.taskId } });
-    expect(required.threshold).toBe(9);
+    expect(required.threshold).toBe(11);
     expect(required.entries.find((e) => e.id === inbox.id)).toMatchObject({ required: true, pinchHitAt: null });
     await expectApiError(
       api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: inbox.taskId } }),
@@ -502,7 +514,7 @@ describe('mock backend pinch hitters and one-offs', () => {
     const thursday = (await api.call('getToday')).series!.games.find((g) => g.gameNumber === 4)!;
     await expectApiError(api.call('addPinchHitter', { params: { gameId: thursday.id }, body: { taskId: yoga.id } }), 'GAME_FINAL');
     // Lowering the bar isn't possible once the week is locked.
-    await expectApiError(api.call('patchLineup', { params: { gameId: game.id }, body: { threshold: 1 } }), 'GAME_LOCKED', 'WEEK_LOCKED');
+    await expectApiError(api.call('patchLineup', { params: { gameId: game.id }, body: { entries: [] } }), 'GAME_LOCKED', 'WEEK_LOCKED');
   });
 
   it('pinch hits on a later day of a locked week and adds to its bench', async () => {
@@ -656,7 +668,7 @@ describe('mock backend suspended games', () => {
       slot: 2,
       status: 'live',
       runs: 3,
-      threshold: 6,
+      threshold: 8,
       result: null,
     });
     expect((await api.call('getMe')).allowances.rainouts).toBe(before.allowances.rainouts - 1);

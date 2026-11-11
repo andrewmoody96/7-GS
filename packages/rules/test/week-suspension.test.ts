@@ -3,6 +3,7 @@ import {
   isIronMan,
   lineupEditPolicy,
   nextGameDate,
+  lineupThreshold,
   pinchHitThreshold,
   plannableWeeks,
   seasonWindow,
@@ -57,6 +58,32 @@ describe('weekly lineup card', () => {
   it('raises runs to win by exactly a pinch hitter’s runs', () => {
     expect(pinchHitThreshold(4, 2)).toBe(6);
     expect(pinchHitThreshold(4, 2, 10)).toBe(6);
+  });
+
+  it('works out runs to win from the lineup: must-hits plus half the rest, rounded up', () => {
+    expect(lineupThreshold([])).toBe(1); // an empty day still needs 1 run
+    expect(lineupThreshold([{ points: 2, required: true }])).toBe(2);
+    expect(lineupThreshold([{ points: 1, required: false }])).toBe(1);
+    expect(
+      lineupThreshold([
+        { points: 2, required: true },
+        { points: 1, required: true },
+        { points: 1, required: false },
+        { points: 2, required: false },
+        { points: 1, required: false },
+      ]),
+    ).toBe(5); // 3 + half of 4
+    // Never more than the lineup can score.
+    for (let must = 0; must <= 6; must++) {
+      for (let other = 0; other <= 6; other++) {
+        if (must + other === 0) continue;
+        const lineup = [
+          ...(must ? [{ points: must, required: true }] : []),
+          ...(other ? [{ points: other, required: false }] : []),
+        ];
+        expect(lineupThreshold(lineup)).toBeLessThanOrEqual(must + other);
+      }
+    }
   });
 
   it('never carries an out-of-reach day forward: doing every task wins', () => {

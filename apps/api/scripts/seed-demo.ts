@@ -212,8 +212,6 @@ for (const task of TASKS) ids[task.name] = (await call('createTask', {}, task)).
 for (const [weekday, plan] of Object.entries(STARTERS)) {
   await call('putStarter', { weekday }, {
     name: plan.name,
-    threshold: plan.threshold,
-    minTasks: plan.minTasks,
     lockTime: plan.lockTime,
     lineup: plan.lineup.map(([task, required], i) => ({ taskId: ids[task], position: i + 1, required })),
     bench: plan.bench.map((task, i) => ({ taskId: ids[task], position: i + 1 })),

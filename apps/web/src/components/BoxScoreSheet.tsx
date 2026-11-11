@@ -70,7 +70,6 @@ export function BoxScoreSheet({ game, today, timeZone, now, onClose, onRally, on
             ) : (
               <span className="muted">
                 {vocab.pinchHit.thresholdLine(game.threshold, raise)}
-                {game.minTasks !== null ? ` · ${vocab.terms.minTasks}: ${game.minTasks}` : ''}
               </span>
             )}
           </p>

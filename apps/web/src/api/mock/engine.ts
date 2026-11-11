@@ -53,6 +53,7 @@ import {
   LIMITS,
   lineupEditPolicy,
   nextGameDate,
+  lineupThreshold,
   pinchHitThreshold,
   plannableWeeks,
   scoreline,
@@ -144,10 +145,32 @@ function rulesOf(world: UserWorld, game: GameRow): GameRules & { starterName: st
   const starter = starterFor(world, game.templateWeekday);
   return {
     starterName: starter.name,
-    threshold: starter.threshold,
-    minTasks: starter.minTasks,
+    threshold: starterThreshold(world, starter),
+    minTasks: null,
     lockTime: starter.lockTime ?? world.user.defaultLockTime,
   };
+}
+
+/** A starter's runs to win from its lineup (rules.lineupThreshold); tasks on the IL count. */
+export function starterThreshold(world: UserWorld, starter: StarterRow): number {
+  return lineupThreshold(
+    starter.lineup.flatMap((s) => {
+      const task = world.tasks.find((t) => t.id === s.taskId);
+      return task && (task.status === 'active' || task.status === 'injured') ? [{ points: task.points, required: s.required }] : [];
+    }),
+  );
+}
+
+/** Runs to win for a day still being planned: from its lineup, IL-held spots included. */
+function plannedThreshold(game: GameRow): number {
+  return Math.min(
+    LIMITS.thresholdMax,
+    lineupThreshold([...game.entries.filter((e) => e.role === 'lineup'), ...game.ilHolds.filter((h) => h.role === 'lineup')]),
+  );
+}
+
+function isWeekLocked(world: UserWorld, game: GameRow, at: Date): boolean {
+  return game.lockedAt !== null || weekLock(world, game.seriesId, at) !== null;
 }
 
 function toEntryState(e: EntryRow): EntryState {
@@ -296,8 +319,8 @@ export function buildGameLineup(world: UserWorld, env: Env, game: GameRow, at: D
   }));
   game.snapshot = {
     starterName: starter.name,
-    threshold: starter.threshold,
-    minTasks: starter.minTasks,
+    threshold: starterThreshold(world, starter),
+    minTasks: null,
     lockTime: starter.lockTime ?? world.user.defaultLockTime,
   };
   game.lineupBuiltAt = iso(at);
@@ -507,10 +530,12 @@ function addPinchHit(
     if (carriedOver) existing.carriedOver = true;
     return;
   }
+  const weekLocked = isWeekLocked(world, game, at);
   if (existing?.role === 'lineup') {
-    // Already batting: its runs were available, so it just becomes required (no raise).
+    // Already batting: once the week is locked it just becomes required (no raise).
     existing.required = true;
     existing.carriedOver = existing.carriedOver || carriedOver;
+    if (!weekLocked) snapshot.threshold = plannedThreshold(game);
     return;
   }
   const lastPosition = Math.max(0, ...game.entries.filter((e) => e.role === 'lineup').map((e) => e.position));
@@ -518,7 +543,10 @@ function addPinchHit(
     (sum, e) => sum + e.points,
     0,
   );
-  snapshot.threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(snapshot.threshold, task.points, lineupRuns));
+  // Locked week: only a new must-hit raises runs to win. Before that, it follows the lineup.
+  if (weekLocked && required) {
+    snapshot.threshold = Math.min(LIMITS.thresholdMax, pinchHitThreshold(snapshot.threshold, task.points, lineupRuns));
+  }
   if (existing) {
     // Promote from the bench.
     existing.position = lastPosition + 1;
@@ -544,6 +572,7 @@ function addPinchHit(
       partial: false,
     });
   }
+  if (!weekLocked) snapshot.threshold = plannedThreshold(game);
   renumber(game);
 }
 
@@ -713,14 +742,14 @@ export function toStarterDto(world: UserWorld, starter: StarterRow): StarterDto 
       ...starter.lineup.map((s) => ({ taskId: s.taskId, points: pointsOf(s.taskId), role: 'lineup' as const })),
       ...starter.bench.map((s) => ({ taskId: s.taskId, points: pointsOf(s.taskId), role: 'bench' as const })),
     ],
-    starter.threshold,
-    starter.minTasks,
+    starterThreshold(world, starter),
+    null,
   );
   return {
     weekday: starter.weekday,
     name: starter.name,
-    threshold: starter.threshold,
-    minTasks: starter.minTasks,
+    threshold: starterThreshold(world, starter),
+    minTasks: null,
     lockTime: starter.lockTime,
     lineup: [...starter.lineup].sort((a, b) => a.position - b.position),
     bench: [...starter.bench].sort((a, b) => a.position - b.position),
@@ -1121,9 +1150,10 @@ export function patchLineup(world: UserWorld, env: Env, gameId: string, patch: L
     game.entries = next;
     // Re-planned while a task was on the IL: the user's plan stands.
     game.ilHolds = [];
+    // Runs to win follows the new lineup (rules.lineupThreshold).
+    game.snapshot.threshold = plannedThreshold(game);
+    game.snapshot.minTasks = null;
   }
-  if (patch.threshold !== undefined) game.snapshot.threshold = patch.threshold;
-  if (patch.minTasks !== undefined) game.snapshot.minTasks = patch.minTasks;
   return toGameDto(world, game, now);
 }
 
@@ -1356,7 +1386,7 @@ export function pinchHitter(world: UserWorld, env: Env, gameId: string, taskId: 
     }
     if (existing?.role === 'lineup') fail(409, 'CONFLICT', 'That task is already in this lineup.', 'ALREADY_IN_LINEUP');
   }
-  if (existing?.role !== 'lineup' && pinchHitThreshold(game.snapshot.threshold, task.points) > LIMITS.thresholdMax) {
+  if (required && existing?.role !== 'lineup' && isWeekLocked(world, game, now) && pinchHitThreshold(game.snapshot.threshold, task.points) > LIMITS.thresholdMax) {
     fail(409, 'CONFLICT', 'Runs to win would go past the limit.', 'THRESHOLD_MAX');
   }
   addPinchHit(world, env, game, task, now, false, required);
@@ -1652,11 +1682,11 @@ export function putStarter(world: UserWorld, day: Weekday, body: StarterPutDto):
   }
   const starter = starterFor(world, day);
   starter.name = body.name;
-  starter.threshold = body.threshold;
-  starter.minTasks = body.minTasks;
+  starter.minTasks = null;
   starter.lockTime = body.lockTime;
   starter.lineup = body.lineup.map((s) => ({ taskId: s.taskId, position: s.position, required: s.required }));
   starter.bench = body.bench.map((s) => ({ taskId: s.taskId, position: s.position }));
+  starter.threshold = starterThreshold(world, starter);
   return toStarterDto(world, starter);
 }
 

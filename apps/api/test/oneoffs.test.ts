@@ -105,7 +105,7 @@ describe('one-off tasks', () => {
 
     t.at('2026-10-06', '08:00', CHICAGO);
     const [tuesday] = (await t.ok('getToday', { token })).games;
-    expect(tuesday!.threshold).toBe(3); // 2 + Haircut's 1
+    expect(tuesday!.threshold).toBe(4); // 3 from the lineup (Gym 2 + half of Read's 1) + Haircut's 1
     expect(entry(tuesday!, 'Haircut')).toMatchObject({
       role: 'lineup',
       required: true,
@@ -119,7 +119,7 @@ describe('one-off tasks', () => {
     await playDay(t, token, '2026-10-06', ['Gym', 'Read']);
     t.at('2026-10-07', '08:00', CHICAGO);
     const [wednesday] = (await t.ok('getToday', { token })).games;
-    expect(wednesday).toMatchObject({ threshold: 3 });
+    expect(wednesday).toMatchObject({ threshold: 4 });
     expect(entry(wednesday!, 'Haircut')).toMatchObject({ required: true, carriedOver: true });
 
     // Done: it retires and doesn't come back.
@@ -128,7 +128,7 @@ describe('one-off tasks', () => {
     t.at('2026-10-08', '08:00', CHICAGO);
     const [thursday] = (await t.ok('getToday', { token })).games;
     expect(thursday!.entries.map((e) => e.taskName)).toEqual(['Gym', 'Read']);
-    expect(thursday!.threshold).toBe(2);
+    expect(thursday!.threshold).toBe(3);
   });
 
   it("doesn't carry a one-off that wasn't a must-hit", async () => {
@@ -177,10 +177,12 @@ describe('one-off tasks', () => {
     await playDay(t, token, '2026-10-05', ['Gym', 'Read']);
     const after = await t.ok('getWeek', { token, params: { startDate: '2026-10-05' } });
     const moved = after.games.find((g) => g.id === tuesday!.id)!;
-    expect(moved).toMatchObject({ playedDate: '2026-10-08', slot: 2, threshold: 2 });
+    expect(moved).toMatchObject({ playedDate: '2026-10-08', slot: 2, threshold: 3 });
     expect(moved.entries.map((e) => e.taskName)).toEqual(['Gym', 'Read']);
     const wed = after.games.find((g) => g.id === wednesday!.id)!;
-    expect(wed.threshold).toBe(2); // Errand was already batting: it becomes a must-hit, no raise
+    // Planned as Gym 2 + half of Errand 2 and Read 1, rounded up = 4. Errand was already
+    // batting, so becoming a must-hit in the locked week doesn't raise it.
+    expect(wed.threshold).toBe(4);
     expect(wed.entries.filter((e) => e.taskName === 'Errand')).toEqual([
       expect.objectContaining({ role: 'lineup', required: true, position: 2, carriedOver: true }),
     ]);
@@ -202,7 +204,7 @@ describe('one-off tasks', () => {
     t.at('2026-10-12', '08:00', CHICAGO);
     const [monday] = (await t.ok('getToday', { token })).games;
     expect(monday!.id).toBe(next.games[0]!.id);
-    expect(monday).toMatchObject({ threshold: 3, seriesId: next.series.id });
+    expect(monday).toMatchObject({ threshold: 4, seriesId: next.series.id });
     expect(entry(monday!, 'Haircut')).toMatchObject({ required: true, carriedOver: true, pinchHitAt: '2026-10-12T05:30:00.000Z' });
   });
 });

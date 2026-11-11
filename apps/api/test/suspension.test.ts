@@ -8,24 +8,26 @@ import { CHICAGO, createTasks, TestApp, useTestDb } from './helpers';
 const env = useTestDb();
 const ALL = ['Gym', 'Read', 'Walk'];
 
-/** Chicago user, sign-up Friday 2026-10-02. Every starter: Gym (2) + Read must-hits, Walk; runs to win 4. */
+/**
+ * Chicago user, sign-up Friday 2026-10-02. Every starter: Gym (2) must-hit, then Read, Walk
+ * and Stretch; runs to win 4 (Gym's 2 plus half of the other 3, rounded up). ALL is enough.
+ */
 async function setup(t: TestApp, email: string) {
   t.clock.set('2026-10-02T15:00:00Z');
   const { token } = await t.signIn(email, CHICAGO);
-  const ids = await createTasks(t, token, [{ name: 'Gym', points: 2 }, { name: 'Read' }, { name: 'Walk' }]);
+  const ids = await createTasks(t, token, [{ name: 'Gym', points: 2 }, { name: 'Read' }, { name: 'Walk' }, { name: 'Stretch' }]);
   for (const weekday of [1, 2, 3, 4, 5, 6, 7]) {
     await t.ok('putStarter', {
       token,
       params: { weekday },
       body: {
         name: `Day ${weekday}`,
-        threshold: 4,
-        minTasks: null,
         lockTime: null,
         lineup: [
           { taskId: ids.Gym!, position: 1, required: true },
           { taskId: ids.Read!, position: 2, required: false },
           { taskId: ids.Walk!, position: 3, required: false },
+          { taskId: ids.Stretch!, position: 4, required: false },
         ],
         bench: [],
       },
@@ -207,11 +209,24 @@ describe('suspended games', () => {
   it('ends a Sunday suspension with no decision; a tied series is split or decided by run differential', async () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
 
-    async function week(email: string, mondayThreshold: number) {
-      const { token } = await setup(t, email);
+    async function week(email: string, lighterMonday: boolean) {
+      const { token, ids } = await setup(t, email);
       t.at('2026-10-05', '08:00', CHICAGO);
       const [monday] = (await t.ok('getToday', { token })).games;
-      await t.ok('patchLineup', { token, params: { gameId: monday!.id }, body: { threshold: mondayThreshold } });
+      if (lighterMonday) {
+        // Stretch comes off Monday's lineup: runs to win follows it down to 2 + half of 2 = 3.
+        await t.ok('patchLineup', {
+          token,
+          params: { gameId: monday!.id },
+          body: {
+            entries: [
+              { taskId: ids.Gym!, position: 1, required: true, role: 'lineup' },
+              { taskId: ids.Read!, position: 2, required: false, role: 'lineup' },
+              { taskId: ids.Walk!, position: 3, required: false, role: 'lineup' },
+            ],
+          },
+        });
+      }
       for (const date of ['2026-10-05', '2026-10-06', '2026-10-07']) await playDay(t, token, date, ALL); // W W W
       for (const date of ['2026-10-08', '2026-10-09', '2026-10-10']) await playDay(t, token, date, ['Gym', 'Read']); // L L L
 
@@ -234,7 +249,7 @@ describe('suspended games', () => {
     }
 
     // Runs to win 4 every day: +1 for each W, −1 for each L → split.
-    const even = await week('split@example.com', 4);
+    const even = await week('split@example.com', false);
     expect(await t.ok('getSeries', { token: even.token, params: { seriesId: even.seriesId } })).toMatchObject({
       wins: 3,
       losses: 3,
@@ -251,15 +266,15 @@ describe('suspended games', () => {
       currentWinStreak: 0,
     });
 
-    // Monday's runs to win lowered to 2: 4–1 is +3, so the tied series is won on run differential.
-    const won = await week('tiebreak@example.com', 2);
+    // Monday's runs to win down to 3: 4–2 is +2, so the tied series is won on run differential.
+    const won = await week('tiebreak@example.com', true);
     expect(await t.ok('getSeries', { token: won.token, params: { seriesId: won.seriesId } })).toMatchObject({
       wins: 3,
       losses: 3,
       result: 'won',
       ironMan: false,
     });
-    expect(await t.ok('getCurrentSeason', { token: won.token })).toMatchObject({ seriesWon: 1, noDecisions: 1, runDifferential: 2 });
+    expect(await t.ok('getCurrentSeason', { token: won.token })).toMatchObject({ seriesWon: 1, noDecisions: 1, runDifferential: 1 });
     // Won without a Rally Cap: the series bonus token.
     expect((await t.ok('getMe', { token: won.token })).allowances).toMatchObject({ rallyTokens: 2, rainouts: 1 });
   });
