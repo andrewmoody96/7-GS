@@ -25,7 +25,8 @@ export function stripText(game: GameSummaryDto, state: StripState, form: 'short'
     case 'win':
     case 'loss': {
       const result = `${state === 'win' ? vocab.terms.win : vocab.terms.loss} ${gameScore(game)}`;
-      if (!game.resultDetail || game.resultDetail === 'clean') return result;
+      // A plain W or L has no short label, so nothing follows the score.
+      if (!game.resultDetail || !vocab.resultDetailShort[game.resultDetail]) return result;
       return form === 'short'
         ? `${result} · ${vocab.resultDetailShort[game.resultDetail]}`
         : `${result} (${vocab.resultDetail[game.resultDetail]})`;

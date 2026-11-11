@@ -24,7 +24,7 @@ export type GameResult = (typeof GAME_RESULTS)[number];
 /**
  * - clean: won outright
  * - short: all must-hits done, but runs or minimum tasks not met
- * - forfeit: exactly one must-hit missed
+ * - forfeit: exactly one must-hit missed (every loss is shown simply as "Loss")
  * - no_appeal: two or more must-hits missed
  * - rally: a loss overturned by a Rally Cap
  * - suspended: a suspended game that couldn't be resumed that week; final with no

@@ -27,4 +27,21 @@ describe('sport themes', () => {
     expect(vocab.jumbotron.walkOff).toBe('Walk-off W');
     expect(vocab.flavor.management).toBe('Management');
   });
+
+  it('calls every loss just a loss', () => {
+    for (const theme of AVAILABLE_THEMES) {
+      applyTheme(theme);
+      const labels = [...Object.values(vocab.resultDetail), ...Object.values(vocab.resultDetailShort)];
+      expect(labels.filter((l) => /forfeit/i.test(l))).toEqual([]);
+    }
+    applyTheme('baseball');
+    for (const theme of AVAILABLE_THEMES) {
+      applyTheme(theme);
+      for (const detail of ['short', 'forfeit', 'no_appeal'] as const) {
+        expect(vocab.resultDetail[detail]).toBe('Loss');
+        expect(vocab.resultDetailShort[detail]).toBe('');
+      }
+    }
+    applyTheme('baseball');
+  });
 });

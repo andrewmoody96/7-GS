@@ -88,7 +88,8 @@ Results:
 
 - **W**: all conditions met.
 - **L**: runs or minimum not met, all must-hits done. Rally Cap eligible.
-- **L (forfeit)**: exactly one must-hit missed. Rally Cap eligible.
+- **L (forfeit)**: exactly one must-hit missed. Rally Cap eligible. (Stored as
+  `forfeit`. On screen every L, whatever the reason, just reads "Loss".)
 - **L (no appeal)**: two or more must-hits missed. Not Rally Cap eligible.
 - **W (rally)**: a loss overturned by a successful Rally Cap.
 

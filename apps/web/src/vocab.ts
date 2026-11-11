@@ -451,17 +451,18 @@ export const baseball: Vocab = {
   },
   resultDetail: {
     clean: 'Win',
-    short: 'Came up short',
-    forfeit: 'Forfeit · 1 must-hit missed',
-    no_appeal: 'No appeal · 2+ must-hits missed',
+    // Every L just reads Loss: the app already decides whether a Rally Cap can save it.
+    short: 'Loss',
+    forfeit: 'Loss',
+    no_appeal: 'Loss',
     rally: 'Rally W',
     suspended: 'Suspended · no decision',
   },
   resultDetailShort: {
     clean: '',
-    short: 'Short',
-    forfeit: 'Forfeit',
-    no_appeal: 'No appeal',
+    short: '',
+    forfeit: '',
+    no_appeal: '',
     rally: 'Rally',
     suspended: 'ND',
   },
@@ -676,8 +677,6 @@ export const basketball: Vocab = overlay(baseball, {
   runs: (n) => plural(n, 'bucket', 'buckets'),
   hits: (n) => plural(n, 'make', 'makes'),
   resultDetail: {
-    forfeit: 'Forfeit · 1 must-make missed',
-    no_appeal: 'No appeal · 2+ must-makes missed',
     rally: 'Challenge W',
   },
   resultDetailShort: { rally: 'Challenge' },
@@ -826,8 +825,6 @@ export const hockey: Vocab = overlay(baseball, {
   runs: (n) => plural(n, 'shot', 'shots'),
   hits: (n) => plural(n, 'shot', 'shots'),
   resultDetail: {
-    forfeit: 'Forfeit · 1 must-score missed',
-    no_appeal: 'No appeal · 2+ must-scores missed',
     rally: 'Challenge W',
   },
   resultDetailShort: { rally: 'Challenge' },
