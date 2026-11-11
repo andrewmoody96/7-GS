@@ -99,9 +99,17 @@ export function pinchHitRaise(game: Pick<GameDto, 'entries'>): number {
   return game.entries.filter((e) => e.pinchHitAt !== null && e.role === 'lineup').reduce((sum, e) => sum + e.points, 0);
 }
 
+/** Everything the lineup could score: every task batting, plus spots held for tasks on the IL. */
+export function lineupRunsOf(game: Pick<GameDto, 'entries' | 'ilHolds'>): number {
+  return [...game.entries.filter((e) => e.role === 'lineup'), ...game.ilHolds.filter((h) => h.role === 'lineup')].reduce(
+    (sum, e) => sum + e.points,
+    0,
+  );
+}
+
 /** The math shown before sending in a pinch hitter: "Runs to win 4 → 6". */
-export function pinchHitMath(threshold: number, points: number) {
-  const after = pinchHitThreshold(threshold, points);
+export function pinchHitMath(threshold: number, points: number, lineupRuns: number = threshold) {
+  const after = pinchHitThreshold(threshold, points, lineupRuns);
   return { before: threshold, after, opponentBefore: opponentScore(threshold), opponentAfter: opponentScore(after) };
 }
 

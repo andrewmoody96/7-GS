@@ -38,9 +38,15 @@ export function lineupEditPolicy(input: { weekLocked: boolean; gameFinal: boolea
   return input.weekLocked ? 'additions_only' : 'free';
 }
 
-/** A pinch hitter is a new must-hit; runs to win rises by exactly its runs. */
-export function pinchHitThreshold(threshold: number, points: number): number {
-  return threshold + points;
+/**
+ * A pinch hitter is a new must-hit; runs to win rises by exactly its runs. But a day
+ * that was already out of reach (runs to win above everything in the lineup, as on an
+ * empty day that needs 1 run) doesn't carry that shortfall forward: the raise starts
+ * from what the lineup could score, so doing every task always wins. `lineupRuns` is
+ * the lineup's total runs before the pinch hitter joins.
+ */
+export function pinchHitThreshold(threshold: number, points: number, lineupRuns: number = threshold): number {
+  return Math.min(threshold, lineupRuns) + points;
 }
 
 /** First day of next week's card opening: Friday (weekday 5). */

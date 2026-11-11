@@ -114,7 +114,9 @@ describe('weekly lineup card', () => {
     // Bench adds and pinch hitters still work on later days.
     await t.ok('addToBench', { token, params: { gameId: wednesday!.id }, body: { taskId: ids.Dishes! } });
     const grown = await t.ok('addPinchHitter', { token, params: { gameId: wednesday!.id }, body: { taskId: ids.Dishes! } });
-    expect(grown).toMatchObject({ threshold: 7, editPolicy: 'additions_only' });
+    // Wednesday needed 4 from a 3-run lineup, out of reach; the pinch hitter's raise starts
+    // from what the lineup could score (3 + 3), so doing every task wins.
+    expect(grown).toMatchObject({ threshold: 6, editPolicy: 'additions_only' });
 
     // Past days are closed.
     t.at('2026-10-06', '10:00', CHICAGO);

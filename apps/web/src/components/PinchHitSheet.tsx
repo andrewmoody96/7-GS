@@ -4,7 +4,7 @@ import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useAddPinchHitter, useCreateTask, useMeQuery, useTasksQuery } from '../app/queries';
 import { useNotify } from '../app/toast';
 import { weekdayLong } from '../lib/format';
-import { benchOf, pinchHitMath } from '../lib/game';
+import { benchOf, lineupRunsOf, pinchHitMath } from '../lib/game';
 import { vocab } from '../vocab';
 import { Stepper, Switch } from './Controls';
 import { IconArrowRight, IconPlus } from './icons';
@@ -36,8 +36,8 @@ export function pinchHitCandidates(game: GameDto, tasks: readonly TaskDto[]): Ca
 }
 
 /** "Runs to win 4 → 6": the raise, shown before confirming. */
-export function PinchHitMath({ threshold, points }: { threshold: number; points: number }) {
-  const math = pinchHitMath(threshold, points);
+export function PinchHitMath({ threshold, points, lineupRuns }: { threshold: number; points: number; lineupRuns: number }) {
+  const math = pinchHitMath(threshold, points, lineupRuns);
   return (
     <div className="phmath" aria-live="polite">
       <p className="phmath__row">
@@ -215,7 +215,7 @@ export function PinchHitSheet({ game, open, onClose, initialTaskId = null }: Pin
         </div>
       ) : null}
       {selected ? (
-        <PinchHitMath threshold={game.threshold} points={selected.points} />
+        <PinchHitMath threshold={game.threshold} points={selected.points} lineupRuns={lineupRunsOf(game)} />
       ) : (
         <p className="phmath phmath--empty">
           {vocab.terms.threshold} {game.threshold} · pick a {vocab.terms.task.toLowerCase()} to see the raise
