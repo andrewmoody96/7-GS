@@ -744,20 +744,6 @@
   font-size: 0.875rem;
 }
 
-.teamnav__head {
-  margin: 0 0 8px;
-  font-family: var(--font-display);
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.teamnav__more {
-  margin-top: 16px;
-}
-
 .explainer--plan {
   margin: 0 0 16px;
 }

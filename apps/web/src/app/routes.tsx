@@ -11,6 +11,7 @@ import {
   HistoryScreen,
   InjuredListScreen,
   LineupsScreen,
+  ManagementScreen,
   RotationScreen,
   SettingsScreen,
   StarterRedirect,
@@ -55,6 +56,7 @@ export function AppRoutes() {
         <Route index element={<TodayScreen />} />
         <Route path="series" element={<SeriesScreen />} />
         <Route path="team" element={<TeamScreen />} />
+        <Route path="team/management" element={<ManagementScreen />} />
         <Route path="team/lineups" element={<LineupsScreen />} />
         <Route path="team/rotation" element={<RotationScreen />} />
         <Route path="team/rotation/:weekday" element={<StarterEditorScreen />} />
