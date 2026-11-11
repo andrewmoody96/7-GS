@@ -109,7 +109,8 @@ function StarterForm({
       <header className="screen__head">
         <div>
           <p className="screen__kicker">
-            <Link to="/team">{vocab.tabs.team}</Link> / <Link to="/team/rotation">{vocab.flavor.rotation}</Link> /
+            <Link to="/team">{vocab.tabs.team}</Link> / <Link to="/team/management">{vocab.flavor.management}</Link> /{' '}
+            <Link to="/team/rotation">{vocab.flavor.rotation}</Link> /
           </p>
           <h1 className="screen__title">
             {dayName}

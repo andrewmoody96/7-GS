@@ -1,7 +1,7 @@
 // Team: the season at a glance (record, pace, goal) and the sections that run the team.
-// Management (Coaching in basketball and hockey) holds the planning: This Week (only this
-// week's days), Default Lineups (what every new week starts with) and Injuries. Then Team
-// History and Settings.
+// Management (Coaching in basketball and hockey) is one page holding the planning: This
+// Week (only this week's days), Default Lineups (what every new week starts with) and
+// Injuries. Then Team History and Settings.
 
 import type { StarterDto, TaskDto } from '@7gs/contracts';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -37,13 +37,30 @@ export const TEAM_SECTIONS = {
 } as const;
 
 /** A Team sub-page: a "Team /" breadcrumb back to the overview, then the title. */
-function SubPage({ title, className, children }: { title: string; className?: string; children: ReactNode }) {
+function SubPage({
+  title,
+  className,
+  inManagement = false,
+  children,
+}: {
+  title: string;
+  className?: string;
+  /** Under Management: the breadcrumb runs Team / Management /. */
+  inManagement?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className={`screen screen--team${className ? ` ${className}` : ''}`}>
       <header className="screen__head">
         <div>
           <p className="screen__kicker">
             <Link to="/team">{vocab.tabs.team}</Link> /
+            {inManagement ? (
+              <>
+                {' '}
+                <Link to="/team/management">{vocab.flavor.management}</Link> /
+              </>
+            ) : null}
           </p>
           <h1 className="screen__title">{title}</h1>
         </div>
@@ -58,11 +75,9 @@ function SubPage({ title, className, children }: { title: string; className?: st
 export function TeamScreen() {
   const season = useCurrentSeasonQuery();
   const me = useMeQuery();
-  const tasks = useTasksQuery();
   if (season.isPending) return <Loading label="Loading your team" />;
   if (season.isError) return <ErrorPanel error={season.error} onRetry={() => void season.refetch()} />;
   const s = season.data;
-  const injured = (tasks.data ?? []).filter((t) => t.status === 'injured').length;
   const totals = s ? seasonTotals(me.data, s) : null;
   return (
     <div className="screen screen--team">
@@ -76,25 +91,10 @@ export function TeamScreen() {
         <AllowanceChips allowances={me.data?.allowances} />
       </header>
       {s && totals ? <Standings season={s} total={totals.total} /> : null}
-      <nav className="teamnav" aria-label={vocab.tabs.team}>
-        <h2 className="teamnav__head">{vocab.flavor.management}</h2>
-        <div className="todo">
-          <TeamLink to="/team/lineups" title={TEAM_SECTIONS.lineups} sub="This week’s days, one by one. Changes here don’t repeat." />
-          <TeamLink to="/team/rotation" title={TEAM_SECTIONS.rotation} sub="What each weekday starts with, every new week." />
-          <TeamLink
-            to="/team/il"
-            title={TEAM_SECTIONS.il}
-            sub={
-              injured > 0
-                ? `${injured} ${injured === 1 ? 'task' : 'tasks'} on hold.`
-                : 'Put a task on hold without it costing you games.'
-            }
-          />
-        </div>
-        <div className="todo teamnav__more">
-          <TeamLink to="/team/history" title={TEAM_SECTIONS.history} sub="Past series and seasons, and your career stats." />
-          <TeamLink to="/team/settings" title={TEAM_SECTIONS.settings} sub="Name, sport, look, reminders and account." />
-        </div>
+      <nav className="todo teamnav" aria-label={vocab.tabs.team}>
+        <TeamLink to="/team/management" title={vocab.flavor.management} sub="This Week, Default Lineups and Injuries." />
+        <TeamLink to="/team/history" title={TEAM_SECTIONS.history} sub="Past series and seasons, and your career stats." />
+        <TeamLink to="/team/settings" title={TEAM_SECTIONS.settings} sub="Name, sport, look, reminders and account." />
       </nav>
       {s && totals ? (
         <>
@@ -107,6 +107,24 @@ export function TeamScreen() {
         </EmptyState>
       )}
     </div>
+  );
+}
+
+export function ManagementScreen() {
+  const tasks = useTasksQuery();
+  const injured = (tasks.data ?? []).filter((t) => t.status === 'injured').length;
+  return (
+    <SubPage title={vocab.flavor.management}>
+      <nav className="todo teamnav" aria-label={vocab.flavor.management}>
+        <TeamLink to="/team/lineups" title={TEAM_SECTIONS.lineups} sub="This week’s days, one by one. Changes here don’t repeat." />
+        <TeamLink to="/team/rotation" title={TEAM_SECTIONS.rotation} sub="What each weekday starts with, every new week." />
+        <TeamLink
+          to="/team/il"
+          title={TEAM_SECTIONS.il}
+          sub={injured > 0 ? `${injured} ${injured === 1 ? 'task' : 'tasks'} on hold.` : 'Put a task on hold without it costing you games.'}
+        />
+      </nav>
+    </SubPage>
   );
 }
 
@@ -126,7 +144,7 @@ function TeamLink({ to, title, sub }: { to: string; title: string; sub: string }
 
 export function LineupsScreen() {
   return (
-    <SubPage title={TEAM_SECTIONS.lineups} className="screen--board">
+    <SubPage title={TEAM_SECTIONS.lineups} className="screen--board" inManagement>
       <aside className="explainer explainer--plan">
         <IconInfo />
         <div>
@@ -144,7 +162,7 @@ export function LineupsScreen() {
 
 export function RotationScreen() {
   return (
-    <SubPage title={TEAM_SECTIONS.rotation}>
+    <SubPage title={TEAM_SECTIONS.rotation} inManagement>
       <Rotation />
     </SubPage>
   );
@@ -160,7 +178,7 @@ export function InjuredListScreen() {
   const active = tasks.data.filter((t) => t.status === 'active');
   const current = selected ? (tasks.data.find((t) => t.id === selected.id) ?? selected) : null;
   return (
-    <SubPage title={TEAM_SECTIONS.il}>
+    <SubPage title={TEAM_SECTIONS.il} inManagement>
       <IlExplainer />
       {injured.length > 0 ? (
         <TaskGroup title={`Sitting out · ${injured.length}`} tasks={injured} onSelect={setSelected} />

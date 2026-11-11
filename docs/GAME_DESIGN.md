@@ -432,10 +432,11 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
    must-hit indicators. Shows both games on a doubleheader day.
 2. **Series**: 7-game strip, series score, broadcast-style status chyron.
 3. **Team**: the season at a glance (record, stats, pace and win goal, Rally Caps and
-   Rainouts), then **Management** (**Coaching** in basketball and hockey): **This Week**
-   (the weekly lineup card; changes are for that day only), **Default Lineups** (weekday
-   starters, which every new week copies when it opens) and **Injuries**. Below that,
-   **Team History** and **Settings** (name, sport, look, reminders, account). Saving a
+   Rainouts), then three buttons: **Management** (**Coaching** in basketball and hockey),
+   **Team History** and **Settings** (name, sport, look, reminders, account). Management
+   is its own page with **This Week** (the weekly lineup card; changes are for that day
+   only), **Default Lineups** (weekday starters, which every new week copies when it
+   opens) and **Injuries**. Saving a
    default lineup also updates that weekday on weeks already open, unless the week has
    started (a switch in the editor turns this off). Replaces the old Film Room and Season tabs.
 4. **Add task** (a window, not a page): the raised **+** in the tab bar opens it from
