@@ -68,11 +68,12 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
         <li>
           <h3>Plan your week</h3>
           <p>
-            <strong>Team → Rotation</strong> is your default plan for each weekday. It fills in future weeks.
+            <strong>Team → {vocab.flavor.management} → Default Lineups</strong> is what each weekday starts with, every week. A
+            new week copies these when it opens.
           </p>
           <p>
-            <strong>Team → This week’s lineups</strong> is the actual week: seven days, each with its own lineup of tasks.
-            Change this week there. Next week’s card opens on Friday.
+            <strong>Team → {vocab.flavor.management} → This Week</strong> is the actual week: seven days, each with its own
+            lineup. Changes there are for that day only. Next week opens there on Friday.
           </p>
         </li>
         <li>

@@ -191,6 +191,37 @@ describe('Add task window', () => {
     const today = (await api.call('getToday')).games[0]!;
     expect(today.entries.some((e) => e.taskName === 'Learn to juggle')).toBe(false);
   });
+
+  it('puts a repeating task in the chosen weekdays’ default lineups, without touching a started week', async () => {
+    const user = userEvent.setup();
+    const { api } = renderWithApp(<TasksSheet open onClose={() => {}} />);
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Task'), 'Stretch');
+    const everyWeek = within(within(dialog).getByRole('group', { name: 'Every week' }));
+    await user.click(everyWeek.getByText('Mon'));
+    await user.click(everyWeek.getByText('Thu'));
+    expect(within(dialog).getByText(/Every Mon and Thu starts with it/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('switch', { name: 'Make it a must-hit' }));
+    await user.click(within(dialog).getByRole('button', { name: /Add task/ }));
+    await waitFor(async () => {
+      const task = (await api.call('listTasks')).tasks.find((t) => t.name === 'Stretch');
+      const { starters } = await api.call('listStarters');
+      const holding = starters.filter((s) => s.lineup.some((l) => l.taskId === task?.id && !l.required)).map((s) => s.weekday);
+      expect(holding).toEqual([1, 4]);
+    });
+    // The demo week has started, so its days keep their lineups.
+    const week = await api.call('getWeek', { params: { startDate: (await api.call('listWeeks')).weeks[0]!.startDate } });
+    expect(week.games.flatMap((g) => g.entries).some((e) => e.taskName === 'Stretch')).toBe(false);
+  });
+
+  it('only offers every week for repeating tasks', async () => {
+    const user = userEvent.setup();
+    renderWithApp(<TasksSheet open onClose={() => {}} />);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Every week' })).toBeInTheDocument();
+    await user.click(within(dialog).getByLabelText(/One-off/));
+    expect(within(dialog).queryByRole('group', { name: 'Every week' })).toBeNull();
+  });
 });
 
 describe('Deleting a task', () => {

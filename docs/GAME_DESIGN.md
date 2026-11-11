@@ -432,19 +432,22 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
    must-hit indicators. Shows both games on a doubleheader day.
 2. **Series**: 7-game strip, series score, broadcast-style status chyron.
 3. **Team**: the season at a glance (record, stats, pace and win goal, Rally Caps and
-   Rainouts), then four sections: **This week's lineups** (the weekly lineup card),
-   **Rotation** (weekday starters), **Injured List** and **Settings** (team name, theme,
-   sign out, account). Replaces the old Film Room and Season tabs.
+   Rainouts), then **Management** (**Coaching** in basketball and hockey): **This Week**
+   (the weekly lineup card; changes are for that day only), **Default Lineups** (weekday
+   starters, which every new week copies when it opens) and **Injuries**. Below that,
+   **Team History** and **Settings** (name, sport, look, reminders, account). Saving a
+   default lineup also updates that weekday on weeks already open, unless the week has
+   started (a switch in the editor turns this off). Replaces the old Film Room and Season tabs.
 4. **Add task** (a window, not a page): the raised **+** in the tab bar opens it from
-   any screen. Add a task and optionally put it straight into today or a later day this
-   week (same rules as §4a). The full task list lives here too, for editing and retiring.
+   any screen. Add a task and optionally put it on one day this week (same rules as §4a)
+   and, for a recurring task, on weekdays **every week** (its Default Lineups, plus those
+   days on open weeks that haven't started). The full task list lives here too, for editing and retiring.
 5. **Rally Cap sheet**: shown on a final, eligible L. Odds breakdown and roll.
 6. **Review Week hub**: season review, awards, front-office changes for the next season.
 7. **How it works**: a five-step guide (add tasks → plan the week → win the day → once the
    week starts, add but don't remove → win the week). It opens by itself on a device's
-   first visit and stays behind the **?** button in the top bar. The Rotation and its
-   starter editor say plainly that they shape future weeks, and point to the lineup card
-   for this week.
+   first visit and stays behind the **?** button in the top bar. This Week and Default
+   Lineups each say at the top what they change and link to the other.
 
 **Weekly lineup card on wider screens** (tablets and desktop, 768px+): the week is a
 board of seven equal-width, equal-height day columns in one row, sized to fit the window

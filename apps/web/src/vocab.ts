@@ -72,8 +72,10 @@ export interface Vocab {
   app: { name: string; shortName: string; tagline: string };
   /** Theme flavor: words that only make sense in this sport. */
   flavor: {
-    /** The weekday defaults as a set ("Rotation"). */
+    /** The weekday defaults as a set ("Default Lineups"). */
     rotation: string;
+    /** The Team group that runs the week ("Management", "Coaching"). */
+    management: string;
     /** How a lineup is ordered ("Batting order"). */
     lineupOrder: string;
     /** Second game of a doubleheader ("nightcap"). */
@@ -287,7 +289,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 export const baseball: Vocab = {
   app: { name: '7-Game Series', shortName: '7GS', tagline: 'Win the day. Win the week. Win the season.' },
   flavor: {
-    rotation: 'Rotation',
+    rotation: 'Default Lineups',
+    management: 'Management',
     lineupOrder: 'Batting order',
     secondGame: 'nightcap',
     welcome: 'Welcome to the ballpark',
@@ -305,7 +308,7 @@ export const baseball: Vocab = {
     doubleheader: 'Doubleheader',
     opponent: 'Opponent',
     taskDefinition: 'Tasks',
-    dayTemplate: 'Starter',
+    dayTemplate: 'Default lineup',
     lineupEntry: 'Lineup',
     required: 'Must-hit',
     points: 'Runs',
@@ -321,7 +324,7 @@ export const baseball: Vocab = {
     roster: 'Tasks',
     task: 'Task',
     tasks: 'Tasks',
-    starters: 'Starters',
+    starters: 'Default lineups',
     lineup: 'Lineup',
     requiredShort: 'MUST',
     pausedShort: 'IL',
@@ -466,7 +469,7 @@ export const baseball: Vocab = {
   phase: { preseason: 'Spring Training', season: 'Season', offseason: 'Review Week' },
   taskStatus: { active: 'Active', injured: 'Injured List', retired: 'Retired' },
   starterWarning: {
-    EMPTY_LINEUP: 'The lineup is empty, so this starter can never win.',
+    EMPTY_LINEUP: 'The lineup is empty, so this default lineup can never win.',
     THRESHOLD_UNREACHABLE: 'Even a perfect day can’t reach the opponent’s score.',
     MIN_TASKS_UNREACHABLE: 'The minimum hits is more than the tasks in the lineup.',
     DUPLICATE_TASK: 'A task appears more than once.',
@@ -571,7 +574,7 @@ export const baseball: Vocab = {
   emptyStates: {
     preseasonTitle: 'Spring Training',
     preseasonBody: (openingDay, days) =>
-      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your rotation under Team. Nothing counts yet, and you can add or change tasks any time after Opening Day too. A season is 12 weeks, then a Review Week.`,
+      `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your default lineups under Team. Nothing counts yet, and you can add or change tasks any time after Opening Day too. A season is 12 weeks, then a Review Week.`,
     offseasonTitle: 'Review Week',
     offseasonBody: (nextSeason) =>
       `No games this week. Review the season, make front-office moves, and get ready for Opening Day ${nextSeason}.`,
@@ -601,6 +604,7 @@ function overlay<T extends object>(base: T, over: DeepPartial<T>): T {
  */
 export const basketball: Vocab = overlay(baseball, {
   flavor: {
+    management: 'Coaching',
     lineupOrder: 'Starting order',
     secondGame: 'second game',
     welcome: 'Welcome to the arena',
@@ -612,7 +616,6 @@ export const basketball: Vocab = overlay(baseball, {
   term: {
     preseason: 'Preseason',
     doubleheader: 'Back-to-back',
-    dayTemplate: 'Game plan',
     required: 'Must-make',
     points: 'Buckets',
     paused: 'Injury report',
@@ -621,7 +624,6 @@ export const basketball: Vocab = overlay(baseball, {
     lockedAt: 'Tip-off',
   },
   terms: {
-    starters: 'Game plans',
     pausedShort: 'OUT',
     comebackTokens: 'Challenges',
     rainouts: 'Postponements',
@@ -682,7 +684,7 @@ export const basketball: Vocab = overlay(baseball, {
   phase: { preseason: 'Preseason' },
   taskStatus: { injured: 'Injury report' },
   starterWarning: {
-    EMPTY_LINEUP: 'The lineup is empty, so this game plan can never win.',
+    EMPTY_LINEUP: 'The lineup is empty, so this default lineup can never win.',
     MIN_TASKS_UNREACHABLE: 'The minimum makes is more than the tasks in the lineup.',
   },
   rainoutReason: {
@@ -741,7 +743,7 @@ export const basketball: Vocab = overlay(baseball, {
   emptyStates: {
     preseasonTitle: 'Preseason',
     preseasonBody: (openingDay, days) =>
-      `Opening Night is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your game plans under Team. Nothing counts yet, and you can add or change tasks any time after Opening Night too. A season is 12 weeks, then a Review Week.`,
+      `Opening Night is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your default lineups under Team. Nothing counts yet, and you can add or change tasks any time after Opening Night too. A season is 12 weeks, then a Review Week.`,
     offseasonBody: (nextSeason) =>
       `No games this week. Review the season, make front-office moves, and get ready for Opening Night ${nextSeason}.`,
   },
@@ -753,7 +755,7 @@ export const basketball: Vocab = overlay(baseball, {
  */
 export const hockey: Vocab = overlay(baseball, {
   flavor: {
-    rotation: 'Lines',
+    management: 'Coaching',
     lineupOrder: 'Line order',
     secondGame: 'second game',
     welcome: 'Welcome to the rink',
@@ -765,7 +767,6 @@ export const hockey: Vocab = overlay(baseball, {
   term: {
     preseason: 'Training camp',
     doubleheader: 'Back-to-back',
-    dayTemplate: 'Line',
     required: 'Must-score',
     points: 'Shots',
     paused: 'Injured reserve',
@@ -774,7 +775,6 @@ export const hockey: Vocab = overlay(baseball, {
     lockedAt: 'Puck drop',
   },
   terms: {
-    starters: 'Lines',
     pausedShort: 'IR',
     comebackTokens: 'Challenges',
     rainouts: 'Postponements',
@@ -834,7 +834,7 @@ export const hockey: Vocab = overlay(baseball, {
   phase: { preseason: 'Training camp' },
   taskStatus: { injured: 'Injured reserve' },
   starterWarning: {
-    EMPTY_LINEUP: 'The lineup is empty, so this line can never win.',
+    EMPTY_LINEUP: 'The lineup is empty, so this default lineup can never win.',
     MIN_TASKS_UNREACHABLE: 'The minimum shots is more than the tasks in the lineup.',
   },
   rainoutReason: {
@@ -893,7 +893,7 @@ export const hockey: Vocab = overlay(baseball, {
   emptyStates: {
     preseasonTitle: 'Training camp',
     preseasonBody: (openingDay, days) =>
-      `Opening Night is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your lines under Team. Nothing counts yet, and you can add or change tasks any time after Opening Night too. A season is 12 weeks, then a Review Week.`,
+      `Opening Night is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your default lineups under Team. Nothing counts yet, and you can add or change tasks any time after Opening Night too. A season is 12 weeks, then a Review Week.`,
     offseasonBody: (nextSeason) =>
       `No games this week. Review the season, make front-office moves, and get ready for Opening Night ${nextSeason}.`,
   },

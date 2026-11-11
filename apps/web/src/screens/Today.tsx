@@ -464,8 +464,8 @@ function StartChoice({ position }: { position: Extract<CalendarPosition, { phase
       >
         <p className="lede">{vocab.headStart.confirmBody(days, openingDay)}</p>
         <p>
-          Today’s game uses today’s {vocab.term.dayTemplate.toLowerCase()} from your Rotation. If it’s empty, add tasks to today from
-          the {vocab.week.title} once you’ve started.
+          Today’s game uses today’s {vocab.term.dayTemplate.toLowerCase()} from your Default Lineups. If it’s empty, add tasks to today from
+          This Week once you’ve started.
         </p>
       </Sheet>
     </section>

@@ -18,7 +18,7 @@ import {
   useQueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
-import { addDays, headStartGames, localDateOf, type TaskKind } from '@7gs/rules';
+import { addDays, headStartGames, localDateOf, weekday, type LocalDate, type TaskKind } from '@7gs/rules';
 import { useTimeZone } from './hooks';
 import { useCallback } from 'react';
 import { isApiError, isRetryable } from '../api/client';
@@ -26,7 +26,7 @@ import { overlayQueue, type NewQueuedOp } from '../api/offlineQueue';
 import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { errorMessage } from './errors';
 import { useNotify } from './toast';
-import { weekdayLong, weekdayShort } from '../lib/format';
+import { formatMonthDay, weekdayLong, weekdayShort } from '../lib/format';
 import { vocab } from '../vocab';
 
 export const qk = {
@@ -546,19 +546,66 @@ export function useActivateFromInjuredList() {
   );
 }
 
+/**
+ * Save a weekday's default lineup. With `alsoThisWeek`, the same day in any week already
+ * open in This Week gets the new lineup too, as long as that week hasn't started (a week
+ * copies its days from the defaults when it's first opened, so it wouldn't see the change).
+ */
 export function usePutStarter() {
   const api = useApi();
   const qc = useQueryClient();
   const notify = useNotify();
   return useMutation({
-    mutationFn: (v: { weekday: number; body: StarterPutDto }) =>
-      api.call('putStarter', { params: { weekday: v.weekday }, body: v.body }),
-    onSuccess: () => {
+    mutationFn: async (v: { weekday: number; body: StarterPutDto; alsoThisWeek?: { today: LocalDate; activeIds: ReadonlySet<string> } }) => {
+      const starter = await api.call('putStarter', { params: { weekday: v.weekday }, body: v.body });
+      const updated: string[] = [];
+      const kept: string[] = [];
+      if (v.alsoThisWeek) {
+        const { today, activeIds } = v.alsoThisWeek;
+        // Tasks on the IL or retired can't go in a week's lineup; the rest of the day still updates.
+        const usable = <T extends { taskId: string }>(slots: T[]) => slots.filter((s) => activeIds.has(s.taskId));
+        const { weeks } = await api.call('listWeeks');
+        for (const w of weeks) {
+          const week = await api.call('getWeek', { params: { startDate: w.startDate } });
+          for (const game of week.games) {
+            if (weekday(game.scheduledDate) !== v.weekday || game.playedDate < today || game.status === 'final') continue;
+            if (game.editPolicy !== 'free') {
+              kept.push(game.playedDate);
+              continue;
+            }
+            await api.call('patchLineup', {
+              params: { gameId: game.id },
+              body: {
+                threshold: v.body.threshold,
+                minTasks: v.body.minTasks,
+                entries: [
+                  ...usable(v.body.lineup).map((s) => ({ ...s, role: 'lineup' as const })),
+                  ...usable(v.body.bench).map((s) => ({ ...s, required: false, role: 'bench' as const })),
+                ],
+              },
+            });
+            updated.push(game.playedDate);
+          }
+        }
+      }
+      return { starter, updated, kept };
+    },
+    onSuccess: ({ updated, kept }) => {
       invalidate(qc, qk.starters, ['series']);
-      notify(`${vocab.term.dayTemplate} saved. It shapes future weeks. To change a day that’s already on this week’s lineup card, add tasks there.`, 'success');
+      if (updated.length > 0 || kept.length > 0) invalidateGameDay(qc);
+      const parts = ['Default lineup saved.'];
+      if (updated.length > 0) parts.push(`Also updated ${updated.map(formatMonthDayShort).join(' and ')} on This Week.`);
+      if (kept.length > 0) {
+        parts.push(`${kept.map(formatMonthDayShort).join(' and ')} ${kept.length === 1 ? 'keeps its' : 'keep their'} lineup: that week has started.`);
+      }
+      notify(parts.join(' '), 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
   });
+}
+
+function formatMonthDayShort(date: LocalDate): string {
+  return `${weekdayShort(date)} ${formatMonthDay(date)}`;
 }
 
 export function useUpdateSeasonGoal() {
@@ -593,37 +640,87 @@ export function useAddTask() {
   const qc = useQueryClient();
   const notify = useNotify();
   return useMutation({
-    mutationFn: async (v: { body: NewTaskBody; schedule: { game: GameDto; required: boolean } | null }) => {
+    mutationFn: async (v: {
+      body: NewTaskBody;
+      schedule: { game: GameDto; required: boolean } | null;
+      /** Weekdays (1 = Mon) whose default lineup gets the task, with whether it's a must-hit. */
+      everyWeek?: { weekdays: number[]; required: boolean; today: LocalDate } | null;
+    }) => {
       const task = await api.call('createTask', { body: v.body });
-      if (!v.schedule) return { task, game: null };
-      const { game, required } = v.schedule;
-      if (game.editPolicy === 'free') {
-        const kept = game.entries.filter((e) => e.role === 'lineup' || e.role === 'bench');
-        const batting = kept.filter((e) => e.role === 'lineup').length;
-        const entries = [
-          ...kept.map((e) => ({ taskId: e.taskId, position: e.position, required: e.required, role: e.role as 'lineup' | 'bench' })),
-          { taskId: task.id, position: batting + 1, required, role: 'lineup' as const },
-        ];
-        return { task, game: await api.call('patchLineup', { params: { gameId: game.id }, body: { entries } }) };
+      let game: GameDto | null = null;
+      if (v.schedule) {
+        const { game: target, required } = v.schedule;
+        game =
+          target.editPolicy === 'free'
+            ? await api.call('patchLineup', { params: { gameId: target.id }, body: { entries: [...keptEntries(target), newEntry(target, task.id, required)] } })
+            : await api.call('addPinchHitter', { params: { gameId: target.id }, body: { taskId: task.id, required } });
       }
-      return { task, game: await api.call('addPinchHitter', { params: { gameId: game.id }, body: { taskId: task.id, required } }) };
+      const days = v.everyWeek?.weekdays ?? [];
+      if (v.everyWeek && days.length > 0) {
+        const { required, today } = v.everyWeek;
+        const { starters } = await api.call('listStarters');
+        for (const day of days) {
+          const s = starters.find((x) => x.weekday === day);
+          if (!s) continue;
+          await api.call('putStarter', {
+            params: { weekday: day },
+            body: {
+              name: s.name,
+              threshold: s.threshold,
+              minTasks: s.minTasks,
+              lockTime: s.lockTime,
+              lineup: [...s.lineup, { taskId: task.id, position: s.lineup.length + 1, required }],
+              bench: s.bench,
+            },
+          });
+        }
+        // Weeks already open copied their days before this; add it to those days too while
+        // their week can still be planned freely.
+        const { weeks } = await api.call('listWeeks');
+        for (const w of weeks) {
+          const week = await api.call('getWeek', { params: { startDate: w.startDate } });
+          for (const g of week.games) {
+            if (!days.includes(weekday(g.scheduledDate)) || g.playedDate < today || g.status === 'final' || g.editPolicy !== 'free') continue;
+            if (g.entries.some((e) => e.taskId === task.id)) continue;
+            await api.call('patchLineup', { params: { gameId: g.id }, body: { entries: [...keptEntries(g), newEntry(g, task.id, required)] } });
+          }
+        }
+      }
+      return { task, game, days };
     },
-    onSuccess: ({ task, game }) => {
+    onSuccess: ({ task, game, days }) => {
       invalidateGameDay(qc);
       invalidate(qc, qk.tasks, qk.starters);
-      notify(
-        game
-          ? `${task.name} added to ${weekdayLong(game.playedDate)}. ${vocab.terms.threshold} is ${game.threshold}.`
-          : `Task added: ${task.name}.`,
-        'success',
-      );
+      const parts = [game ? `${task.name} added to ${weekdayLong(game.playedDate)}. ${vocab.terms.threshold} is ${game.threshold}.` : `Task added: ${task.name}.`];
+      if (days.length > 0) parts.push(`It’s in your default lineup every ${everyWeekLabel(days)}.`);
+      notify(parts.join(' '), 'success');
     },
     onError: (error) => {
       // The task may exist even if scheduling it failed.
-      invalidate(qc, qk.tasks);
+      invalidate(qc, qk.tasks, qk.starters);
       notify(errorMessage(error), 'error');
     },
   });
+}
+
+function keptEntries(game: GameDto) {
+  return game.entries
+    .filter((e) => e.role === 'lineup' || e.role === 'bench')
+    .map((e) => ({ taskId: e.taskId, position: e.position, required: e.required, role: e.role as 'lineup' | 'bench' }));
+}
+
+function newEntry(game: GameDto, taskId: string, required: boolean) {
+  const batting = game.entries.filter((e) => e.role === 'lineup').length;
+  return { taskId, position: batting + 1, required, role: 'lineup' as const };
+}
+
+const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+/** "Mon, Wed and Fri", or "day" for all seven. */
+export function everyWeekLabel(days: readonly number[]): string {
+  if (days.length === 7) return 'day';
+  const names = [...days].sort((a, b) => a - b).map((d) => WEEKDAY_SHORT[d - 1]);
+  return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 /** Start playing today instead of waiting for Opening Day (Spring Training only). */
