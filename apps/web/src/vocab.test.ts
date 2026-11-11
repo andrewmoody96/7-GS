@@ -27,4 +27,15 @@ describe('sport themes', () => {
     expect(vocab.jumbotron.walkOff).toBe('Walk-off W');
     expect(vocab.flavor.management).toBe('Management');
   });
+
+  it('never calls a loss a forfeit', () => {
+    for (const theme of AVAILABLE_THEMES) {
+      applyTheme(theme);
+      const labels = [...Object.values(vocab.resultDetail), ...Object.values(vocab.resultDetailShort)];
+      expect(labels.filter((l) => /forfeit/i.test(l))).toEqual([]);
+    }
+    applyTheme('baseball');
+    expect(vocab.resultDetail.forfeit).toBe('1 must-hit missed');
+    expect(vocab.resultDetailShort.forfeit).toBe('1 missed');
+  });
 });
