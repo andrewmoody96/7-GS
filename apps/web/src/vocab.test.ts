@@ -28,14 +28,20 @@ describe('sport themes', () => {
     expect(vocab.flavor.management).toBe('Management');
   });
 
-  it('never calls a loss a forfeit', () => {
+  it('calls every loss just a loss', () => {
     for (const theme of AVAILABLE_THEMES) {
       applyTheme(theme);
       const labels = [...Object.values(vocab.resultDetail), ...Object.values(vocab.resultDetailShort)];
       expect(labels.filter((l) => /forfeit/i.test(l))).toEqual([]);
     }
     applyTheme('baseball');
-    expect(vocab.resultDetail.forfeit).toBe('1 must-hit missed');
-    expect(vocab.resultDetailShort.forfeit).toBe('1 missed');
+    for (const theme of AVAILABLE_THEMES) {
+      applyTheme(theme);
+      for (const detail of ['short', 'forfeit', 'no_appeal'] as const) {
+        expect(vocab.resultDetail[detail]).toBe('Loss');
+        expect(vocab.resultDetailShort[detail]).toBe('');
+      }
+    }
+    applyTheme('baseball');
   });
 });

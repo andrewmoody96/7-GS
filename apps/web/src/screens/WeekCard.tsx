@@ -365,7 +365,7 @@ function GameStatusLine({ game }: { game: GameDto }) {
     return (
       <p className={`dayg__status dayg__status--${win ? 'win' : 'loss'}`}>
         {vocab.term.final} · {game.result} {gameScore(game)}
-        {game.resultDetail && game.resultDetail !== 'clean' ? ` · ${vocab.resultDetailShort[game.resultDetail]}` : ''}
+        {game.resultDetail && vocab.resultDetailShort[game.resultDetail] ? ` · ${vocab.resultDetailShort[game.resultDetail]}` : ''}
       </p>
     );
   }

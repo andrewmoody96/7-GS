@@ -139,7 +139,7 @@ function DemoBar() {
   };
   const labels: Record<ScenarioName, [string, string]> = {
     midseason: ['Mid-series Friday', 'Leads 2–1 with a live game (a carried-over one-off pinch hits), a rally W and a doubleheader Saturday.'],
-    rally: ['Rally Cap morning', 'Last night’s L (1 must-hit missed) is Rally Cap eligible until 11:59 a.m.'],
+    rally: ['Rally Cap morning', 'Last night’s loss is Rally Cap eligible until 11:59 a.m.'],
     doubleheader: ['Doubleheader Saturday', 'Clinch game: two games today, one of them a makeup.'],
     preseason: [vocab.term.preseason, 'Signed up this week; Opening Day is Monday.'],
     offseason: [vocab.term.offseason, 'A full season in the books.'],
