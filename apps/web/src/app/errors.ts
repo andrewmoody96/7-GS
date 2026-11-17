@@ -12,6 +12,8 @@ export function errorMessage(error: unknown): string {
   if (error instanceof ClockSetBackError) return error.message;
   if (!isApiError(error)) return 'Something went wrong. Try again.';
   if (error.code === 'NETWORK') return 'You’re offline. Try again when you’re back in range.';
+  // A server bug is sent as CONFLICT + reason INTERNAL; don't call it a conflict.
+  if (error.reason === 'INTERNAL') return 'Something went wrong on our side. Try again in a minute.';
   if (error.code === 'SERVER') return vocab.flavor.serverDown;
   if (error.reason && rallyReasons.has(error.reason)) {
     return vocab.rallyReason[error.reason as keyof typeof vocab.rallyReason];
