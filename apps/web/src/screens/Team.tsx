@@ -82,17 +82,16 @@ export function TeamScreen() {
   const totals = s ? seasonTotals(me.data, s) : null;
   return (
     <div className="screen screen--team">
-      <header className="screen__head">
-        <div>
+      <header className="screen__head teamhead">
+        <div className="teamhead__text">
           <p className="screen__kicker">
             {s ? `${vocab.term.season} ${s.number} · ${seasonStatusLabel(s.status)} · ${formatRange(s.startDate, s.playEndDate)}` : vocab.tabs.team}
           </p>
-          <div className="teamtitle">
-            <TeamBadge name={me.data?.displayName ?? vocab.tabs.team} size={48} />
-            <h1 className="screen__title">{me.data?.displayName ?? vocab.tabs.team}</h1>
-          </div>
+          <h1 className="screen__title">{me.data?.displayName ?? vocab.tabs.team}</h1>
+          <AllowanceChips allowances={me.data?.allowances} />
         </div>
-        <AllowanceChips allowances={me.data?.allowances} />
+        {/* The name is right there, so the photo shows on its own here. */}
+        <TeamBadge name={me.data?.displayName ?? vocab.tabs.team} size={160} plain />
       </header>
       {s && totals ? <Standings season={s} total={totals.total} /> : null}
       <nav className="todo teamnav" aria-label={vocab.tabs.team}>
