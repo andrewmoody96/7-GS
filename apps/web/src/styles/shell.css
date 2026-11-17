@@ -801,23 +801,44 @@
 }
 
 .teamhead {
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
 }
 
-.teamhead__text {
-  flex: 1;
+.teamhead__kicker,
+.teamhead__chips {
+  grid-column: 1 / -1;
+}
+
+.teamhead__name {
   min-width: 0;
+  margin: 0;
+  line-height: 0.95;
 }
 
-.teamhead__text .allowances {
-  margin-top: 10px;
+/* Measured by FitName: each word's own width, without wrapping inside it. */
+.teamhead__word {
+  display: inline-block;
+  white-space: nowrap;
 }
 
-/* The big team photo fills the space beside the name. */
+/* A single word too long even at the smallest size may break. */
+.teamhead__name.is-squeezed:not([data-measuring]) .teamhead__word {
+  display: inline;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.teamhead__chips {
+  margin-top: 6px;
+}
+
+/* The big team photo fills the space beside the name and chips. */
 .teamhead > .badge {
-  flex: none;
-  width: clamp(80px, 22vw, 168px);
+  width: clamp(120px, 40vw, 220px);
   height: auto;
   filter: drop-shadow(0 6px 16px rgb(0 0 0 / 0.18));
 }

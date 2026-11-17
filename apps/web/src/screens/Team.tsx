@@ -4,7 +4,7 @@
 // Injuries. Then Team History and Settings.
 
 import type { StarterDto, TaskDto } from '@7gs/contracts';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   useCareerQuery,
@@ -83,15 +83,16 @@ export function TeamScreen() {
   return (
     <div className="screen screen--team">
       <header className="screen__head teamhead">
-        <div className="teamhead__text">
-          <p className="screen__kicker">
-            {s ? `${vocab.term.season} ${s.number} · ${seasonStatusLabel(s.status)} · ${formatRange(s.startDate, s.playEndDate)}` : vocab.tabs.team}
-          </p>
-          <h1 className="screen__title">{me.data?.displayName ?? vocab.tabs.team}</h1>
-          <AllowanceChips allowances={me.data?.allowances} />
-        </div>
+        {/* The season line and the chips run full width; the name and the big photo share the row between. */}
+        <p className="screen__kicker teamhead__kicker">
+          {s ? `${vocab.term.season} ${s.number} · ${seasonStatusLabel(s.status)} · ${formatRange(s.startDate, s.playEndDate)}` : vocab.tabs.team}
+        </p>
+        <FitName name={me.data?.displayName ?? vocab.tabs.team} />
         {/* The name is right there, so the photo shows on its own here. */}
         <TeamBadge name={me.data?.displayName ?? vocab.tabs.team} size={160} plain />
+        <div className="teamhead__chips">
+          <AllowanceChips allowances={me.data?.allowances} />
+        </div>
       </header>
       {s && totals ? <Standings season={s} total={totals.total} /> : null}
       <nav className="todo teamnav" aria-label={vocab.tabs.team}>
@@ -128,6 +129,83 @@ export function ManagementScreen() {
         />
       </nav>
     </SubPage>
+  );
+}
+
+/** The team name's size range on the Team page, in px. */
+const NAME_MIN_PX = 24;
+const NAME_MAX_PX = 96;
+
+/**
+ * The team name, sized to its space: as large as it can be while its longest word fits the
+ * column beside the photo and the whole name is no taller than the photo. Every word uses
+ * that one size. Found by a short search (wrapping changes as the size does), and redone
+ * when the column's width changes or the fonts load. A single word too long even at the
+ * smallest size may break across lines.
+ */
+function FitName({ name }: { name: string }) {
+  const ref = useRef<HTMLHeadingElement>(null);
+  const [fit, setFit] = useState<{ size: number; squeeze: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let lastWidth = -1;
+    const measure = (force = false) => {
+      const available = el.clientWidth;
+      if (!available || (!force && available === lastWidth)) return;
+      lastWidth = available;
+      const photo = el.parentElement?.querySelector<HTMLElement>(':scope > .badge');
+      const photoHeight = photo?.getBoundingClientRect().height ?? 0;
+      const words = [...el.querySelectorAll<HTMLElement>('.teamhead__word')];
+      // Measure words whole, even if the last fit let a long one break.
+      el.dataset.measuring = '';
+      const fits = (px: number) => {
+        el.style.fontSize = `${px}px`;
+        const widest = Math.max(0, ...words.map((w) => w.getBoundingClientRect().width));
+        const height = el.getBoundingClientRect().height;
+        return widest <= available + 0.5 && (!photoHeight || height <= photoHeight);
+      };
+      let best: { size: number; squeeze: boolean };
+      if (fits(NAME_MAX_PX)) best = { size: NAME_MAX_PX, squeeze: false };
+      else if (!fits(NAME_MIN_PX)) best = { size: NAME_MIN_PX, squeeze: true };
+      else {
+        let lo = NAME_MIN_PX;
+        let hi = NAME_MAX_PX;
+        while (hi - lo > 1) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (fits(mid)) lo = mid;
+          else hi = mid;
+        }
+        best = { size: lo, squeeze: false };
+      }
+      el.style.fontSize = `${best.size}px`;
+      delete el.dataset.measuring;
+      setFit((prev) => (prev && prev.size === best.size && prev.squeeze === best.squeeze ? prev : best));
+    };
+    measure(true);
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(el);
+    let live = true;
+    void document.fonts?.ready.then(() => live && measure(true));
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
+  }, [name]);
+  const words = name.trim().split(/\s+/);
+  return (
+    <h1
+      ref={ref}
+      className={`screen__title teamhead__name${fit?.squeeze ? ' is-squeezed' : ''}`}
+      style={fit ? { fontSize: `${fit.size}px` } : undefined}
+    >
+      {words.map((word, i) => (
+        <span key={i}>
+          <span className="teamhead__word">{word}</span>
+          {i < words.length - 1 ? ' ' : null}
+        </span>
+      ))}
+    </h1>
   );
 }
 
