@@ -6,6 +6,7 @@ import {
   rallyDeadline,
   rallyEligibility,
   rallyOdds,
+  streakBonusEarned,
   type RallyEligibilityInput,
 } from '../src';
 
@@ -120,6 +121,28 @@ describe('rally odds', () => {
         partialOnMissed: false,
       }),
     ).toThrow(RangeError);
+  });
+});
+
+describe('saving Rally Caps', () => {
+  const lossBy1 = { seasonWinStreak: 0, runs: 4, threshold: 5, tasksDone: 4, minTasks: null, missedRequired: 0, partialOnMissed: false };
+
+  it('adds 3% for each other Rally Cap still held, under the same 40% cap', () => {
+    expect(rallyOdds(lossBy1)).toMatchObject({ holding: 0, pct: 20 });
+    expect(rallyOdds({ ...lossBy1, otherCapsHeld: 1 })).toMatchObject({ holding: 3, pct: 23 });
+    expect(rallyOdds({ ...lossBy1, otherCapsHeld: 2 })).toMatchObject({ holding: 6, pct: 26 });
+    expect(rallyOdds({ ...lossBy1, seasonWinStreak: 5, otherCapsHeld: 2 })).toMatchObject({ raw: 40, pct: 40 });
+  });
+
+  it('earns the 3rd with a 7-game win streak holding 3 perfect games', () => {
+    const w = (perfect = false) => ({ result: 'W' as const, perfect });
+    const l = { result: 'L' as const, perfect: false };
+    expect(streakBonusEarned([w(true), w(true), w(true), w(), w(), w(), w()])).toBe(true);
+    expect(streakBonusEarned([w(true), w(true), w(), w(), w(), w(), w()])).toBe(false); // 2 perfect
+    expect(streakBonusEarned([w(true), w(true), w(true), w(), w(), w()])).toBe(false); // streak of 6
+    // Perfect games before a loss don't count toward the current streak.
+    expect(streakBonusEarned([w(true), w(true), w(true), l, w(), w(), w(), w(), w(), w(), w()])).toBe(false);
+    expect(streakBonusEarned([l, w(), w(true), w(), w(true), w(), w(true), w()])).toBe(true);
   });
 });
 

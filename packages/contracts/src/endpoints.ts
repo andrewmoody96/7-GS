@@ -97,6 +97,7 @@ export const endpoints = {
   uncompleteEntry: endpoint({
     method: 'DELETE',
     path: '/v1/games/:gameId/entries/:entryId/complete',
+    body: S.UncompleteEntry,
     response: S.Game,
   }),
   patchEntry: endpoint({

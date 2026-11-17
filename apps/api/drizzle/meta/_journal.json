@@ -71,6 +71,13 @@
       "when": 1794432031532,
       "tag": "0009_runs_to_win_from_lineup",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794897261355,
+      "tag": "0010_rally_streak_bonus",
+      "breakpoints": true
     }
   ]
 }

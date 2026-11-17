@@ -260,6 +260,8 @@ export interface Vocab {
     missedMustHit: string;
     warningTrack: string;
     runCushion: string;
+    /** Odds bonus for the other Rally Caps still held. */
+    holding: string;
     floor: string;
     cap: string;
     tokenNote: (available: number) => string;
@@ -556,6 +558,7 @@ export const baseball: Vocab = {
     missedMustHit: 'Missed must-hit',
     warningTrack: 'Warning track',
     runCushion: 'Run cushion',
+    holding: 'Rally Caps saved',
     floor: 'Floor',
     cap: 'Cap',
     tokenNote: (n) => `${plural(n, 'Rally Cap', 'Rally Caps')} left this month · one per series`,
@@ -726,6 +729,7 @@ export const basketball: Vocab = overlay(baseball, {
     missedMustHit: 'Missed must-make',
     warningTrack: 'In and out',
     runCushion: 'Bucket cushion',
+    holding: 'Challenges saved',
     tokenNote: (n) => `${plural(n, 'challenge', 'challenges')} left this month · one per series`,
   },
   jumbotron: { walkOff: 'Buzzer beater' },
@@ -874,6 +878,7 @@ export const hockey: Vocab = overlay(baseball, {
     missedMustHit: 'Missed must-score',
     warningTrack: 'Off the post',
     runCushion: 'Shot cushion',
+    holding: 'Challenges saved',
     tokenNote: (n) => `${plural(n, 'challenge', 'challenges')} left this month · one per series`,
   },
   jumbotron: { walkOff: 'OT winner' },

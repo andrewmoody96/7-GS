@@ -73,6 +73,8 @@ export function toRallyRollDto(roll: RallyRollRow): RallyRollDto {
       missedMustHit: b.missedMustHit,
       warningTrack: b.warningTrack,
       runCushion: b.runCushion,
+      // Rolls stored before the holding bonus existed have none.
+      holding: b.holding ?? 0,
       raw: b.raw,
       pct: b.pct,
       limit: b.limit,

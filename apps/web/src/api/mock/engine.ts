@@ -55,6 +55,7 @@ import {
   nextGameDate,
   lineupThreshold,
   pinchHitThreshold,
+  streakBonusEarned,
   plannableWeeks,
   scoreline,
   suspensionOptions,
@@ -407,6 +408,27 @@ function finalizeGame(world: UserWorld, env: Env, game: GameRow, at: Date): void
   game.rallyDeadline = iso(rallyDeadline(game.playedDate, world.user.timezone));
   game.finalizedAt = iso(at);
   applyFinalEffects(world, env, game, at);
+  if (game.result === 'W') grantStreakBonus(world, env, game);
+}
+
+/**
+ * The 3rd Rally Cap of the month (rules.streakBonusEarned): a 7-game win streak with 3
+ * perfect games (every lineup task done) in it, for the month of the game completing it.
+ */
+function grantStreakBonus(world: UserWorld, env: Env, game: GameRow): void {
+  const month = monthKey(game.playedDate);
+  if (world.rallyTokens.some((t) => t.source === 'streak_bonus' && t.month === month)) return;
+  if (world.rallyTokens.filter((t) => t.month === month && !t.usedGameId).length >= RALLY.maxHeld) return;
+  const decided = seasonGames(world, seasonNumberOfGame(world, game))
+    .filter((g) => g.status === 'final' && (g.result === 'W' || g.result === 'L'))
+    .sort(chronological)
+    .map((g) => {
+      const lineup = g.entries.filter((e) => e.role === 'lineup');
+      return { result: g.result as 'W' | 'L', perfect: lineup.length > 0 && lineup.every((e) => e.completedClientAt !== null) };
+    });
+  if (streakBonusEarned(decided)) {
+    world.rallyTokens.push({ id: env.ids(), source: 'streak_bonus', month, usedGameId: null, usedAt: null });
+  }
 }
 
 // ── One-offs and pinch hitters ───────────────────────────────────────────────
@@ -1041,6 +1063,8 @@ function assertBeforeMidnight(world: UserWorld, game: GameRow, now: Date): void 
 export function completeEntry(world: UserWorld, gameId: string, entryId: string, clientAt: Date, now: Date): GameDto {
   const game = findGame(world, gameId);
   const entry = findEntry(game, entryId);
+  // The demo never goes offline, so it doesn't re-score a final game for a late check-off.
+  if (game.status === 'final') fail(409, 'STALE_CHECKOFF', 'That check-off arrived too late to count.', 'GAME_FINAL');
   const check = validateCheckoff({
     playedDate: game.playedDate,
     timeZone: world.user.timezone,
@@ -1480,6 +1504,7 @@ export function rallyQuote(world: UserWorld, gameId: string, now: Date): RallyQu
       minTasks: rules.minTasks,
       missedRequired: game.missedRequired,
       partialOnMissed: evaluate(world, game).partialOnMissed,
+      otherCapsHeld: Math.max(0, tokensAvailable - 1),
     });
   }
   return {

@@ -133,7 +133,8 @@ describe('rainouts', () => {
       [7, '2026-10-11', 1, 'W'],
     ]);
     const me = await t.ok('getMe', { token });
-    expect(me.allowances).toMatchObject({ rainouts: 1, ironManBonusHeld: false, rallyTokens: 2 });
+    // Monthly + series bonus + streak bonus (7 straight Ws, every one perfect).
+    expect(me.allowances).toMatchObject({ rainouts: 1, ironManBonusHeld: false, rallyTokens: 3 });
   });
 
   it('rejects rainouts the rules reject', async () => {

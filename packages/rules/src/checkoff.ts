@@ -1,7 +1,7 @@
 // When check-offs count, when a game locks, and when it goes final (GAME_DESIGN §4).
 
-import { CHECKOFF_CLOCK_SKEW_MS, FINALIZE_SETTLE_MINUTES } from './constants';
-import type { LocalDate } from './dates';
+import { CHECKOFF_CLOCK_SKEW_MS, FINALIZE_SETTLE_MINUTES, LATE_CHECKOFF_UNTIL } from './constants';
+import { addDays, type LocalDate } from './dates';
 import type { GameStatus, LineupRole } from './enums';
 import { endOfLocalDay, startOfLocalDay, zonedTimeToInstant } from './time';
 
@@ -27,9 +27,22 @@ export interface CheckoffInput {
 
 export type CheckoffValidation = { ok: true } | { ok: false; reason: CheckoffRejection };
 
+/**
+ * Until when a check-off stamped before midnight still counts after the game went final
+ * (noon the next day): it reopens the result, which is then worked out again.
+ */
+export function lateCheckoffDeadline(playedDate: LocalDate, timeZone: string): Date {
+  return zonedTimeToInstant(addDays(playedDate, 1), LATE_CHECKOFF_UNTIL, timeZone);
+}
+
 export function validateCheckoff(input: CheckoffInput): CheckoffValidation {
   const no = (reason: CheckoffRejection): CheckoffValidation => ({ ok: false, reason });
-  if (input.gameStatus === 'final') return no('GAME_FINAL');
+  if (
+    input.gameStatus === 'final' &&
+    input.receivedAt.getTime() >= lateCheckoffDeadline(input.playedDate, input.timeZone).getTime()
+  ) {
+    return no('GAME_FINAL');
+  }
   if (input.role !== 'lineup') return no('NOT_IN_LINEUP');
   const client = input.clientAt.getTime();
   if (client > input.receivedAt.getTime() + CHECKOFF_CLOCK_SKEW_MS) return no('CLIENT_CLOCK_AHEAD');

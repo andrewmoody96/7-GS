@@ -141,6 +141,17 @@ editable. After the lock (a user-set time, or the first check-off, whichever com
 next game, so there is no grace period for tasks. The result becomes official 30 minutes
 later, so a check-off made at 11:58 p.m. on a weak connection still counts when it syncs.
 
+**Late check-offs.** Every check-off, uncheck and "partly done" carries the device's time
+when it happened, and offline ones are replayed in order with those times. One stamped
+before midnight that only arrives after the game is final still counts until **noon the
+next day** (the Rally Cap window): the game is worked out again, with its series and
+season, streaks and bonuses. If it turns an L into a W, a Rally Cap rolled on it is given
+back. A one-off done late retires and leaves the next day; one undone late carries over.
+After noon the result stands. Guards against a wrong or set-back clock: times more than 5
+minutes ahead are rejected, the device refuses to queue an action stamped more than a
+minute before the one queued last, and the noon cutoff bounds everything else. A
+no-decision stays one.
+
 ## 4a. The weekly lineup card
 
 Like a fantasy lineup, each series is planned as a week.
@@ -286,7 +297,10 @@ streak to build confidence, and miss often enough that nobody plans around it.
 
 - **1 token per calendar month** by default.
 - **Earn a 2nd token** that month by winning a series without using a Rally Cap.
-- Hard cap of 2 held at once. Tokens do not roll over between months.
+- **Earn a 3rd token** that month with a **7-game win streak** (this season) that has at
+  least **3 perfect games** in it: every task in that day's lineup done. Rally Cap wins
+  extend the streak but are never perfect. At most one a month.
+- Hard cap of 3 held at once. Tokens do not roll over between months.
 - Max **one Rally Cap per series**.
 - A roll uses up the token whether it hits or misses.
 
@@ -320,6 +334,10 @@ Shown to the user **before** they roll. Transparent odds keep expectations hones
 |---|---|
 | Warning track: the missed must-hit was marked "partial" before midnight | +4% |
 | Run cushion: runs ≥ threshold + 50% | +2% |
+| Saved Rally Caps: each other token still held when rolling | +3% each |
+
+Saving them up pays off: a roll made while holding 3 gets +6%. It never makes a roll a
+sure thing; the 40% cap still applies.
 
 **Limits**: the result is capped at **40%** and floored at **10%**. A cold streak never
 lowers the base below 20%; only a poor game does.
@@ -349,6 +367,8 @@ Examples:
 - Store `odds`, `odds_breakdown`, `roll`, `result`, `token_id`, and a timestamp. The
   record is immutable and idempotent per game: a refresh or retry returns the same
   result.
+- The one exception: a late check-off (§4) that turns the L into a W erases the roll and
+  gives the token back, since the Rally Cap was never needed.
 
 ## 7. Rainouts, Suspended games and the Injured List
 

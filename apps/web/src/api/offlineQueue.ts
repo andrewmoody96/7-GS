@@ -32,6 +32,16 @@ export interface ReplayResult {
 
 const STORAGE_KEY = '7gs.checkoff-queue.v1';
 
+/** Small slips (a network time sync) are fine; a clock set back further isn't. */
+const CLOCK_BACK_TOLERANCE_MS = 60_000;
+
+export class ClockSetBackError extends Error {
+  constructor() {
+    super('Your device’s clock went backwards, so this wasn’t saved. Check the date and time settings, then try again.');
+    this.name = 'ClockSetBackError';
+  }
+}
+
 export class CheckoffQueue {
   private items: QueuedOp[];
   private readonly listeners = new Set<() => void>();
@@ -76,6 +86,12 @@ export class CheckoffQueue {
   }
 
   enqueue(op: NewQueuedOp): QueuedOp {
+    // Queued actions are stamped in the order they happen. One stamped well before the
+    // last means the device clock was set back, so it isn't kept (GAME_DESIGN §4).
+    const last = this.items[this.items.length - 1];
+    if (last && Date.parse(op.clientAt) < Date.parse(last.clientAt) - CLOCK_BACK_TOLERANCE_MS) {
+      throw new ClockSetBackError();
+    }
     const queued = { ...op, id: `${Date.now().toString(36)}-${(this.seq++).toString(36)}` } as QueuedOp;
     this.items = [...this.items, queued];
     this.save();
@@ -121,9 +137,9 @@ function send(api: ApiClient, op: QueuedOp) {
     case 'complete':
       return api.call('completeEntry', { params, body: { clientAt: op.clientAt } });
     case 'uncomplete':
-      return api.call('uncompleteEntry', { params });
+      return api.call('uncompleteEntry', { params, body: { clientAt: op.clientAt } });
     case 'partial':
-      return api.call('patchEntry', { params, body: { partial: op.partial } });
+      return api.call('patchEntry', { params, body: { partial: op.partial, clientAt: op.clientAt } });
   }
 }
 

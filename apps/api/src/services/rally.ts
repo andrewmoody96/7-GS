@@ -21,7 +21,7 @@ import type { Db } from '../db/client';
 import { games, rallyRolls, rallyTokens, series, type GameRow, type RallyRollRow, type UserRow } from '../db/schema';
 import { conflict, notFound, type ApiException } from '../errors';
 import { uuidv7 } from '../ids';
-import { availableRallyTokens } from './allowances';
+import { availableRallyTokens, grantStreakBonusToken } from './allowances';
 import { iso } from './dto';
 import { evaluateRows, loadEntries, loadUserGame, reloadGame } from './lineups';
 import { closeSeries, recomputeSeason, recomputeSeries, seasonFinalGames, seriesRallyUsed } from './standings';
@@ -88,6 +88,7 @@ async function rallyState(tx: Db, user: UserRow, game: GameRow, now: Date): Prom
       minTasks: game.minTasks,
       missedRequired: game.missedRequired,
       partialOnMissed: ev.partialOnMissed,
+      otherCapsHeld: Math.max(0, tokens.length - 1),
     });
   }
   return { eligibility, odds, tokens, seasonWinStreak, existing };
@@ -166,6 +167,8 @@ export async function rollRally(
     await recomputeSeason(tx, updated.seasonId);
     // A closed series may now earn Iron Man (rally wins count as wins).
     if (updated.closedAt) await closeSeries(tx, user, updated.id, now);
+    // Rally wins extend the streak too.
+    await grantStreakBonusToken(tx, user, updated.seasonId, game.playedDate, now);
   }
   return { roll: stored, game: await reloadGame(tx, game.id) };
 }

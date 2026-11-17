@@ -327,8 +327,8 @@ export function useEntryAction() {
         if (action.kind === 'complete') {
           return await api.call('completeEntry', { params, body: { clientAt: action.clientAt } });
         }
-        if (action.kind === 'uncomplete') return await api.call('uncompleteEntry', { params });
-        return await api.call('patchEntry', { params, body: { partial: action.partial } });
+        if (action.kind === 'uncomplete') return await api.call('uncompleteEntry', { params, body: { clientAt: action.clientAt } });
+        return await api.call('patchEntry', { params, body: { partial: action.partial, clientAt: action.clientAt } });
       } catch (error) {
         if (api.mode === 'http' && isApiError(error) && error.isNetwork) return enqueue();
         throw error;
