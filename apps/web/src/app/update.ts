@@ -1,14 +1,27 @@
-// App updates. main.tsx registers the service worker here; the app looks for a new version
-// the first time it's opened (or brought back) each day, and Settings can check by hand.
-// A waiting version is offered by the UpdateBar and applied on tap.
+// App updates. main.tsx registers the service worker here. The first time the app is
+// opened (or brought back) each day it looks for a new version and, if there is one,
+// reloads into it right away. Settings can check by hand; a version found that way (or
+// found too late after opening) is offered by the UpdateBar and applied on tap.
 
 import { useSyncExternalStore } from 'react';
 
 let apply: (() => void) | null = null;
 const listeners = new Set<() => void>();
 
+/**
+ * Until when a version found by the open-of-the-day check is applied straight away (a
+ * reload just after opening interrupts nothing). Found later, it waits for a tap instead.
+ */
+let autoApplyUntil = 0;
+const AUTO_APPLY_WINDOW_MS = 20_000;
+
 /** Called by the service worker registration when an update is waiting. */
 export function offerUpdate(fn: () => void): void {
+  if (Date.now() < autoApplyUntil) {
+    autoApplyUntil = 0;
+    fn();
+    return;
+  }
   apply = fn;
   listeners.forEach((l) => l());
 }
@@ -47,7 +60,10 @@ export function checkIfFirstOpenToday(): void {
     // Storage unavailable: just check.
   }
   if (last === todayKey()) return;
-  void checkForUpdate();
+  autoApplyUntil = Date.now() + AUTO_APPLY_WINDOW_MS;
+  void checkForUpdate().then((outcome) => {
+    if (outcome !== 'available') autoApplyUntil = 0;
+  });
 }
 
 /**
