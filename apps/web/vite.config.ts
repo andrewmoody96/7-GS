@@ -15,7 +15,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': a new version waits until the user taps Reload (UpdateBar), instead of
+      // only taking over on some later full reload.
+      registerType: 'prompt',
       injectRegister: false,
       manifest: {
         id: BASE,

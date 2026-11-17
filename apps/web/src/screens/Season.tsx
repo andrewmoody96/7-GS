@@ -13,6 +13,7 @@ import { Sheet } from '../components/Sheet';
 import { Tile } from '../components/Tile';
 import { formatTimeOfDay, formatWinPct, signed } from '../lib/format';
 import { AVAILABLE_THEMES, vocab } from '../vocab';
+import { checkForUpdate, useUpdateAvailable } from '../app/update';
 
 // A function, not a constant: the labels follow the account's theme.
 const statusLabel = (): Record<SeasonDto['status'], string> => ({
@@ -303,6 +304,7 @@ export function Clubhouse({ me }: { me: MeDto }) {
           ))}
         </div>
       </div>
+      <AppUpdateCheck />
       <div className="clubhouse__exit">
         <button type="button" className="btn btn--quiet btn--danger-text" onClick={() => logout.mutate()} disabled={logout.isPending}>
           Sign out
@@ -313,6 +315,35 @@ export function Clubhouse({ me }: { me: MeDto }) {
       </div>
       <DeleteAccountSheet open={deleting} email={me.email} onClose={() => setDeleting(false)} onDeleted={leave} />
     </section>
+  );
+}
+
+/** Settings → App version: look for a new version now (it also checks on the first open each day). */
+function AppUpdateCheck() {
+  const notify = useNotify();
+  const waiting = useUpdateAvailable();
+  const [checking, setChecking] = useState(false);
+  const check = async () => {
+    setChecking(true);
+    const outcome = await checkForUpdate();
+    setChecking(false);
+    if (outcome === 'current') notify('You’re on the latest version.', 'success');
+    else if (outcome === 'unsupported') notify('Updates aren’t checked in this browser.', 'error');
+  };
+  return (
+    <div className="field">
+      <span className="field__label">App version</span>
+      {waiting ? (
+        <button type="button" className="btn btn--primary" onClick={waiting}>
+          Reload to update
+        </button>
+      ) : (
+        <button type="button" className="btn btn--quiet" onClick={() => void check()} disabled={checking}>
+          {checking ? 'Checking…' : 'Check for updates'}
+        </button>
+      )}
+      <p className="field__hint">The app also checks the first time you open it each day.</p>
+    </div>
   );
 }
 

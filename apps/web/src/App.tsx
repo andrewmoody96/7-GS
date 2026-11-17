@@ -4,6 +4,7 @@ import type { ApiClient } from './api/client';
 import { CheckoffQueue } from './api/offlineQueue';
 import { createQueryClient } from './app/queries';
 import { AppProviders, AppRoutes } from './app/routes';
+import { UpdateBar } from './components/UpdateBar';
 
 /** The router's base: '' at the domain root, '/7-GS' on GitHub Pages (from Vite's `base`). */
 const BASENAME = import.meta.env.BASE_URL.replace(/\/+$/, '');
@@ -14,6 +15,7 @@ export function App({ api }: { api: ApiClient }) {
   return (
     <AppProviders api={api} queue={queue} queryClient={queryClient}>
       <BrowserRouter basename={BASENAME}>
+        <UpdateBar />
         <AppRoutes />
       </BrowserRouter>
     </AppProviders>
