@@ -740,3 +740,7 @@ code {
 .installsteps li + li {
   margin-top: 4px;
 }
+
+.badge--photo {
+  display: block;
+}

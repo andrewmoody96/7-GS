@@ -14,10 +14,12 @@ import { formatDate, formatDayTime } from '../lib/format';
 import type { Theme } from '@7gs/rules';
 import { activeTheme, applyTheme, vocab } from '../vocab';
 import { useApi, useCheckoffQueue, useQueuedOps } from './context';
-import { forgetCachedMe, invalidateGameDay, useMeQuery } from './queries';
+import { forgetCachedMe, invalidateGameDay, useMeQuery, useUpdateMe } from './queries';
 import { useNotify } from './toast';
 import { useNow } from './hooks';
 import { TasksModalProvider, useTasksModal } from './tasksModal';
+import { WhatsNew } from '../components/WhatsNew';
+import { LATEST_RELEASE } from '../releaseNotes';
 
 /** The Today tab's icon follows the sport: home plate, a basketball, or a stick and puck. */
 const TODAY_ICONS: Record<Theme, typeof IconToday> = {
@@ -80,6 +82,7 @@ function TopBar() {
     setHelpOpen(false);
   };
   const queued = useQueuedOps();
+  const updateMe = useUpdateMe();
   const pos = me.data?.position;
   const meta =
     pos?.phase === 'season'
@@ -115,8 +118,15 @@ function TopBar() {
           <IconHelp />
         </button>
       </div>
-      <WelcomeSetup onDone={() => setHelpOpen(!hasSeenHowItWorks())} />
+      <WelcomeSetup
+        onDone={() => {
+          setHelpOpen(!hasSeenHowItWorks());
+          // A brand-new account has nothing to catch up on.
+          if (me.data && me.data.seenRelease !== LATEST_RELEASE) updateMe.mutate({ seenRelease: LATEST_RELEASE });
+        }}
+      />
       <HowItWorksSheet open={helpOpen} onClose={closeHelp} />
+      {me.data ? <WhatsNew seen={me.data.seenRelease} ready={welcomeStep === null && !helpOpen} /> : null}
     </header>
   );
 }

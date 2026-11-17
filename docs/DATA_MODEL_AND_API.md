@@ -288,7 +288,9 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/v1/me` | Profile, timezone, current season/series summary, allowances. |
-| PATCH | `/v1/me` | Display name, timezone, default lock time. |
+| PATCH | `/v1/me` | Display name, timezone, default lock time, sport theme, `seenRelease` (newest release notes seen, for the What's new popup). |
+| PUT | `/v1/me/avatar` | Team photo: `{ image }`, a JPEG/PNG/WebP data URL already squared and resized on the device (≤ 200 KB). Stored in `user_avatars`; returned as `Me.avatar`. |
+| DELETE | `/v1/me/avatar` | Remove the team photo (back to the initials badge). |
 | POST | `/v1/me/head-start` | Start playing today instead of waiting for Opening Day. Spring Training only (`409 NOT_ELIGIBLE`, reason `NOT_PRESEASON` otherwise). Sets `users.head_start_from`, moves Season 1's start to today and builds today's game. Returns `Me` (with `headStartFrom`). |
 | DELETE | `/v1/me` | Body: `{ confirmEmail }` (must match the account's email, else `400 VALIDATION_FAILED`). Deletes the user, everything they own (FK cascades) and their login links; clears the cookie. |
 | GET | `/v1/calendar` | Spring Training / season / offseason boundaries. |

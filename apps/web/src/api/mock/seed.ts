@@ -16,6 +16,7 @@ import {
 import { MOCK_DB_VERSION, type MockDb, type ScenarioName, type StarterRow, type UserRow, type UserWorld } from './db';
 import * as engine from './engine';
 import { cryptoRoll, idFactory, seededRandom } from './ids';
+import { LATEST_RELEASE } from '../../releaseNotes';
 
 export const DEMO_USER_ID = '01920000-0000-7000-8000-000000000001';
 export const DEMO_EMAIL = 'demo@7gs.app';
@@ -204,6 +205,8 @@ class Seeder {
       id: DEMO_USER_ID,
       email: DEMO_EMAIL,
       displayName: DEMO_TEAM,
+      // The demo has nothing to catch up on.
+      seenRelease: LATEST_RELEASE,
       timezone: tz,
       startDate: signupDate,
       defaultLockTime: null,

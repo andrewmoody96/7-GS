@@ -736,6 +736,32 @@ export function useStartHeadStart() {
   });
 }
 
+/** Upload a team photo (already squared and resized: lib/avatar.squarePhoto). */
+export function useSetAvatar() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: (image: string) => api.call('putAvatar', { body: { image } }),
+    onSuccess: (me) => {
+      qc.setQueryData(qk.me, me);
+      notify('Team photo saved.', 'success');
+    },
+    onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
+export function useClearAvatar() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: () => api.call('deleteAvatar'),
+    onSuccess: (me) => qc.setQueryData(qk.me, me),
+    onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
 export function useUpdateMe() {
   const api = useApi();
   const qc = useQueryClient();

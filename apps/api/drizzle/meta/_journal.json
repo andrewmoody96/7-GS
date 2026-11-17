@@ -78,6 +78,13 @@
       "when": 1794897261355,
       "tag": "0010_rally_streak_bonus",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794900752039,
+      "tag": "0011_team_photo_and_release_notes",
+      "breakpoints": true
     }
   ]
 }

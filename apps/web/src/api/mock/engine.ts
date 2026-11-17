@@ -1012,6 +1012,8 @@ export function toMeDto(world: UserWorld, now: Date): MeDto {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
+    avatar: user.avatar ?? null,
+    seenRelease: user.seenRelease ?? null,
     timezone: user.timezone,
     startDate: user.startDate,
     headStartFrom: headStartFrom(user),

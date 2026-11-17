@@ -25,6 +25,7 @@ import type { CareerDto, SeasonDto, SeriesSummaryDto } from '@7gs/contracts';
 import { vocab } from '../vocab';
 import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings } from './Season';
 import { WeekCardView } from './WeekCard';
+import { TeamBadge } from '../components/Badges';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
@@ -86,7 +87,10 @@ export function TeamScreen() {
           <p className="screen__kicker">
             {s ? `${vocab.term.season} ${s.number} · ${seasonStatusLabel(s.status)} · ${formatRange(s.startDate, s.playEndDate)}` : vocab.tabs.team}
           </p>
-          <h1 className="screen__title">{me.data?.displayName ?? vocab.tabs.team}</h1>
+          <div className="teamtitle">
+            <TeamBadge name={me.data?.displayName ?? vocab.tabs.team} size={48} />
+            <h1 className="screen__title">{me.data?.displayName ?? vocab.tabs.team}</h1>
+          </div>
         </div>
         <AllowanceChips allowances={me.data?.allowances} />
       </header>
