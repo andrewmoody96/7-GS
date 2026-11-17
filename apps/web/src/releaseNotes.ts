@@ -22,7 +22,7 @@ export const RELEASES: readonly ReleaseNote[] = [
   },
   {
     id: '2026-11-team-photo',
-    title: 'November 2026',
+    title: 'November 2026: team photo',
     added: [
       'Team photo: add one in Team → Settings and it fills your team badge, initials on top.',
       'A 3rd Rally Cap each month for a 7-game win streak with 3 perfect days in it.',
@@ -44,9 +44,15 @@ export const RELEASES: readonly ReleaseNote[] = [
 
 export const LATEST_RELEASE = RELEASES[0]!.id;
 
-/** The entries newer than `seen` (just the latest when nothing has been seen yet). */
+/** At most this many entries in one popup, newest first. */
+const MAX_SHOWN = 3;
+
+/**
+ * The entries newer than `seen`, newest first. Nothing seen yet (an account from before the
+ * popup existed) or an id no longer listed means the newest few, so nobody misses a release.
+ */
 export function unseenReleases(seen: string | null): ReleaseNote[] {
   if (seen === LATEST_RELEASE) return [];
   const index = seen === null ? -1 : RELEASES.findIndex((r) => r.id === seen);
-  return index === -1 ? [RELEASES[0]!] : RELEASES.slice(0, index);
+  return (index === -1 ? RELEASES : RELEASES.slice(0, index)).slice(0, MAX_SHOWN);
 }
