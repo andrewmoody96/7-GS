@@ -104,6 +104,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     problems.push('ALLOWED_EMAILS must be comma-separated addresses or @domains, e.g. "me@example.com, @family.com".');
   }
 
+  const adminEmails = parseAllowedEmails(env.ADMIN_EMAILS) ?? [];
+  if (adminEmails.some((entry) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(entry))) {
+    problems.push('ADMIN_EMAILS must be comma-separated email addresses, e.g. "me@example.com".');
+  }
+
   if (problems.length > 0) throw new ConfigError(problems);
 
   return {
@@ -120,6 +125,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
       allowDevLogin,
       limitMagicLinks: flag(env.LIMIT_MAGIC_LINKS, production),
       allowedEmails,
+      adminEmails,
     },
     email,
     finalizerIntervalMs: Number(env.FINALIZER_INTERVAL_MS ?? 15 * 60_000),

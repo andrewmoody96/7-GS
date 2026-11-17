@@ -21,6 +21,7 @@ import { MemoryLogger } from '../src/logger';
 import { MemoryPusher } from '../src/push';
 import { runFinalizer } from '../src/services/finalizer';
 import { runReminders } from '../src/services/reminders';
+import type { SessionDto, SignInResultDto } from '@7gs/contracts';
 
 export const CHICAGO = 'America/Chicago';
 export const TOKYO = 'Asia/Tokyo';
@@ -161,7 +162,8 @@ export class TestApp {
     const setCookie = result.headers.get('set-cookie') ?? '';
     const token = /7gs_session=([^;]+)/.exec(setCookie)?.[1];
     if (!token) throw new Error('No session cookie set');
-    return { token, userId: result.data.me.id, setCookie, isNewUser: result.data.isNewUser };
+    const session = asSession(result.data);
+    return { token, userId: session.me.id, setCookie, isNewUser: session.isNewUser };
   }
 
   reminders() {
@@ -226,3 +228,9 @@ export async function snapshotDb(db: Db): Promise<Record<string, unknown[]>> {
 }
 
 export { addDays };
+
+/** A sign-in result that signed in (no password step); fails the test otherwise. */
+export function asSession(result: SignInResultDto): SessionDto {
+  if ('passwordRequired' in result) throw new Error('Expected a session, got the password step');
+  return result;
+}

@@ -5,7 +5,17 @@ import { clientAddress, RateLimiter } from '../http/rateLimit';
 import { route, type AnyRoute } from '../http/router';
 import { clearSessionCookie, setSessionCookie } from '../http/session';
 import { describeError } from '../logger';
-import { createLoginToken, deleteSession, isEmailAllowed, normalizeEmail, verifyLoginCode, verifyLoginToken } from '../services/auth';
+import type { UserRow } from '../db/schema';
+import {
+  createLoginToken,
+  deleteSession,
+  isEmailAllowed,
+  normalizeEmail,
+  verifyLoginCode,
+  verifyLoginToken,
+  verifyPasswordChallenge,
+  type SignInNext,
+} from '../services/auth';
 import { inUserTx } from '../services/today';
 import { meView } from '../services/users';
 
@@ -21,6 +31,16 @@ export function authRoutes(deps: Deps): AnyRoute[] {
   // Per address (protects inboxes) and per client (protects the email quota).
   const perEmail = new RateLimiter(5, WINDOW_MS);
   const perClient = new RateLimiter(20, WINDOW_MS);
+  // Password guesses per client, on top of the 5 per challenge.
+  const perPassword = new RateLimiter(30, WINDOW_MS);
+
+  /** Signed in (cookie + Me), or the password step when the account has a password. */
+  async function signedIn(c: Context, user: UserRow, isNewUser: boolean, next: SignInNext, now: Date) {
+    if (next.kind === 'password') return { passwordRequired: true as const, challenge: next.challenge, email: user.email };
+    setSessionCookie(c, next.sessionToken, deps);
+    const me = await inUserTx(deps.db, user, now, (tx, u) => meView(tx, u, now), { scope: 'account' });
+    return { me, isNewUser };
+  }
 
   return [
     route('requestMagicLink', async ({ c, body, now }) => {
@@ -63,14 +83,20 @@ export function authRoutes(deps: Deps): AnyRoute[] {
     }),
 
     route('verifyLoginCode', async ({ c, body, now }) => {
-      const { user, isNewUser, sessionToken } = await verifyLoginCode(deps.db, body.email, body.code, body.timezone, now);
-      setSessionCookie(c, sessionToken, deps);
-      const me = await inUserTx(deps.db, user, now, (tx, u) => meView(tx, u, now), { scope: 'account' });
-      return { me, isNewUser };
+      const { user, isNewUser, next } = await verifyLoginCode(deps.db, body.email, body.code, body.timezone, now);
+      return signedIn(c, user, isNewUser, next, now);
     }),
 
     route('verifyMagicLink', async ({ c, body, now }) => {
-      const { user, isNewUser, sessionToken } = await verifyLoginToken(deps.db, body.token, body.timezone, now);
+      const { user, isNewUser, next } = await verifyLoginToken(deps.db, body.token, body.timezone, now);
+      return signedIn(c, user, isNewUser, next, now);
+    }),
+
+    route('verifyPassword', async ({ c, body, now }) => {
+      if (!perPassword.take(clientAddress(c.req.header('x-forwarded-for')), now)) {
+        throw new ApiException(429, 'RATE_LIMITED', 'Too many tries. Wait a few minutes and try again.');
+      }
+      const { user, isNewUser, sessionToken } = await verifyPasswordChallenge(deps.db, body.challenge, body.password, now);
       setSessionCookie(c, sessionToken, deps);
       const me = await inUserTx(deps.db, user, now, (tx, u) => meView(tx, u, now), { scope: 'account' });
       return { me, isNewUser };

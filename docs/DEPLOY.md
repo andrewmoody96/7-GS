@@ -175,6 +175,7 @@ With `NODE_ENV=production` set, the server also does the following automatically
 | `EMAIL_FROM` | — | Required with either provider. |
 | `ALLOW_DEV_LOGIN` | `false` in prod | `true` shows the "Sign in now" shortcut. |
 | `ALLOWED_EMAILS` | unset (open) | Invite list: comma-separated addresses and/or `@domains`. |
+| `ADMIN_EMAILS` | unset (no admins) | Who sees **Team → Settings → Accounts** (every account's created, last sign-in and last seen times): comma-separated addresses. An admin also needs a password set in Settings, entered once per device every 12 hours. Anyone else gets "not found". |
 | `FINALIZER_INTERVAL_MS` | `900000` | How often games are settled. |
 | `FORCE_HTTPS`, `COOKIE_SECURE`, `LIMIT_MAGIC_LINKS` | `true` in prod | Escape hatches; leave them alone on Heroku. |
 | `LOG_REQUESTS` | `true` | One log line per request. |

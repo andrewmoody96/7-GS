@@ -291,6 +291,11 @@ bodies are defined as Zod schemas in `packages/contracts`.
 | PATCH | `/v1/me` | Display name, timezone, default lock time, sport theme, `seenRelease` (newest release notes seen, for the What's new popup). |
 | PUT | `/v1/me/avatar` | Team photo: `{ image }`, a JPEG/PNG/WebP data URL already squared and resized on the device (≤ 200 KB). Stored in `user_avatars`; returned as `Me.avatar`. |
 | DELETE | `/v1/me/avatar` | Remove the team photo (back to the initials badge). |
+| PUT | `/v1/me/password` | Set or change the optional password: `{ current?, password }` (8+ characters; `current` needed to change). Stored only as an scrypt hash with a random salt (`users.password_hash`). |
+| DELETE | `/v1/me/password` | Remove it: `{ current }`. Sign-in goes back to the email code or link alone. |
+| POST | `/v1/auth/password` | The second sign-in step for an account with a password. `/v1/auth/verify` and `/v1/auth/code` then return `{ passwordRequired: true, challenge, email }` instead of a session; send `{ challenge, password }` here (single use, 10 minutes, 5 tries). |
+| POST | `/v1/admin/unlock` | `{ password }`: opens the admin pages on this session for 12 hours (ADMIN_EMAILS with a password only; 5 tries per 15 minutes). |
+| GET | `/v1/admin/accounts` | Every account: created, last sign-in, last seen (`users.last_seen_at`, to the hour), devices signed in. ADMIN_EMAILS only (404 otherwise), unlocked (409 `ADMIN_LOCKED` / `PASSWORD_NOT_SET`). |
 | POST | `/v1/me/head-start` | Start playing today instead of waiting for Opening Day. Spring Training only (`409 NOT_ELIGIBLE`, reason `NOT_PRESEASON` otherwise). Sets `users.head_start_from`, moves Season 1's start to today and builds today's game. Returns `Me` (with `headStartFrom`). |
 | DELETE | `/v1/me` | Body: `{ confirmEmail }` (must match the account's email, else `400 VALIDATION_FAILED`). Deletes the user, everything they own (FK cascades) and their login links; clears the cookie. |
 | GET | `/v1/calendar` | Spring Training / season / offseason boundaries. |

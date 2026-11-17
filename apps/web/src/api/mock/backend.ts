@@ -225,6 +225,35 @@ export class MockBackend {
       if (patch.seenRelease !== undefined) w.user.seenRelease = patch.seenRelease;
       return engine.toMeDto(w, now);
     },
+    // The demo signs straight in and never stores a password; it only notes one was set.
+    verifyPassword: () => engine.fail(400, 'VALIDATION_FAILED', 'The demo doesn’t use passwords.'),
+    setPassword: ({ world, now }) => {
+      const w = world();
+      w.user.hasPassword = true;
+      return engine.toMeDto(w, now);
+    },
+    removePassword: ({ world, now }) => {
+      const w = world();
+      w.user.hasPassword = false;
+      return engine.toMeDto(w, now);
+    },
+    unlockAdmin: () => ({ ok: true as const }),
+    listAccounts: ({ world, now }) => {
+      const { user } = world();
+      return {
+        accounts: [
+          {
+            email: user.email,
+            displayName: user.displayName,
+            createdAt: user.createdAt,
+            lastSignInAt: user.createdAt,
+            lastSeenAt: now.toISOString(),
+            devices: 1,
+            theme: user.theme ?? 'baseball',
+          },
+        ],
+      };
+    },
     putAvatar: ({ world, body, now }) => {
       const w = world();
       w.user.avatar = (body as { image: string }).image;

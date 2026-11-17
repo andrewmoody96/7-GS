@@ -4,9 +4,10 @@
 import { randomInt, timingSafeEqual } from 'node:crypto';
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { loginTokens, sessions, users, type UserRow } from '../db/schema';
+import { loginTokens, sessions, users, type UserRow, passwordChallenges } from '../db/schema';
 import { unauthorized } from '../errors';
 import { randomSecret, sha256 } from '../ids';
+import { verifyPassword } from './passwords';
 import { findOrCreateUser } from './users';
 
 export const LOGIN_TOKEN_TTL_MS = 15 * 60_000;
@@ -65,7 +66,7 @@ export async function verifyLoginCode(
   code: string,
   timezone: string,
   now: Date,
-): Promise<{ user: UserRow; isNewUser: boolean; sessionToken: string }> {
+): Promise<{ user: UserRow; isNewUser: boolean; next: SignInNext }> {
   const address = normalizeEmail(email);
   // The guess is recorded even when it's wrong, so the transaction returns instead of throwing.
   const outcome = await db.transaction(async (tx) => {
@@ -89,8 +90,7 @@ export async function verifyLoginCode(
     }
     await tx.update(loginTokens).set({ usedAt: now }).where(eq(loginTokens.tokenHash, login.tokenHash));
     const { user, created } = await findOrCreateUser(tx, address, timezone, now);
-    const sessionToken = await createSession(tx, user.id, now);
-    return { ok: true as const, user, isNewUser: created, sessionToken };
+    return { ok: true as const, user, isNewUser: created, next: await finishSignIn(tx, user, created, now) };
   });
   if (!outcome.ok) {
     throw unauthorized(
@@ -99,7 +99,65 @@ export async function verifyLoginCode(
         : 'That code has expired or been used up. Ask for a new email.',
     );
   }
-  return { user: outcome.user, isNewUser: outcome.isNewUser, sessionToken: outcome.sessionToken };
+  return { user: outcome.user, isNewUser: outcome.isNewUser, next: outcome.next };
+}
+
+/** After the email checks out: a session, or the password step when the account has one. */
+export type SignInNext = { kind: 'session'; sessionToken: string } | { kind: 'password'; challenge: string };
+
+const CHALLENGE_TTL_MS = 10 * 60_000;
+const PASSWORD_MAX_ATTEMPTS = 5;
+
+async function finishSignIn(tx: Db, user: UserRow, isNewUser: boolean, now: Date): Promise<SignInNext> {
+  if (!user.passwordHash) return { kind: 'session', sessionToken: await createSession(tx, user.id, now) };
+  const challenge = randomSecret();
+  await tx.insert(passwordChallenges).values({
+    idHash: sha256(challenge),
+    userId: user.id,
+    isNewUser,
+    createdAt: now,
+    expiresAt: new Date(now.getTime() + CHALLENGE_TTL_MS),
+  });
+  return { kind: 'password', challenge };
+}
+
+/**
+ * The password step: the challenge from a verified email code or link, plus the
+ * password. Single use; each wrong password counts, and after PASSWORD_MAX_ATTEMPTS the
+ * challenge is spent (back to the email).
+ */
+export async function verifyPasswordChallenge(
+  db: Db,
+  challenge: string,
+  password: string,
+  now: Date,
+): Promise<{ user: UserRow; isNewUser: boolean; sessionToken: string }> {
+  const idHash = sha256(challenge);
+  const [row] = await db
+    .select({ challenge: passwordChallenges, user: users })
+    .from(passwordChallenges)
+    .innerJoin(users, eq(users.id, passwordChallenges.userId))
+    .where(and(eq(passwordChallenges.idHash, idHash), gt(passwordChallenges.expiresAt, now)));
+  if (!row || row.challenge.attempts >= PASSWORD_MAX_ATTEMPTS) {
+    throw unauthorized('This sign-in has expired. Ask for a new email to start again.');
+  }
+  // Slow on purpose (scrypt), outside any transaction.
+  const ok = row.user.passwordHash !== null && (await verifyPassword(password, row.user.passwordHash));
+  if (!ok) {
+    const attempts = row.challenge.attempts + 1;
+    await db.update(passwordChallenges).set({ attempts }).where(eq(passwordChallenges.idHash, idHash));
+    const left = PASSWORD_MAX_ATTEMPTS - attempts;
+    throw unauthorized(
+      left > 0
+        ? `That password isn’t right. ${left} ${left === 1 ? 'try' : 'tries'} left.`
+        : 'Too many wrong passwords. Ask for a new email to start again.',
+    );
+  }
+  return db.transaction(async (tx) => {
+    const [spent] = await tx.delete(passwordChallenges).where(eq(passwordChallenges.idHash, idHash)).returning();
+    if (!spent) throw unauthorized('This sign-in has already been used. Ask for a new email to start again.');
+    return { user: row.user, isNewUser: spent.isNewUser, sessionToken: await createSession(tx, row.user.id, now) };
+  });
 }
 
 export async function createSession(tx: Db, userId: string, now: Date): Promise<string> {
@@ -119,7 +177,7 @@ export async function verifyLoginToken(
   token: string,
   timezone: string,
   now: Date,
-): Promise<{ user: UserRow; isNewUser: boolean; sessionToken: string }> {
+): Promise<{ user: UserRow; isNewUser: boolean; next: SignInNext }> {
   return db.transaction(async (tx) => {
     const [login] = await tx
       .update(loginTokens)
@@ -128,8 +186,7 @@ export async function verifyLoginToken(
       .returning();
     if (!login) throw unauthorized('This sign-in link is invalid, expired, or already used.');
     const { user, created } = await findOrCreateUser(tx, login.email, timezone, now);
-    const sessionToken = await createSession(tx, user.id, now);
-    return { user, isNewUser: created, sessionToken };
+    return { user, isNewUser: created, next: await finishSignIn(tx, user, created, now) };
   });
 }
 

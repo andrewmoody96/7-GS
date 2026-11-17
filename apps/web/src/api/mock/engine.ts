@@ -1014,6 +1014,9 @@ export function toMeDto(world: UserWorld, now: Date): MeDto {
     displayName: user.displayName,
     avatar: user.avatar ?? null,
     seenRelease: user.seenRelease ?? null,
+    // The demo shows the admin page with its own account.
+    isAdmin: true,
+    hasPassword: user.hasPassword ?? false,
     timezone: user.timezone,
     startDate: user.startDate,
     headStartFrom: headStartFrom(user),

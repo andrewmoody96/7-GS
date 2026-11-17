@@ -31,6 +31,8 @@ export interface UserRow {
   avatar?: string | null;
   /** Newest release notes seen; absent = none. */
   seenRelease?: string | null;
+  /** The demo never stores a password, only whether one was "set". */
+  hasPassword?: boolean;
   createdAt: string;
 }
 
