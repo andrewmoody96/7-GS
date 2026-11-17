@@ -747,3 +747,36 @@
 .explainer--plan {
   margin: 0 0 16px;
 }
+
+/* ── Update bar: a new version is waiting ──────────────────────────────── */
+
+.updatebar {
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 8px 8px 16px;
+  border-radius: 999px;
+  background: var(--ink-900);
+  color: var(--chalk-50);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+}
+
+.updatebar__btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: var(--gold-500);
+  color: var(--ink-900);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

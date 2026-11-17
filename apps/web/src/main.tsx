@@ -12,12 +12,27 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { createApi } from './api';
 import { applyThemePref, getThemePref } from './app/theme';
+import { checkIfFirstOpenToday, offerUpdate, setRegistration } from './app/update';
 
 applyThemePref(getThemePref());
 
 if (import.meta.env.PROD) {
-  // Precache the app shell; new versions activate on the next load.
-  void import('virtual:pwa-register').then(({ registerSW }) => registerSW({ immediate: true }));
+  // Precache the app shell. Look for a new version the first time the app is opened or
+  // brought back each day (and from Settings); when one is waiting, the UpdateBar offers a reload.
+  void import('virtual:pwa-register').then(({ registerSW }) => {
+    const updateSW = registerSW({
+      immediate: true,
+      onNeedRefresh: () => offerUpdate(() => void updateSW(true)),
+      onRegisteredSW: (_url, registration) => {
+        if (!registration) return;
+        setRegistration(registration);
+        checkIfFirstOpenToday();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkIfFirstOpenToday();
+        });
+      },
+    });
+  });
 }
 
 const root = document.getElementById('root');
