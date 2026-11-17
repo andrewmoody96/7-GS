@@ -222,6 +222,17 @@ export class MockBackend {
       if (patch.timezone !== undefined) w.user.timezone = patch.timezone;
       if (patch.defaultLockTime !== undefined) w.user.defaultLockTime = patch.defaultLockTime;
       if (patch.theme !== undefined) w.user.theme = patch.theme;
+      if (patch.seenRelease !== undefined) w.user.seenRelease = patch.seenRelease;
+      return engine.toMeDto(w, now);
+    },
+    putAvatar: ({ world, body, now }) => {
+      const w = world();
+      w.user.avatar = (body as { image: string }).image;
+      return engine.toMeDto(w, now);
+    },
+    deleteAvatar: ({ world, now }) => {
+      const w = world();
+      w.user.avatar = null;
       return engine.toMeDto(w, now);
     },
     startHeadStart: ({ world, now }) => engine.startHeadStart(world(), this.env, now),

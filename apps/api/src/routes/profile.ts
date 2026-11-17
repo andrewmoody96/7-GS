@@ -6,7 +6,7 @@ import { clearSessionCookie } from '../http/session';
 import { deleteAccount, normalizeEmail } from '../services/auth';
 import { inUserTx } from '../services/today';
 import { prepareDay } from '../services/finalizer';
-import { calendarView, meView, startHeadStart, updateMe } from '../services/users';
+import { calendarView, clearAvatar, meView, setAvatar, startHeadStart, updateMe } from '../services/users';
 
 export function profileRoutes(deps: Deps): AnyRoute[] {
   return [
@@ -18,6 +18,32 @@ export function profileRoutes(deps: Deps): AnyRoute[] {
       inUserTx(deps.db, auth.user, now, async (tx, user) => meView(tx, await updateMe(tx, user, body), now), {
         scope: 'account',
       }),
+    ),
+
+    route('putAvatar', ({ auth, body, now }) =>
+      inUserTx(
+        deps.db,
+        auth.user,
+        now,
+        async (tx, user) => {
+          await setAvatar(tx, user, body.image, now);
+          return meView(tx, user, now);
+        },
+        { scope: 'account' },
+      ),
+    ),
+
+    route('deleteAvatar', ({ auth, now }) =>
+      inUserTx(
+        deps.db,
+        auth.user,
+        now,
+        async (tx, user) => {
+          await clearAvatar(tx, user);
+          return meView(tx, user, now);
+        },
+        { scope: 'account' },
+      ),
     ),
 
     route('startHeadStart', ({ auth, now }) =>

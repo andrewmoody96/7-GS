@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi, useCheckoffQueue } from '../app/context';
-import { forgetCachedMe, useUpdateMe, useUpdateSeasonGoal } from '../app/queries';
+import { forgetCachedMe, useUpdateMe, useUpdateSeasonGoal, useClearAvatar, useSetAvatar } from '../app/queries';
 import { errorMessage } from '../app/errors';
 import { getThemePref, setThemePref, type ThemePref } from '../app/theme';
 import { useNotify } from '../app/toast';
@@ -14,6 +14,8 @@ import { Tile } from '../components/Tile';
 import { formatTimeOfDay, formatWinPct, signed } from '../lib/format';
 import { AVAILABLE_THEMES, vocab } from '../vocab';
 import { checkForUpdate, useUpdateAvailable } from '../app/update';
+import { squarePhoto } from '../lib/avatar';
+import { TeamBadge } from '../components/Badges';
 
 // A function, not a constant: the labels follow the account's theme.
 const statusLabel = (): Record<SeasonDto['status'], string> => ({
@@ -251,6 +253,7 @@ export function Clubhouse({ me }: { me: MeDto }) {
           </button>
         </div>
       </form>
+      <TeamPhoto me={me} />
       <dl className="facts">
         <div>
           <dt>Time zone</dt>
@@ -315,6 +318,57 @@ export function Clubhouse({ me }: { me: MeDto }) {
       </div>
       <DeleteAccountSheet open={deleting} email={me.email} onClose={() => setDeleting(false)} onDeleted={leave} />
     </section>
+  );
+}
+
+/** Settings → Team photo: replaces the initials badge everywhere your team appears. */
+function TeamPhoto({ me }: { me: MeDto }) {
+  const setAvatar = useSetAvatar();
+  const clearAvatar = useClearAvatar();
+  const notify = useNotify();
+  const inputId = useId();
+  const [preparing, setPreparing] = useState(false);
+  const busy = preparing || setAvatar.isPending || clearAvatar.isPending;
+  const choose = async (file: File | undefined) => {
+    if (!file) return;
+    setPreparing(true);
+    try {
+      setAvatar.mutate(await squarePhoto(file));
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'That photo couldn’t be used.', 'error');
+    } finally {
+      setPreparing(false);
+    }
+  };
+  return (
+    <div className="field teamphoto">
+      <span className="field__label">Team photo</span>
+      <div className="teamphoto__row">
+        <TeamBadge name={me.displayName} size={64} />
+        <div className="teamphoto__actions">
+          <label htmlFor={inputId} className={`btn${busy ? ' is-disabled' : ''}`} aria-disabled={busy}>
+            {preparing || setAvatar.isPending ? 'Saving…' : me.avatar ? 'Change photo' : 'Choose photo'}
+          </label>
+          <input
+            id={inputId}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            disabled={busy}
+            onChange={(e) => {
+              void choose(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+          {me.avatar ? (
+            <button type="button" className="btn btn--quiet" disabled={busy} onClick={() => clearAvatar.mutate()}>
+              Remove
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <p className="field__hint">Shows in your team badge on the scoreboard and series, with your initials over it. It’s cropped to a square.</p>
+    </div>
   );
 }
 

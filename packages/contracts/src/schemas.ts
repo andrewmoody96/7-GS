@@ -101,6 +101,10 @@ export const Me = z.object({
   defaultLockTime: TimeOfDay.nullable(),
   /** Sport theme: words and look only, never the rules. */
   theme: z.enum(THEMES),
+  /** The team photo as a data: URL, or null for the initials badge. */
+  avatar: z.string().nullable(),
+  /** The newest release notes this account has seen (null: none yet). */
+  seenRelease: z.string().nullable(),
   today: LocalDate,
   position: CalendarPosition,
   allowances: Allowances,
@@ -112,8 +116,17 @@ export const MePatch = z
     timezone: TimeZone,
     defaultLockTime: TimeOfDay.nullable(),
     theme: z.enum(THEMES),
+    seenRelease: z.string().min(1).max(32),
   })
   .partial();
+
+/** A square team photo, already resized on the device (a few KB). */
+export const AvatarUpload = z.object({
+  image: z
+    .string()
+    .max(200_000, 'That photo is too large.')
+    .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, 'Upload a JPEG, PNG or WebP image.'),
+});
 
 // ── Auth (dev-friendly magic link) ───────────────────────────────────────────
 

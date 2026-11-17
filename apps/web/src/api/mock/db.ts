@@ -27,6 +27,10 @@ export interface UserRow {
   defaultLockTime: string | null;
   /** Sport theme; absent in worlds saved before themes. */
   theme?: Theme;
+  /** Team photo data: URL; absent = the initials badge. */
+  avatar?: string | null;
+  /** Newest release notes seen; absent = none. */
+  seenRelease?: string | null;
   createdAt: string;
 }
 

@@ -2,7 +2,7 @@ import type { CalendarDto, MeDto, MePatchDto } from '@7gs/contracts';
 import { addDays, calendarPosition, isTheme, localDateOf, seasonWindow, type Theme } from '@7gs/rules';
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { seasons, users, type UserRow } from '../db/schema';
+import { seasons, userAvatars, users, type UserRow } from '../db/schema';
 import { conflict } from '../errors';
 import { uuidv7 } from '../ids';
 import { allowancesView } from './allowances';
@@ -67,6 +67,8 @@ export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
     headStartFrom: user.headStartFrom,
     defaultLockTime: user.defaultLockTime,
     theme: themeOf(user),
+    avatar: (await tx.select({ image: userAvatars.image }).from(userAvatars).where(eq(userAvatars.userId, user.id)))[0]?.image ?? null,
+    seenRelease: user.seenRelease,
     today,
     position: calendarPosition(user, today),
     allowances: await allowancesView(tx, user.id, today),
@@ -84,9 +86,23 @@ export async function updateMe(tx: Db, user: UserRow, patch: MePatchDto): Promis
   if (patch.timezone !== undefined) set.timezone = patch.timezone;
   if (patch.defaultLockTime !== undefined) set.defaultLockTime = patch.defaultLockTime;
   if (patch.theme !== undefined) set.theme = patch.theme;
+  if (patch.seenRelease !== undefined) set.seenRelease = patch.seenRelease;
   if (Object.keys(set).length === 0) return user;
   const [row] = await tx.update(users).set(set).where(eq(users.id, user.id)).returning();
   return row ?? user;
+}
+
+/** Replace the team photo (validated by contracts AvatarUpload). */
+export async function setAvatar(tx: Db, user: UserRow, image: string, now: Date): Promise<void> {
+  await tx
+    .insert(userAvatars)
+    .values({ userId: user.id, image, updatedAt: now })
+    .onConflictDoUpdate({ target: userAvatars.userId, set: { image, updatedAt: now } });
+}
+
+/** Back to the initials badge. */
+export async function clearAvatar(tx: Db, user: UserRow): Promise<void> {
+  await tx.delete(userAvatars).where(eq(userAvatars.userId, user.id));
 }
 
 /**

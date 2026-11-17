@@ -48,6 +48,8 @@ export const endpoints = {
   // Profile & calendar
   getMe: endpoint({ method: 'GET', path: '/v1/me', response: S.Me }),
   updateMe: endpoint({ method: 'PATCH', path: '/v1/me', body: S.MePatch, response: S.Me }),
+  putAvatar: endpoint({ method: 'PUT', path: '/v1/me/avatar', body: S.AvatarUpload, response: S.Me }),
+  deleteAvatar: endpoint({ method: 'DELETE', path: '/v1/me/avatar', response: S.Me }),
   /**
    * Start playing today instead of waiting for Opening Day (Spring Training only). The
    * days left this week become the Head Start: games that count toward the season record.

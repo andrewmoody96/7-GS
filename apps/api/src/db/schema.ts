@@ -95,6 +95,18 @@ export const users = pgTable('users', {
   remindRally: boolean('remind_rally').notNull().default(true),
   remindPlan: boolean('remind_plan').notNull().default(true),
   remindEmail: boolean('remind_email').notNull().default(false),
+  /** The newest release notes (web releaseNotes.ts id) this account has seen; null = none yet. */
+  seenRelease: text('seen_release'),
+});
+
+/** The team photo: a small square image, resized on the device before upload. */
+export const userAvatars = pgTable('user_avatars', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  /** A data: URL (image/jpeg, image/png or image/webp, base64). */
+  image: text('image').notNull(),
+  updatedAt: instant('updated_at').notNull(),
 });
 
 export const loginTokens = pgTable('login_tokens', {
