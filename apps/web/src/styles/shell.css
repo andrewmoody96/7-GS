@@ -800,14 +800,26 @@
   pointer-events: none;
 }
 
-.teamtitle {
-  display: flex;
+.teamhead {
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 10px;
 }
 
-.teamtitle .badge {
+.teamhead__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.teamhead__text .allowances {
+  margin-top: 10px;
+}
+
+/* The big team photo fills the space beside the name. */
+.teamhead > .badge {
   flex: none;
+  width: clamp(80px, 22vw, 168px);
+  height: auto;
+  filter: drop-shadow(0 6px 16px rgb(0 0 0 / 0.18));
 }
 
 /* ── What's new ─────────────────────────────────────────────────────────── */
