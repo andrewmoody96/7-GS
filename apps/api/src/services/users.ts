@@ -3,11 +3,12 @@ import { addDays, calendarPosition, isTheme, localDateOf, seasonWindow, type The
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { seasons, userAvatars, users, type UserRow } from '../db/schema';
-import { conflict } from '../errors';
+import { conflict, validationFailed } from '../errors';
 import { uuidv7 } from '../ids';
 import { allowancesView } from './allowances';
 import { syncSeasons } from './calendar';
 import { ensureStarters } from './starters';
+import { hashPassword, verifyPassword } from './passwords';
 
 const DISPLAY_NAME_MAX = 40;
 
@@ -82,6 +83,7 @@ export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
     avatar: (await tx.select({ image: userAvatars.image }).from(userAvatars).where(eq(userAvatars.userId, user.id)))[0]?.image ?? null,
     seenRelease: user.seenRelease,
     isAdmin: isAdmin(user.email),
+    hasPassword: user.passwordHash !== null,
     today,
     position: calendarPosition(user, today),
     allowances: await allowancesView(tx, user.id, today),
@@ -149,4 +151,25 @@ export function calendarView(user: UserRow, now: Date): CalendarDto {
     position,
     seasons: [seasonWindow(user, position.seasonNumber), seasonWindow(user, position.seasonNumber + 1)],
   };
+}
+
+/** Set or change the password (hashed with scrypt). Changing needs the current one. */
+export async function setPassword(tx: Db, user: UserRow, current: string | undefined, password: string): Promise<UserRow> {
+  await assertCurrentPassword(user, current);
+  const [row] = await tx.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id)).returning();
+  return row ?? user;
+}
+
+/** Back to email-only sign-in. Needs the current password. */
+export async function removePassword(tx: Db, user: UserRow, current: string): Promise<UserRow> {
+  await assertCurrentPassword(user, current);
+  const [row] = await tx.update(users).set({ passwordHash: null }).where(eq(users.id, user.id)).returning();
+  return row ?? user;
+}
+
+async function assertCurrentPassword(user: UserRow, current: string | undefined): Promise<void> {
+  if (user.passwordHash === null) return;
+  if (!current || !(await verifyPassword(current, user.passwordHash))) {
+    throw validationFailed([{ path: 'current', message: 'That isn’t your current password.' }], 'That isn’t your current password.');
+  }
 }

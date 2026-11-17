@@ -32,7 +32,7 @@ export const endpoints = {
     method: 'POST',
     path: '/v1/auth/verify',
     body: S.VerifyRequest,
-    response: S.Session,
+    response: S.SignInResult,
     auth: false,
   }),
   /** Sign in with the 6-digit code from the email (single use, 15 minutes, 5 tries). */
@@ -40,6 +40,14 @@ export const endpoints = {
     method: 'POST',
     path: '/v1/auth/code',
     body: S.VerifyCodeRequest,
+    response: S.SignInResult,
+    auth: false,
+  }),
+  /** The password step, for an account that has one (5 tries per challenge). */
+  verifyPassword: endpoint({
+    method: 'POST',
+    path: '/v1/auth/password',
+    body: S.PasswordSignIn,
     response: S.Session,
     auth: false,
   }),
@@ -48,7 +56,10 @@ export const endpoints = {
   // Profile & calendar
   getMe: endpoint({ method: 'GET', path: '/v1/me', response: S.Me }),
   updateMe: endpoint({ method: 'PATCH', path: '/v1/me', body: S.MePatch, response: S.Me }),
+  setPassword: endpoint({ method: 'PUT', path: '/v1/me/password', body: S.PasswordSet, response: S.Me }),
+  removePassword: endpoint({ method: 'DELETE', path: '/v1/me/password', body: S.PasswordRemove, response: S.Me }),
   // Admin (ADMIN_EMAILS only; anyone else gets 404)
+  unlockAdmin: endpoint({ method: 'POST', path: '/v1/admin/unlock', body: S.AdminUnlock, response: S.Ok }),
   listAccounts: endpoint({ method: 'GET', path: '/v1/admin/accounts', response: S.AdminAccountList }),
   putAvatar: endpoint({ method: 'PUT', path: '/v1/me/avatar', body: S.AvatarUpload, response: S.Me }),
   deleteAvatar: endpoint({ method: 'DELETE', path: '/v1/me/avatar', response: S.Me }),

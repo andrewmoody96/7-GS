@@ -72,7 +72,7 @@ describe('mock backend seeds', () => {
     await expectApiError(api.call('getMe'), 'UNAUTHORIZED');
     const link = await api.call('requestMagicLink', { body: { email: me.email } });
     const again = await api.call('verifyMagicLink', { body: { token: link.devToken!, timezone: TZ } });
-    expect(again.isNewUser).toBe(true);
+    expect('isNewUser' in again && again.isNewUser).toBe(true);
   });
 
   it('pins each scenario to its weekday near the real date', () => {

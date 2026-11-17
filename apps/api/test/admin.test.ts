@@ -45,6 +45,15 @@ describe('admin: accounts', () => {
     t.clock.set('2026-10-03T11:00:00Z'); // the boss checks in later, so is the most recent
     expect((await t.ok('getMe', { token: boss.token })).isAdmin).toBe(true);
 
+    // The admin pages need a password, entered on this device.
+    expect(await t.fails('listAccounts', { token: boss.token }, 409)).toMatchObject({ reason: 'PASSWORD_NOT_SET' });
+    await t.ok('setPassword', { token: boss.token, body: { password: 'correct horse battery' } });
+    expect(await t.fails('listAccounts', { token: boss.token }, 409)).toMatchObject({ reason: 'ADMIN_LOCKED' });
+    expect(await t.fails('unlockAdmin', { token: boss.token, body: { password: 'wrong guess' } }, 400)).toMatchObject({
+      code: 'VALIDATION_FAILED',
+    });
+    await t.ok('unlockAdmin', { token: boss.token, body: { password: 'correct horse battery' } });
+
     const { accounts } = await t.ok('listAccounts', { token: boss.token });
     expect(accounts.map((a) => a.email)).toEqual(['boss@example.com', 'pat@example.com']);
     expect(accounts.find((a) => a.email === 'pat@example.com')).toMatchObject({
@@ -57,9 +66,22 @@ describe('admin: accounts', () => {
     });
   });
 
+  it('stays unlocked on that device for 12 hours', async () => {
+    const t = new TestApp(env.db, '2026-10-02T15:00:00Z', { config: adminConfig });
+    const boss = await t.signIn('boss@example.com', CHICAGO);
+    await t.ok('setPassword', { token: boss.token, body: { password: 'correct horse battery' } });
+    await t.ok('unlockAdmin', { token: boss.token, body: { password: 'correct horse battery' } });
+    t.clock.set('2026-10-03T02:59:00Z');
+    await t.ok('listAccounts', { token: boss.token });
+    t.clock.set('2026-10-03T03:00:00Z');
+    expect(await t.fails('listAccounts', { token: boss.token }, 409)).toMatchObject({ reason: 'ADMIN_LOCKED' });
+  });
+
   it('is a plain 404 for everyone else', async () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z', { config: adminConfig });
     const { token } = await t.signIn('nosy@example.com', CHICAGO);
+    await t.ok('setPassword', { token, body: { password: 'let me in please' } });
+    expect((await t.fails('unlockAdmin', { token, body: { password: 'let me in please' } }, 404)).code).toBe('NOT_FOUND');
     expect((await t.fails('listAccounts', { token }, 404)).code).toBe('NOT_FOUND');
   });
 });

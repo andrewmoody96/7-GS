@@ -1,7 +1,7 @@
 import { ApiError } from '@7gs/contracts';
 import { describe, expect, it } from 'vitest';
 import { loginTokens, sessions } from '../src/db/schema';
-import { CHICAGO, TestApp, useTestDb } from './helpers';
+import { CHICAGO, TestApp, useTestDb, asSession } from './helpers';
 
 const env = useTestDb();
 
@@ -16,8 +16,9 @@ describe('magic-link auth', () => {
 
     const verified = await t.call('verifyMagicLink', { body: { token: link.devToken, timezone: CHICAGO } });
     if (!verified.ok) throw new Error('verify failed');
-    expect(verified.data.isNewUser).toBe(true);
-    expect(verified.data.me).toMatchObject({
+    const signedIn = asSession(verified.data);
+    expect(signedIn.isNewUser).toBe(true);
+    expect(signedIn.me).toMatchObject({
       email: 'pat.smith@example.com',
       displayName: 'pat.smith',
       timezone: CHICAGO,
@@ -39,8 +40,8 @@ describe('magic-link auth', () => {
     const session = /7gs_session=([^;]+)/.exec(cookie)?.[1] ?? '';
     const viaCookie = await t.ok('getMe', { cookie: `7gs_session=${session}` });
     const viaBearer = await t.ok('getMe', { token: session });
-    expect(viaCookie.id).toBe(verified.data.me.id);
-    expect(viaBearer.id).toBe(verified.data.me.id);
+    expect(viaCookie.id).toBe(signedIn.me.id);
+    expect(viaBearer.id).toBe(signedIn.me.id);
   });
 
   it('only stores hashes of login tokens and sessions', async () => {

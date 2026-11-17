@@ -1,10 +1,18 @@
-import type { MeDto, SeasonDto } from '@7gs/contracts';
+import { PASSWORD_MIN, type MeDto, type SeasonDto } from '@7gs/contracts';
 import { gamesInSeason, GAMES_PER_SEASON, HEAD_START_SERIES, seasonPace, THEME_TERMS } from '@7gs/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi, useCheckoffQueue } from '../app/context';
-import { forgetCachedMe, useUpdateMe, useUpdateSeasonGoal, useClearAvatar, useSetAvatar } from '../app/queries';
+import {
+  forgetCachedMe,
+  useClearAvatar,
+  useRemovePassword,
+  useSetAvatar,
+  useSetPassword,
+  useUpdateMe,
+  useUpdateSeasonGoal,
+} from '../app/queries';
 import { errorMessage } from '../app/errors';
 import { getThemePref, setThemePref, type ThemePref } from '../app/theme';
 import { useNotify } from '../app/toast';
@@ -254,6 +262,7 @@ export function Clubhouse({ me }: { me: MeDto }) {
         </div>
       </form>
       <TeamPhoto me={me} />
+      <PasswordSettings me={me} />
       <dl className="facts">
         <div>
           <dt>Time zone</dt>
@@ -318,6 +327,145 @@ export function Clubhouse({ me }: { me: MeDto }) {
       </div>
       <DeleteAccountSheet open={deleting} email={me.email} onClose={() => setDeleting(false)} onDeleted={leave} />
     </section>
+  );
+}
+
+/**
+ * Settings → Password (optional). With one, sign-in takes the email code or link plus the
+ * password, so the email alone isn't enough. Admin pages need one.
+ */
+function PasswordSettings({ me }: { me: MeDto }) {
+  const setPassword = useSetPassword();
+  const removePassword = useRemovePassword();
+  const notify = useNotify();
+  const [mode, setMode] = useState<'idle' | 'set' | 'remove'>('idle');
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const currentId = useId();
+  const nextId = useId();
+  const confirmId = useId();
+  const reset = () => {
+    setMode('idle');
+    setCurrent('');
+    setNext('');
+    setConfirm('');
+    setPassword.reset();
+    removePassword.reset();
+  };
+  const mismatch = confirm.length > 0 && confirm !== next;
+  const tooShort = next.length > 0 && next.length < PASSWORD_MIN;
+  const error = setPassword.error ?? removePassword.error;
+  const busy = setPassword.isPending || removePassword.isPending;
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (mode === 'set') {
+      if (tooShort || mismatch || !next) return;
+      setPassword.mutate(
+        { current: me.hasPassword ? current : undefined, password: next },
+        {
+          onSuccess: () => {
+            notify(me.hasPassword ? 'Password changed.' : 'Password set. Signing in now asks for it after the email code.', 'success');
+            reset();
+          },
+        },
+      );
+    } else if (mode === 'remove' && current) {
+      removePassword.mutate(current, {
+        onSuccess: () => {
+          notify('Password removed. Signing in takes just the email code again.', 'success');
+          reset();
+        },
+      });
+    }
+  };
+  return (
+    <div className="field password">
+      <span className="field__label">Password</span>
+      {mode === 'idle' ? (
+        <>
+          <p className="field__hint">
+            {me.hasPassword
+              ? 'On. Signing in takes your email code (or link) plus your password.'
+              : 'Optional. Add one and signing in takes your email code plus the password, so your email alone isn’t enough.'}
+          </p>
+          <div className="teamphoto__actions">
+            <button type="button" className="btn" onClick={() => setMode('set')}>
+              {me.hasPassword ? 'Change password' : 'Add a password'}
+            </button>
+            {me.hasPassword ? (
+              <button type="button" className="btn btn--quiet" onClick={() => setMode('remove')}>
+                Remove
+              </button>
+            ) : null}
+          </div>
+        </>
+      ) : (
+        <form className="password__form" onSubmit={submit}>
+          {me.hasPassword ? (
+            <>
+              <label className="field__label" htmlFor={currentId}>
+                Current password
+              </label>
+              <input
+                id={currentId}
+                className="input"
+                type="password"
+                autoComplete="current-password"
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+              />
+            </>
+          ) : null}
+          {mode === 'set' ? (
+            <>
+              <label className="field__label" htmlFor={nextId}>
+                New password
+              </label>
+              <input
+                id={nextId}
+                className={`input${tooShort ? ' is-invalid' : ''}`}
+                type="password"
+                autoComplete="new-password"
+                value={next}
+                onChange={(e) => setNext(e.target.value)}
+              />
+              <label className="field__label" htmlFor={confirmId}>
+                Type it again
+              </label>
+              <input
+                id={confirmId}
+                className={`input${mismatch ? ' is-invalid' : ''}`}
+                type="password"
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+              <p className="field__hint">
+                {tooShort ? `Use at least ${PASSWORD_MIN} characters.` : mismatch ? 'Those don’t match.' : `At least ${PASSWORD_MIN} characters.`}
+              </p>
+            </>
+          ) : null}
+          {error ? (
+            <p className="notice notice--error" role="alert">
+              {errorMessage(error)}
+            </p>
+          ) : null}
+          <div className="teamphoto__actions">
+            <button
+              type="submit"
+              className={`btn ${mode === 'remove' ? 'btn--danger' : 'btn--primary'}`}
+              disabled={busy || (mode === 'set' ? !next || tooShort || mismatch || (me.hasPassword && !current) : !current)}
+            >
+              {busy ? 'Saving…' : mode === 'remove' ? 'Remove password' : 'Save password'}
+            </button>
+            <button type="button" className="btn btn--quiet" onClick={reset}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
 

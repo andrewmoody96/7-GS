@@ -85,7 +85,8 @@ export function forgetCachedMe(): void {
 /** Every account, for the admin page (ADMIN_EMAILS only). */
 export function useAdminAccountsQuery() {
   const api = useApi();
-  return useQuery({ queryKey: ['admin', 'accounts'], queryFn: async () => (await api.call('listAccounts')).accounts });
+  // A locked or password-less admin is a normal state here (an unlock form), not something to retry.
+  return useQuery({ queryKey: ['admin', 'accounts'], queryFn: async () => (await api.call('listAccounts')).accounts, retry: false });
 }
 
 export function useMeQuery() {
@@ -739,6 +740,25 @@ export function useStartHeadStart() {
       notify(vocab.headStart.started(headStartGames(me)), 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
+/** Set, change (`current` needed) or remove the optional password. */
+export function useSetPassword() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { current?: string; password: string }) => api.call('setPassword', { body: v }),
+    onSuccess: (me) => qc.setQueryData(qk.me, me),
+  });
+}
+
+export function useRemovePassword() {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (current: string) => api.call('removePassword', { body: { current } }),
+    onSuccess: (me) => qc.setQueryData(qk.me, me),
   });
 }
 

@@ -2,7 +2,12 @@
 // created, when it last signed in, and when it was last seen using the app.
 
 import type { AdminAccountDto } from '@7gs/contracts';
+import { useMutation } from '@tanstack/react-query';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { isApiError } from '../api/client';
+import { useApi } from '../app/context';
+import { errorMessage } from '../app/errors';
 import { useAdminAccountsQuery } from '../app/queries';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { THEME_TERMS } from '@7gs/rules';
@@ -65,6 +70,15 @@ export function AccountsScreen() {
       </header>
       {accounts.isPending ? (
         <Loading label="Loading accounts" />
+      ) : isApiError(accounts.error) && accounts.error.reason === 'PASSWORD_NOT_SET' ? (
+        <EmptyState title="Set a password first">
+          <p>
+            The admin pages need a password on top of your email. Add one in <Link to="/team/settings">Settings → Password</Link>, then
+            come back.
+          </p>
+        </EmptyState>
+      ) : isApiError(accounts.error) && accounts.error.reason === 'ADMIN_LOCKED' ? (
+        <AdminUnlock onUnlocked={() => void accounts.refetch()} />
       ) : accounts.isError ? (
         <ErrorPanel error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : accounts.data.length === 0 ? (
@@ -83,5 +97,51 @@ export function AccountsScreen() {
         </>
       )}
     </div>
+  );
+}
+
+/** Enter the account password to open the admin pages on this device for 12 hours. */
+function AdminUnlock({ onUnlocked }: { onUnlocked: () => void }) {
+  const api = useApi();
+  const [password, setPassword] = useState('');
+  const passwordId = useId();
+  const unlock = useMutation({
+    mutationFn: () => api.call('unlockAdmin', { body: { password } }),
+    onSuccess: onUnlocked,
+    onError: () => setPassword(''),
+  });
+  return (
+    <form
+      className="card form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (password && !unlock.isPending) unlock.mutate();
+      }}
+    >
+      <p>Enter your password to open the admin pages. They stay open on this device for 12 hours.</p>
+      <label className="field__label" htmlFor={passwordId}>
+        Password
+      </label>
+      <input
+        id={passwordId}
+        className={`input${unlock.isError ? ' is-invalid' : ''}`}
+        type="password"
+        autoComplete="current-password"
+        autoFocus
+        value={password}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          if (unlock.isError) unlock.reset();
+        }}
+      />
+      {unlock.isError ? (
+        <p className="notice notice--error" role="alert">
+          {isApiError(unlock.error) && unlock.error.code === 'VALIDATION_FAILED' ? 'That password isn’t right.' : errorMessage(unlock.error)}
+        </p>
+      ) : null}
+      <button type="submit" className="btn btn--primary" disabled={!password || unlock.isPending}>
+        {unlock.isPending ? 'Unlocking…' : 'Unlock'}
+      </button>
+    </form>
   );
 }

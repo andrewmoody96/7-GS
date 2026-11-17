@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { SessionDto } from '@7gs/contracts';
+import type { SessionDto, SignInResultDto } from '@7gs/contracts';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { isApiError } from '../api/client';
@@ -31,7 +31,14 @@ export function SignInScreen() {
       setSentAt(Date.now());
     },
   });
-  const signedIn = (session: SessionDto) => {
+  // The email checked out but the account has a password: one more step.
+  const [passwordStep, setPasswordStep] = useState<{ challenge: string; email: string } | null>(null);
+  const signedIn = (result: SignInResultDto) => {
+    if ('passwordRequired' in result) {
+      setPasswordStep({ challenge: result.challenge, email: result.email });
+      return;
+    }
+    const session: SessionDto = result;
     qc.clear();
     qc.setQueryData(qk.me, session.me);
     // A brand-new account starts with the welcome setup (sport, then look).
@@ -78,7 +85,17 @@ export function SignInScreen() {
       {verify.isPending ? <p className="loading-line">{vocab.flavor.signingIn}</p> : null}
       {verify.isError ? <p className="notice notice--error">{errorMessage(verify.error)}</p> : null}
 
-      {sent ? (
+      {passwordStep ? (
+        <PasswordStep
+          challenge={passwordStep.challenge}
+          email={passwordStep.email}
+          onSignedIn={signedIn}
+          onRestart={() => {
+            setPasswordStep(null);
+            setSent(null);
+          }}
+        />
+      ) : sent ? (
         <section className="card signin__card" aria-live="polite">
           <h2 className="card__title">{sent.devToken && sent.emailed !== true ? 'Sign in' : 'Check your email'}</h2>
           {sent.emailed === false ? (
@@ -159,7 +176,7 @@ function CodeEntry({
   sentAt,
 }: {
   email: string;
-  onSignedIn: (session: SessionDto) => void;
+  onSignedIn: (result: SignInResultDto) => void;
   onResend: () => void;
   resending: boolean;
   sentAt: number;
@@ -235,5 +252,71 @@ function CodeEntry({
         {resending ? 'Sending…' : wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}
       </button>
     </div>
+  );
+}
+
+/**
+ * The second step for an account with a password: the email code or link checked out, now
+ * the password. Five wrong tries send you back to the email.
+ */
+function PasswordStep({
+  challenge,
+  email,
+  onSignedIn,
+  onRestart,
+}: {
+  challenge: string;
+  email: string;
+  onSignedIn: (result: SignInResultDto) => void;
+  onRestart: () => void;
+}) {
+  const api = useApi();
+  const [password, setPassword] = useState('');
+  const passwordId = useId();
+  const check = useMutation({
+    mutationFn: () => api.call('verifyPassword', { body: { challenge, password } }),
+    onSuccess: onSignedIn,
+    onError: () => setPassword(''),
+  });
+  const spent = isApiError(check.error) && /new email/.test(check.error.message);
+  return (
+    <form
+      className="card signin__card"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (password && !check.isPending) check.mutate();
+      }}
+    >
+      <p className="signin__sent">
+        Email confirmed for <strong>{email}</strong>. This account also has a password.
+      </p>
+      <label className="field__label" htmlFor={passwordId}>
+        Password
+      </label>
+      <input
+        id={passwordId}
+        className={`input${check.isError ? ' is-invalid' : ''}`}
+        type="password"
+        autoComplete="current-password"
+        autoFocus
+        value={password}
+        disabled={spent}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          if (check.isError) check.reset();
+        }}
+      />
+      {check.isError ? (
+        <p className="notice notice--error" role="alert">
+          {isApiError(check.error) && check.error.code === 'UNAUTHORIZED' ? check.error.message : errorMessage(check.error)}
+        </p>
+      ) : null}
+      <button type="submit" className="btn btn--primary btn--block" disabled={!password || check.isPending || spent}>
+        {check.isPending ? 'Signing in…' : 'Sign in'}
+      </button>
+      <button type="button" className="btn btn--quiet" onClick={onRestart}>
+        Start over
+      </button>
+    </form>
   );
 }

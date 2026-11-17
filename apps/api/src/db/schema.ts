@@ -99,6 +99,8 @@ export const users = pgTable('users', {
   seenRelease: text('seen_release'),
   /** Last signed-in request, to the hour (http/session.touchLastSeen); null = not since this was added. */
   lastSeenAt: instant('last_seen_at'),
+  /** Optional password (services/passwords: scrypt). When set, sign-in also asks for it. */
+  passwordHash: text('password_hash'),
 });
 
 /** The team photo: a small square image, resized on the device before upload. */
@@ -132,9 +134,26 @@ export const sessions = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     createdAt: instant('created_at').notNull(),
     expiresAt: instant('expires_at').notNull(),
+    /** Admin pages unlocked with the password on this session until then. */
+    adminUnlockedUntil: instant('admin_unlocked_until'),
   },
   (t) => [index('sessions_user_idx').on(t.userId)],
 );
+
+/**
+ * The second step of signing in to an account with a password: the email code or link
+ * checked out, the password hasn't yet. Single use, 10 minutes, 5 tries.
+ */
+export const passwordChallenges = pgTable('password_challenges', {
+  idHash: text('id_hash').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  isNewUser: boolean('is_new_user').notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  createdAt: instant('created_at').notNull(),
+  expiresAt: instant('expires_at').notNull(),
+});
 
 // ── Calendar ─────────────────────────────────────────────────────────────────
 

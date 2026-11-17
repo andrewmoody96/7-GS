@@ -92,6 +92,13 @@
       "when": 1794905102466,
       "tag": "0012_last_seen",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794905534326,
+      "tag": "0013_passwords",
+      "breakpoints": true
     }
   ]
 }

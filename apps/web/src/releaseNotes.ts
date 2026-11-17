@@ -13,6 +13,14 @@ export interface ReleaseNote {
 
 export const RELEASES: readonly ReleaseNote[] = [
   {
+    id: '2026-11-passwords',
+    title: 'November 2026: passwords',
+    added: [
+      'Optional password: add one in Team → Settings and signing in takes your email code plus the password, so your email alone isn’t enough.',
+    ],
+    improved: ['The Team page shows your team photo large, next to your name.', 'What’s new lists each item as its own bullet.'],
+  },
+  {
     id: '2026-11-team-photo',
     title: 'November 2026',
     added: [

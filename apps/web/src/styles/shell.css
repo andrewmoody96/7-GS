@@ -900,3 +900,14 @@
 .account__facts {
   margin-top: 10px;
 }
+
+/* ── Password settings ──────────────────────────────────────────────────── */
+
+.password__form {
+  display: grid;
+  gap: 8px;
+}
+
+.password__form .teamphoto__actions {
+  margin-top: 4px;
+}
