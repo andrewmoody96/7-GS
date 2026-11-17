@@ -83,15 +83,16 @@ export function TeamScreen() {
   return (
     <div className="screen screen--team">
       <header className="screen__head teamhead">
-        <div className="teamhead__text">
-          <p className="screen__kicker">
-            {s ? `${vocab.term.season} ${s.number} · ${seasonStatusLabel(s.status)} · ${formatRange(s.startDate, s.playEndDate)}` : vocab.tabs.team}
-          </p>
-          <h1 className="screen__title">{me.data?.displayName ?? vocab.tabs.team}</h1>
-          <AllowanceChips allowances={me.data?.allowances} />
-        </div>
+        {/* The season line and the chips run full width; the name and the big photo share the row between. */}
+        <p className="screen__kicker teamhead__kicker">
+          {s ? `${vocab.term.season} ${s.number} · ${seasonStatusLabel(s.status)} · ${formatRange(s.startDate, s.playEndDate)}` : vocab.tabs.team}
+        </p>
+        <h1 className="screen__title teamhead__name">{me.data?.displayName ?? vocab.tabs.team}</h1>
         {/* The name is right there, so the photo shows on its own here. */}
         <TeamBadge name={me.data?.displayName ?? vocab.tabs.team} size={160} plain />
+        <div className="teamhead__chips">
+          <AllowanceChips allowances={me.data?.allowances} />
+        </div>
       </header>
       {s && totals ? <Standings season={s} total={totals.total} /> : null}
       <nav className="todo teamnav" aria-label={vocab.tabs.team}>
