@@ -28,6 +28,7 @@ import { seriesGames } from './standings';
 import { assertPlannable } from './weekCard';
 import { weekLockOf } from './weeks';
 import { dropHoldsForGame } from './ilHolds';
+import { rescoreFinalGame } from './rescore';
 
 const STALE_MESSAGES: Record<CheckoffRejection, string> = {
   GAME_FINAL: 'This game is already final.',
@@ -41,17 +42,33 @@ function staleCheckoff(reason: CheckoffRejection): ApiException {
   return conflict('STALE_CHECKOFF', STALE_MESSAGES[reason], reason);
 }
 
-/** rules.validateCheckoff for an action happening now on the server (undo, partial). */
-function assertCheckoffWindow(game: GameRow, user: UserRow, role: Parameters<typeof validateCheckoff>[0]['role'], now: Date) {
+/**
+ * rules.validateCheckoff for an undo or "partly done", judged at the device's time
+ * `clientAt` (the server's when the client didn't send one). On a final game it must be
+ * a decided game, which is then re-scored.
+ */
+function assertCheckoffWindow(
+  game: GameRow,
+  user: UserRow,
+  role: Parameters<typeof validateCheckoff>[0]['role'],
+  clientAt: Date,
+  now: Date,
+) {
   const check = validateCheckoff({
     playedDate: game.playedDate,
     timeZone: gameTimeZone(game, user),
     gameStatus: game.status,
     role,
-    clientAt: now,
+    clientAt,
     receivedAt: now,
   });
   if (!check.ok) throw staleCheckoff(check.reason);
+  if (game.status === 'final') assertRescorable(game);
+}
+
+/** A no-decision (suspended to the end) stays one; only a W or L can be re-scored. */
+function assertRescorable(game: GameRow) {
+  if (game.result === null) throw staleCheckoff('GAME_FINAL');
 }
 
 /** Pre-lock edits: threshold, minimum, and the whole lineup and bench. */
@@ -195,6 +212,12 @@ export async function completeEntry(
     receivedAt: now,
   });
   if (!check.ok) throw staleCheckoff(check.reason);
+  if (game.status === 'final') {
+    // Late, but stamped before midnight: it counts, and the result is worked out again.
+    assertRescorable(game);
+    await tx.update(lineupEntries).set({ completedClientAt: clientAt, completedReceivedAt: now }).where(eq(lineupEntries.id, entry.id));
+    return rescoreFinalGame(tx, user, game, entry.taskId, now);
+  }
 
   // A check-off is first pitch unless something locked the game earlier. It counts at
   // the device time for an offline replay (never later than receipt), so an 11:58 p.m.
@@ -207,16 +230,27 @@ export async function completeEntry(
   return refreshScore(tx, game);
 }
 
-/** Undo a check-off, before midnight only. Idempotent. */
-export async function uncompleteEntry(tx: Db, user: UserRow, gameId: string, entryId: string, now: Date): Promise<GameRow> {
+/**
+ * Undo a check-off made before midnight. `clientAt` is when the device undid it (an
+ * offline replay); a late one, stamped before midnight, re-scores a final game. Idempotent.
+ */
+export async function uncompleteEntry(
+  tx: Db,
+  user: UserRow,
+  gameId: string,
+  entryId: string,
+  clientAt: Date,
+  now: Date,
+): Promise<GameRow> {
   const game = await loadUserGame(tx, user.id, gameId, { forUpdate: true });
   const entry = await loadEntry(tx, game, entryId);
   if (!entry.completedClientAt) return game;
-  assertCheckoffWindow(game, user, entry.role, now);
+  assertCheckoffWindow(game, user, entry.role, clientAt, now);
   await tx
     .update(lineupEntries)
     .set({ completedClientAt: null, completedReceivedAt: null })
     .where(eq(lineupEntries.id, entry.id));
+  if (game.status === 'final') return rescoreFinalGame(tx, user, game, entry.taskId, now);
   return refreshScore(tx, game);
 }
 
@@ -227,11 +261,13 @@ export async function setPartial(
   gameId: string,
   entryId: string,
   partial: boolean,
+  clientAt: Date,
   now: Date,
 ): Promise<GameRow> {
   const game = await loadUserGame(tx, user.id, gameId, { forUpdate: true });
   const entry = await loadEntry(tx, game, entryId);
-  assertCheckoffWindow(game, user, entry.role, now);
+  // A late one only changes the Rally Cap odds, which are worked out when asked for.
+  assertCheckoffWindow(game, user, entry.role, clientAt, now);
   if (partial && !entry.required) {
     throw conflict('CONFLICT', 'Only a must-hit can be marked as partly done.', 'NOT_REQUIRED');
   }

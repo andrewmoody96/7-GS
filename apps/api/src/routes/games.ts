@@ -19,6 +19,11 @@ import { suspendGame, suspensionQuote } from '../services/suspensions';
 import { inUserTx, todayView } from '../services/today';
 import { gameView, seriesView } from '../services/views';
 
+/** The device's time for an action, or the server's when the client didn't send one. */
+function deviceTime(clientAt: string | undefined, now: Date): Date {
+  return clientAt ? new Date(clientAt) : now;
+}
+
 const IDEMPOTENCY_KEY_RE = /^[\x21-\x7e]{8,200}$/;
 
 export function gameRoutes(deps: Deps): AnyRoute[] {
@@ -46,15 +51,20 @@ export function gameRoutes(deps: Deps): AnyRoute[] {
       ),
     ),
 
-    route('uncompleteEntry', ({ auth, params, now }) =>
+    route('uncompleteEntry', ({ auth, params, body, now }) =>
       inUserTx(db, auth.user, now, async (tx, user) =>
-        gameView(tx, user, await uncompleteEntry(tx, user, params.gameId, params.entryId, now), now),
+        gameView(tx, user, await uncompleteEntry(tx, user, params.gameId, params.entryId, deviceTime(body.clientAt, now), now), now),
       ),
     ),
 
     route('patchEntry', ({ auth, params, body, now }) =>
       inUserTx(db, auth.user, now, async (tx, user) =>
-        gameView(tx, user, await setPartial(tx, user, params.gameId, params.entryId, body.partial, now), now),
+        gameView(
+          tx,
+          user,
+          await setPartial(tx, user, params.gameId, params.entryId, body.partial, deviceTime(body.clientAt, now), now),
+          now,
+        ),
       ),
     ),
 

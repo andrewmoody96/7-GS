@@ -25,7 +25,7 @@ import { and, eq, inArray, lt, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { games, lineupEntries, loginTokens, sessions, users, type GameRow, type UserRow } from '../db/schema';
 import { describeError, type Logger } from '../logger';
-import { ensureMonthlyAllowances } from './allowances';
+import { ensureMonthlyAllowances, grantStreakBonusToken } from './allowances';
 import { ensureDay, findSeriesByStart, syncSeasons } from './calendar';
 import {
   buildLineupIfDue,
@@ -119,6 +119,10 @@ export async function settleDate(tx: Db, user: UserRow, date: LocalDate, now: Da
     for (const seriesId of new Set(finalized.map((g) => g.seriesId))) {
       const row = await recomputeSeries(tx, seriesId);
       await recomputeSeason(tx, row.seasonId);
+      // A W may complete the streak that earns the month's 3rd Rally Cap.
+      if (finalized.some((g) => g.seriesId === seriesId && g.result === 'W')) {
+        await grantStreakBonusToken(tx, user, row.seasonId, date, now);
+      }
     }
     // Completed one-offs retire; missed one-off must-hits carry over to the next game.
     await settleOneOffs(tx, user, date, finalized, now);

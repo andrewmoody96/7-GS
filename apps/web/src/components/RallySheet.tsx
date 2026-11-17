@@ -58,6 +58,7 @@ function OddsTable({ odds, streak }: { odds: RallyOddsBreakdownDto; streak: numb
     [vocab.rally.missedMustHit, odds.missedMustHit],
     [vocab.rally.warningTrack, odds.warningTrack],
     [vocab.rally.runCushion, odds.runCushion],
+    [vocab.rally.holding, odds.holding],
   ];
   return (
     <table className="odds">

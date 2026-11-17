@@ -237,6 +237,8 @@ export const RallyOddsBreakdown = z.object({
   missedMustHit: z.number().int(),
   warningTrack: z.number().int(),
   runCushion: z.number().int(),
+  /** +% for each other Rally Cap still held. */
+  holding: z.number().int(),
   raw: z.number().int(),
   pct: z.number().int().min(1).max(100),
   limit: z.enum(['floor', 'cap']).nullable(),
@@ -376,7 +378,13 @@ export const LineupPatch = z
   .partial();
 
 export const CompleteEntry = z.object({ clientAt: Instant });
-export const EntryPatch = z.object({ partial: z.boolean() });
+/**
+ * `clientAt`: when the device made the change, so one replayed from an offline queue is
+ * judged at that time (an accidental check-off undone before midnight stays undone).
+ * Left out, the server's time is used.
+ */
+export const UncompleteEntry = z.object({ clientAt: Instant.optional() });
+export const EntryPatch = z.object({ partial: z.boolean(), clientAt: Instant.optional() });
 export const Substitution = z.object({ outEntryId: Id, inEntryId: Id });
 /** Any active roster task can join today's bench until the game is final. */
 export const AddToBench = z.object({ taskId: Id });

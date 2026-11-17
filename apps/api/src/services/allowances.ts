@@ -6,10 +6,11 @@
 // for dates outside the season.
 
 import type { AllowancesDto } from '@7gs/contracts';
-import { addDays, monthKey, RAINOUT, RALLY, type LocalDate } from '@7gs/rules';
-import { and, asc, count, eq, gte, isNull } from 'drizzle-orm';
+import { addDays, monthKey, RAINOUT, RALLY, streakBonusEarned, type LocalDate } from '@7gs/rules';
+import { and, asc, count, eq, gte, inArray, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { rainoutAllowances, rallyTokens, type SeasonRow, type SeriesRow, type UserRow } from '../db/schema';
+import { lineupEntries, rainoutAllowances, rallyTokens, type SeasonRow, type SeriesRow, type UserRow } from '../db/schema';
+import { seasonFinalGames } from './standings';
 import { uuidv7 } from '../ids';
 
 export async function ensureMonthlyAllowances(tx: Db, user: UserRow, date: LocalDate, now: Date): Promise<void> {
@@ -145,7 +146,7 @@ export async function grantIronManRainout(
 /**
  * Series bonus Rally token (GAME_DESIGN §6): a series won without using a Rally Cap
  * earns a 2nd token for the month the series ended in (at most one per month, never
- * more than 2 held).
+ * more than RALLY.maxHeld held).
  */
 export async function grantSeriesBonusToken(tx: Db, user: UserRow, seriesRow: SeriesRow, now: Date): Promise<boolean> {
   const month = monthKey(addDays(seriesRow.startDate, 6));
@@ -154,6 +155,49 @@ export async function grantSeriesBonusToken(tx: Db, user: UserRow, seriesRow: Se
   const inserted = await tx
     .insert(rallyTokens)
     .values({ id: uuidv7(), userId: user.id, source: 'series_bonus', month, seriesId: seriesRow.id, createdAt: now })
+    .onConflictDoNothing()
+    .returning({ id: rallyTokens.id });
+  return inserted.length > 0;
+}
+
+/**
+ * Streak bonus Rally token, the 3rd of the month (GAME_DESIGN §6): the season's current
+ * win streak reaches RALLY.streakBonusWins with RALLY.streakBonusPerfect perfect games in
+ * it (every lineup task done). At most one a month (for the month of `date`, the day that
+ * completed it), and never more than RALLY.maxHeld held.
+ */
+export async function grantStreakBonusToken(tx: Db, user: UserRow, seasonId: string, date: LocalDate, now: Date): Promise<boolean> {
+  const decided = (await seasonFinalGames(tx, seasonId)).filter(
+    (g): g is typeof g & { result: 'W' | 'L' } => g.result === 'W' || g.result === 'L',
+  );
+  let start = decided.length;
+  while (start > 0 && decided[start - 1]!.result === 'W') start--;
+  const streak = decided.slice(start);
+  if (streak.length < RALLY.streakBonusWins) return false;
+
+  const lineups = await tx
+    .select({ gameId: lineupEntries.gameId, completedAt: lineupEntries.completedClientAt })
+    .from(lineupEntries)
+    .where(
+      and(
+        inArray(
+          lineupEntries.gameId,
+          streak.map((g) => g.id),
+        ),
+        eq(lineupEntries.role, 'lineup'),
+      ),
+    );
+  const perfect = (gameId: string) => {
+    const own = lineups.filter((e) => e.gameId === gameId);
+    return own.length > 0 && own.every((e) => e.completedAt !== null);
+  };
+  if (!streakBonusEarned(decided.map((g, i) => ({ result: g.result, perfect: i >= start && perfect(g.id) })))) return false;
+
+  const month = monthKey(date);
+  if ((await availableRallyTokens(tx, user.id, month)).length >= RALLY.maxHeld) return false;
+  const inserted = await tx
+    .insert(rallyTokens)
+    .values({ id: uuidv7(), userId: user.id, source: 'streak_bonus', month, createdAt: now })
     .onConflictDoNothing()
     .returning({ id: rallyTokens.id });
   return inserted.length > 0;

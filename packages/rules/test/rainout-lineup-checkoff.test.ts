@@ -7,6 +7,7 @@ import {
   hashSeed,
   rainoutOptions,
   starterWarnings,
+  lateCheckoffDeadline,
   validateCheckoff,
   type RainoutGame,
 } from '../src';
@@ -146,9 +147,18 @@ describe('check-offs and locking', () => {
     expect(
       validateCheckoff({ ...base, clientAt: new Date('2026-10-05T20:00:00Z'), receivedAt: new Date('2026-10-05T19:00:00Z') }),
     ).toEqual({ ok: false, reason: 'CLIENT_CLOCK_AHEAD' });
-    expect(validateCheckoff({ ...base, gameStatus: 'final', clientAt: new Date('2026-10-05T20:00:00Z') })).toEqual({
+    // Final: a check-off stamped before midnight still counts until noon the next day
+    // (17:00Z in Chicago), when the game is re-scored; after that it's too late.
+    const late = { ...base, gameStatus: 'final' as const, clientAt: new Date('2026-10-05T20:00:00Z') };
+    expect(lateCheckoffDeadline('2026-10-05', tz).toISOString()).toBe('2026-10-06T17:00:00.000Z');
+    expect(validateCheckoff({ ...late, receivedAt: new Date('2026-10-06T16:59:00Z') })).toEqual({ ok: true });
+    expect(validateCheckoff({ ...late, receivedAt: new Date('2026-10-06T17:00:00Z') })).toEqual({
       ok: false,
       reason: 'GAME_FINAL',
+    });
+    expect(validateCheckoff({ ...late, clientAt: new Date('2026-10-06T05:10:00Z'), receivedAt: new Date('2026-10-06T08:00:00Z') })).toEqual({
+      ok: false,
+      reason: 'AFTER_MIDNIGHT',
     });
     expect(validateCheckoff({ ...base, role: 'bench', clientAt: new Date('2026-10-05T20:00:00Z') })).toEqual({
       ok: false,

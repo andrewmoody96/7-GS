@@ -1,0 +1,1 @@
+ALTER TYPE "public"."rally_token_source" ADD VALUE 'streak_bonus';

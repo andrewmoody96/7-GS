@@ -152,7 +152,7 @@ export interface FinalEffects {
 
 export interface RallyTokenRow {
   id: string;
-  source: 'monthly' | 'series_bonus';
+  source: 'monthly' | 'series_bonus' | 'streak_bonus';
   month: string;
   usedGameId: string | null;
   usedAt: string | null;

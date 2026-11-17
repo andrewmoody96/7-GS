@@ -331,7 +331,7 @@ describe('check-offs', () => {
     ).toBe('VALIDATION_FAILED');
   });
 
-  it('accepts offline replays made before midnight until the game is final', async () => {
+  it('accepts offline replays made before midnight, re-scoring a final game until noon', async () => {
     const { t, token } = await setup();
     const game = await mondayGame(t, token, '10:00');
     const at = (name: string) => ({ gameId: game.id, entryId: entry(game, name).id });
@@ -352,16 +352,31 @@ describe('check-offs', () => {
     // Tuesday is already the new "today".
     expect((await t.ok('getToday', { token })).games[0]?.gameNumber).toBe(2);
 
-    // 12:30 a.m.: the finalizer closes Monday; later replays are stale.
+    // 12:30 a.m.: the finalizer closes Monday.
     t.at('2026-10-06', '00:30', CHICAGO);
     await t.finalize();
     const final = await t.ok('getGame', { token, params: { gameId: game.id } });
     expect(final).toMatchObject({ status: 'final', result: 'W', resultDetail: 'clean', runs: 3, tasksDone: 2 });
+
+    // 3:20 a.m.: an 11:59 p.m. check-off and an 11:59 p.m. uncheck finally sync. Both count,
+    // and Monday is worked out again: Read undone leaves Gym 2 + Dishes 1 = 3, still a W.
+    t.at('2026-10-06', '03:20', CHICAGO);
+    const late = await t.ok('completeEntry', { token, params: at('Dishes'), body: { clientAt: '2026-10-06T04:59:00Z' } });
+    expect(late).toMatchObject({ status: 'final', result: 'W', runs: 4, tasksDone: 3 });
+    const undone = await t.ok('uncompleteEntry', { token, params: at('Read'), body: { clientAt: '2026-10-06T04:59:30Z' } });
+    expect(undone).toMatchObject({ status: 'final', result: 'W', runs: 3, tasksDone: 2 });
+    // Gym undone too: 1 run against 3 to win is now an L.
+    const lost = await t.ok('uncompleteEntry', { token, params: at('Gym'), body: { clientAt: '2026-10-06T04:59:40Z' } });
+    expect(lost).toMatchObject({ result: 'L', resultDetail: 'forfeit', runs: 1, missedRequired: 1 });
+    expect((await t.ok('getCurrentSeason', { token }))?.losses).toBe(1);
+
+    // Noon: too late for anything else.
+    t.at('2026-10-06', '12:00', CHICAGO);
     expect(
-      await t.fails('completeEntry', { token, params: at('Dishes'), body: { clientAt: '2026-10-06T04:59:00Z' } }, 409),
+      await t.fails('completeEntry', { token, params: at('Gym'), body: { clientAt: '2026-10-06T04:59:50Z' } }, 409),
     ).toMatchObject({ code: 'STALE_CHECKOFF', reason: 'GAME_FINAL' });
     // Replaying a check-off that already counted is still a no-op success.
-    expect((await t.ok('completeEntry', { token, params: at('Gym'), body: { clientAt: '2026-10-05T15:00:00Z' } })).runs).toBe(3);
+    expect((await t.ok('completeEntry', { token, params: at('Dishes'), body: { clientAt: '2026-10-06T04:59:00Z' } })).runs).toBe(1);
   });
 
   it('marks an incomplete must-hit as partly done before midnight', async () => {

@@ -42,7 +42,7 @@ export type Phase = (typeof PHASES)[number];
 export const SERIES_RESULTS = ['won', 'lost'] as const;
 export type SeriesResult = (typeof SERIES_RESULTS)[number];
 
-export const RALLY_TOKEN_SOURCES = ['monthly', 'series_bonus'] as const;
+export const RALLY_TOKEN_SOURCES = ['monthly', 'series_bonus', 'streak_bonus'] as const;
 export type RallyTokenSource = (typeof RALLY_TOKEN_SOURCES)[number];
 
 export const RAINOUT_SOURCES = ['monthly', 'iron_man'] as const;

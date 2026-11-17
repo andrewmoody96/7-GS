@@ -14,6 +14,8 @@ export interface RallyOddsInput {
   minTasks: number | null;
   missedRequired: number;
   partialOnMissed: boolean;
+  /** Rally Caps held besides the one this roll would use. */
+  otherCapsHeld?: number;
 }
 
 export interface RallyOdds {
@@ -22,6 +24,8 @@ export interface RallyOdds {
   missedMustHit: number;
   warningTrack: number;
   runCushion: number;
+  /** RALLY.holdBonusPct for each other Rally Cap still held. */
+  holding: number;
   /** Sum before the floor and cap. */
   raw: number;
   /** Final chance in whole percent; the roll hits when roll (1–100) <= pct. */
@@ -63,11 +67,29 @@ export function rallyOdds(input: RallyOddsInput): RallyOdds {
   // Runs at least 150% of the threshold, in integer math.
   const runCushion = input.threshold > 0 && input.runs * 2 >= input.threshold * 3 ? 2 : 0;
 
-  const raw = base + closeness + missedMustHit + warningTrack + runCushion;
+  const holding = Math.max(0, input.otherCapsHeld ?? 0) * RALLY.holdBonusPct;
+
+  const raw = base + closeness + missedMustHit + warningTrack + runCushion + holding;
   const pct = Math.min(RALLY.capPct, Math.max(RALLY.floorPct, raw));
   const limit = raw < RALLY.floorPct ? 'floor' : raw > RALLY.capPct ? 'cap' : null;
 
-  return { base, closeness, missedMustHit, warningTrack, runCushion, raw, pct, limit, closenessRatio: ratio };
+  return { base, closeness, missedMustHit, warningTrack, runCushion, holding, raw, pct, limit, closenessRatio: ratio };
+}
+
+/**
+ * The 3rd Rally Cap of the month (GAME_DESIGN §6): the season's current win streak is at
+ * least RALLY.streakBonusWins long and RALLY.streakBonusPerfect of its games were perfect
+ * (every task in the lineup done). `decided` is the season's decided games, oldest first;
+ * no-decisions are left out, as they don't break a streak.
+ */
+export function streakBonusEarned(decided: readonly { result: 'W' | 'L'; perfect: boolean }[]): boolean {
+  let wins = 0;
+  let perfect = 0;
+  for (let i = decided.length - 1; i >= 0 && decided[i]!.result === 'W'; i--) {
+    wins++;
+    if (decided[i]!.perfect) perfect++;
+  }
+  return wins >= RALLY.streakBonusWins && perfect >= RALLY.streakBonusPerfect;
 }
 
 export const RALLY_INELIGIBLE_REASONS = [
