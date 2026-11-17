@@ -82,6 +82,12 @@ export function forgetCachedMe(): void {
   }
 }
 
+/** Every account, for the admin page (ADMIN_EMAILS only). */
+export function useAdminAccountsQuery() {
+  const api = useApi();
+  return useQuery({ queryKey: ['admin', 'accounts'], queryFn: async () => (await api.call('listAccounts')).accounts });
+}
+
 export function useMeQuery() {
   const api = useApi();
   return useQuery({

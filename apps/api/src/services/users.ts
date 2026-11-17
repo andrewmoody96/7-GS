@@ -56,6 +56,18 @@ export async function findOrCreateUser(
   return { user: created, created: true };
 }
 
+/** ADMIN_EMAILS, set once when the app is created (app.ts). */
+let adminEmails: readonly string[] = [];
+
+export function configureAdmins(emails: readonly string[]): void {
+  adminEmails = emails.map((e) => e.trim().toLowerCase());
+}
+
+/** On the ADMIN_EMAILS list: may open the admin pages. */
+export function isAdmin(email: string): boolean {
+  return adminEmails.includes(email.trim().toLowerCase());
+}
+
 export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
   const today = localDateOf(now, user.timezone);
   return {
@@ -69,6 +81,7 @@ export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
     theme: themeOf(user),
     avatar: (await tx.select({ image: userAvatars.image }).from(userAvatars).where(eq(userAvatars.userId, user.id)))[0]?.image ?? null,
     seenRelease: user.seenRelease,
+    isAdmin: isAdmin(user.email),
     today,
     position: calendarPosition(user, today),
     allowances: await allowancesView(tx, user.id, today),

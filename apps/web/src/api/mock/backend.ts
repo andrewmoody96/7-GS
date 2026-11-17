@@ -225,6 +225,22 @@ export class MockBackend {
       if (patch.seenRelease !== undefined) w.user.seenRelease = patch.seenRelease;
       return engine.toMeDto(w, now);
     },
+    listAccounts: ({ world, now }) => {
+      const { user } = world();
+      return {
+        accounts: [
+          {
+            email: user.email,
+            displayName: user.displayName,
+            createdAt: user.createdAt,
+            lastSignInAt: user.createdAt,
+            lastSeenAt: now.toISOString(),
+            devices: 1,
+            theme: user.theme ?? 'baseball',
+          },
+        ],
+      };
+    },
     putAvatar: ({ world, body, now }) => {
       const w = world();
       w.user.avatar = (body as { image: string }).image;

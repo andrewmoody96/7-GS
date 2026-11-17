@@ -875,3 +875,28 @@
 .whatsnew__list li + li {
   margin-top: 8px;
 }
+
+/* ── Admin: accounts ────────────────────────────────────────────────────── */
+
+.accounts {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account__name,
+.account__email {
+  margin: 0;
+}
+
+.account__email {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  word-break: break-all;
+}
+
+.account__facts {
+  margin-top: 10px;
+}

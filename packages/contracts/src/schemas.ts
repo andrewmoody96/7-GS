@@ -105,6 +105,8 @@ export const Me = z.object({
   avatar: z.string().nullable(),
   /** The newest release notes this account has seen (null: none yet). */
   seenRelease: z.string().nullable(),
+  /** On the ADMIN_EMAILS list: may open the admin pages. */
+  isAdmin: z.boolean(),
   today: LocalDate,
   position: CalendarPosition,
   allowances: Allowances,
@@ -566,3 +568,21 @@ export const PushSubscription = z.object({
 export const PushUnsubscribe = z.object({ endpoint: z.url().max(2048) });
 
 export const ReminderTestResult = z.object({ devices: Count, email: z.boolean() });
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+/** One account, as the admin page lists it. */
+export const AdminAccount = z.object({
+  email: z.email(),
+  displayName: z.string(),
+  /** When the account was created: its first sign-in. */
+  createdAt: Instant,
+  /** The newest sign-in on any device (null if every session has since been removed). */
+  lastSignInAt: Instant.nullable(),
+  /** The last time it used the app, to the hour (null: not since this started being recorded). */
+  lastSeenAt: Instant.nullable(),
+  /** Devices currently signed in. */
+  devices: z.number().int().min(0),
+  theme: z.enum(THEMES),
+});
+export const AdminAccountList = z.object({ accounts: z.array(AdminAccount) });

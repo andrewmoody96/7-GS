@@ -27,6 +27,8 @@ export interface AppConfig {
    * (`@example.com`), lowercased. Null or absent: anyone.
    */
   allowedEmails?: string[] | null;
+  /** Who may open the admin pages (ADMIN_EMAILS), lowercased addresses. Absent: nobody. */
+  adminEmails?: string[];
 }
 
 /** Sends magic links (see mailer.ts). Without one, links come back as `devToken`. */

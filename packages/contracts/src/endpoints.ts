@@ -48,6 +48,8 @@ export const endpoints = {
   // Profile & calendar
   getMe: endpoint({ method: 'GET', path: '/v1/me', response: S.Me }),
   updateMe: endpoint({ method: 'PATCH', path: '/v1/me', body: S.MePatch, response: S.Me }),
+  // Admin (ADMIN_EMAILS only; anyone else gets 404)
+  listAccounts: endpoint({ method: 'GET', path: '/v1/admin/accounts', response: S.AdminAccountList }),
   putAvatar: endpoint({ method: 'PUT', path: '/v1/me/avatar', body: S.AvatarUpload, response: S.Me }),
   deleteAvatar: endpoint({ method: 'DELETE', path: '/v1/me/avatar', response: S.Me }),
   /**

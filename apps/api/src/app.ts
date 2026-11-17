@@ -14,6 +14,8 @@ import { rosterRoutes } from './routes/roster';
 import { reminderRoutes } from './routes/reminders';
 import { seasonRoutes } from './routes/seasons';
 import { weekRoutes } from './routes/weeks';
+import { adminRoutes } from './routes/admin';
+import { configureAdmins } from './services/users';
 
 /**
  * The /v1 API, plus the built web app when `config.webRoot` is set (production). Always
@@ -36,7 +38,9 @@ export function createApp(deps: Deps): Hono {
 
   app.notFound((c) => c.json(notFound(`${c.req.method} ${c.req.path}`).toBody(), 404));
 
+  configureAdmins(deps.config.adminEmails ?? []);
   registerRoutes(app, deps, [
+    ...adminRoutes(deps),
     ...authRoutes(deps),
     ...profileRoutes(deps),
     ...rosterRoutes(deps),

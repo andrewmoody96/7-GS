@@ -97,6 +97,8 @@ export const users = pgTable('users', {
   remindEmail: boolean('remind_email').notNull().default(false),
   /** The newest release notes (web releaseNotes.ts id) this account has seen; null = none yet. */
   seenRelease: text('seen_release'),
+  /** Last signed-in request, to the hour (http/session.touchLastSeen); null = not since this was added. */
+  lastSeenAt: instant('last_seen_at'),
 });
 
 /** The team photo: a small square image, resized on the device before upload. */

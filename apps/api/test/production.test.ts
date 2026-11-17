@@ -115,7 +115,13 @@ describe('loadConfig', () => {
       allowDevLogin: false,
       limitMagicLinks: true,
       allowedEmails: null,
+      adminEmails: [],
     });
+  });
+
+  it('reads the admin list and rejects anything but full addresses', () => {
+    expect(loadConfig({ ADMIN_EMAILS: 'Boss@Example.com' }).app.adminEmails).toEqual(['boss@example.com']);
+    expect(problemsOf(() => loadConfig({ ADMIN_EMAILS: '@example.com' }))).toEqual([expect.stringMatching(/ADMIN_EMAILS must be/)]);
   });
 
   it('reads the invite list and rejects malformed entries', () => {
