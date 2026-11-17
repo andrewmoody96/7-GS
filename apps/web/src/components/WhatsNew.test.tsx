@@ -14,10 +14,10 @@ describe('release notes', () => {
     expect(unseenReleases(LATEST_RELEASE)).toEqual([]);
     // Never saw a popup (or an id we no longer list): every recent release, newest first, up to 3.
     expect(unseenReleases(null).map((r) => r.id)).toEqual(RELEASES.slice(0, 3).map((r) => r.id));
-    expect(unseenReleases(null).map((r) => r.id)).toEqual(['2026-11-passwords', '2026-11-team-photo']);
+    expect(unseenReleases(null).map((r) => r.id)).toEqual(['2026-11-sign-in-lock', '2026-11-team-photo']);
     expect(unseenReleases('some-old-id-we-no-longer-list')).toEqual(unseenReleases(null));
     // Someone who saw the team-photo notes gets just the newer ones.
-    expect(unseenReleases('2026-11-team-photo').map((r) => r.id)).toEqual(['2026-11-passwords']);
+    expect(unseenReleases('2026-11-team-photo').map((r) => r.id)).toEqual(['2026-11-sign-in-lock']);
   });
 });
 

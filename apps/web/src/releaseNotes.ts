@@ -13,7 +13,7 @@ export interface ReleaseNote {
 
 export const RELEASES: readonly ReleaseNote[] = [
   {
-    id: '2026-11-passwords',
+    id: '2026-11-sign-in-lock',
     title: 'November 2026: passwords',
     added: [
       'Optional password: add one in Team → Settings and signing in takes your email code plus the password, so your email alone isn’t enough.',
