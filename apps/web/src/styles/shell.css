@@ -815,6 +815,20 @@
 
 .teamhead__name {
   min-width: 0;
+  margin: 0;
+  line-height: 0.95;
+}
+
+/* Measured by FitName: each word's own width, without wrapping inside it. */
+.teamhead__word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* A single word too long even at the smallest size may break. */
+.teamhead__name.is-squeezed:not([data-measuring]) .teamhead__word {
+  display: inline;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 
