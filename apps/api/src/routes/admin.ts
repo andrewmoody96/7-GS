@@ -63,7 +63,9 @@ export function adminRoutes(deps: Deps): AnyRoute[] {
           user: users,
           lastSignInAt: max(sessions.createdAt),
           // Devices still signed in: sessions that haven't expired.
-          devices: count(sql`CASE WHEN ${sessions.expiresAt} > ${now} THEN 1 END`),
+          // The time goes in as text with an explicit type: the Postgres driver can't send a
+          // bare Date inside raw SQL (PGlite can, which is why tests alone missed it).
+          devices: count(sql`CASE WHEN ${sessions.expiresAt} > ${now.toISOString()}::timestamptz THEN 1 END`),
         })
         .from(users)
         .leftJoin(sessions, eq(sessions.userId, users.id))
