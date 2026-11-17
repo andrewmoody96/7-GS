@@ -3,7 +3,8 @@
 
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import type { UserRow } from '../db/schema';
+import { eq } from 'drizzle-orm';
+import { users, type UserRow } from '../db/schema';
 import type { Deps } from '../deps';
 import { unauthorized } from '../errors';
 import { isEmailAllowed, resolveSession, SESSION_TTL_MS } from '../services/auth';
@@ -50,7 +51,24 @@ export async function authenticate(c: Context, deps: Deps, now: Date): Promise<A
   if (!isEmailAllowed(deps.config.allowedEmails, session.user.email)) {
     throw unauthorized('This account isn’t on the invite list anymore.');
   }
+  await touchLastSeen(deps, session.user, now);
   // Sliding expiry: re-issue the cookie with a fresh Max-Age when the session moved.
   if (session.refreshed && found.via === 'cookie') setSessionCookie(c, found.token, deps);
   return { user: session.user, token: found.token, via: found.via };
+}
+
+/** How stale `users.last_seen_at` may get before a request updates it. */
+const LAST_SEEN_PRECISION_MS = 60 * 60 * 1000;
+
+/**
+ * Record that the account used the app, at most once an hour, so it costs next to
+ * nothing. Never fails the request: it's bookkeeping for the admin page.
+ */
+async function touchLastSeen(deps: Deps, user: UserRow, now: Date): Promise<void> {
+  if (user.lastSeenAt && now.getTime() - user.lastSeenAt.getTime() < LAST_SEEN_PRECISION_MS) return;
+  try {
+    await deps.db.update(users).set({ lastSeenAt: now }).where(eq(users.id, user.id));
+  } catch (error) {
+    deps.log.warn('Could not record last seen', { userId: user.id, error: String(error) });
+  }
 }

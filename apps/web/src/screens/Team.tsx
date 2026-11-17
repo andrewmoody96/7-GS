@@ -200,6 +200,11 @@ export function SettingsScreen() {
   const me = useMeQuery();
   return (
     <SubPage title={TEAM_SECTIONS.settings}>
+      {me.data?.isAdmin ? (
+        <nav className="todo teamnav" aria-label="Admin">
+          <TeamLink to="/team/admin/accounts" title="Accounts" sub="Who’s signed up, and when each account was last seen." />
+        </nav>
+      ) : null}
       <RemindersCard />
       {me.data ? <Clubhouse me={me.data} /> : <Loading label="Loading settings" />}
     </SubPage>

@@ -10,7 +10,7 @@ import { databaseOptionsFromEnv } from '../src/db/client';
 import type { AppConfig, Mailer } from '../src/deps';
 import { clientAddress, RateLimiter } from '../src/http/rateLimit';
 import { createMailer } from '../src/mailer';
-import { CHICAGO, TestApp, useTestDb } from './helpers';
+import { CHICAGO, TestApp, useTestDb, asSession } from './helpers';
 
 const env = useTestDb();
 const NOW = '2026-10-06T15:00:00Z';
@@ -115,7 +115,13 @@ describe('loadConfig', () => {
       allowDevLogin: false,
       limitMagicLinks: true,
       allowedEmails: null,
+      adminEmails: [],
     });
+  });
+
+  it('reads the admin list and rejects anything but full addresses', () => {
+    expect(loadConfig({ ADMIN_EMAILS: 'Boss@Example.com' }).app.adminEmails).toEqual(['boss@example.com']);
+    expect(problemsOf(() => loadConfig({ ADMIN_EMAILS: '@example.com' }))).toEqual([expect.stringMatching(/ADMIN_EMAILS must be/)]);
   });
 
   it('reads the invite list and rejects malformed entries', () => {
@@ -193,7 +199,7 @@ describe('email sign-in', () => {
     const token = new URL(mailer.sent[0]!.link).searchParams.get('token');
     expect(mailer.sent[0]?.link).toMatch(/^https:\/\/seven\.example\/sign-in\?token=/);
     const verified = await t.ok('verifyMagicLink', { body: { token, timezone: CHICAGO } });
-    expect(verified.me.email).toBe('fan@example.com');
+    expect(asSession(verified).me.email).toBe('fan@example.com');
   });
 
   it('reports a failed send instead of pretending', async () => {
@@ -214,7 +220,9 @@ describe('email sign-in', () => {
     const broken = new TestApp(env.db, NOW, { mailer: recordingMailer(true), config: { ...base, appUrl: 'https://seven.example', allowDevLogin: true } });
     const fallback = await broken.ok('requestMagicLink', { body: { email: 'fan@example.com' } });
     expect(fallback).toMatchObject({ sent: true, emailed: false });
-    expect((await broken.ok('verifyMagicLink', { body: { token: fallback.devToken, timezone: CHICAGO } })).me.email).toBe('fan@example.com');
+    expect(asSession(await broken.ok('verifyMagicLink', { body: { token: fallback.devToken, timezone: CHICAGO } })).me.email).toBe(
+      'fan@example.com',
+    );
     expect(broken.log.lines.some((l) => l.message === 'Magic link email failed')).toBe(true);
   });
 
@@ -231,7 +239,7 @@ describe('email sign-in', () => {
       message: 'That code isn’t right. 4 tries left.',
     });
     const session = await t.ok('verifyLoginCode', { body: { email: 'FAN@example.com', code, timezone: CHICAGO } });
-    expect(session.me.email).toBe('fan@example.com');
+    expect(asSession(session).me.email).toBe('fan@example.com');
     // Single use: the code and the link are the same sign-in.
     await t.fails('verifyLoginCode', { body: { email: 'fan@example.com', code, timezone: CHICAGO } }, 401);
     const token = new URL(mailer.sent[0]!.link).searchParams.get('token');

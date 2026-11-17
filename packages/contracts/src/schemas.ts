@@ -105,6 +105,10 @@ export const Me = z.object({
   avatar: z.string().nullable(),
   /** The newest release notes this account has seen (null: none yet). */
   seenRelease: z.string().nullable(),
+  /** On the ADMIN_EMAILS list: may open the admin pages (with a password). */
+  isAdmin: z.boolean(),
+  /** A password is set: sign-in asks for it after the email code or link. */
+  hasPassword: z.boolean(),
   today: LocalDate,
   position: CalendarPosition,
   allowances: Allowances,
@@ -144,6 +148,20 @@ export const VerifyRequest = z.object({
   timezone: TimeZone,
 });
 export const Session = z.object({ me: Me, isNewUser: z.boolean() });
+/** The email checked out; this account also has a password. Send it with the challenge. */
+export const PasswordStep = z.object({ passwordRequired: z.literal(true), challenge: z.string(), email: z.email() });
+/** What verifying an email code or link returns: signed in, or one more step. */
+export const SignInResult = z.union([Session, PasswordStep]);
+export const PasswordSignIn = z.object({ challenge: z.string().min(16), password: z.string().min(1).max(200) });
+
+export const PASSWORD_MIN = 8;
+/** Set or change the password; `current` is required when one is already set. */
+export const PasswordSet = z.object({
+  current: z.string().max(200).optional(),
+  password: z.string().min(PASSWORD_MIN, `Use at least ${PASSWORD_MIN} characters.`).max(200),
+});
+export const PasswordRemove = z.object({ current: z.string().min(1).max(200) });
+export const AdminUnlock = z.object({ password: z.string().min(1).max(200) });
 /** The 6-digit code from the sign-in email, for when the link would open the wrong app. */
 export const VerifyCodeRequest = z.object({
   email: z.email(),
@@ -566,3 +584,21 @@ export const PushSubscription = z.object({
 export const PushUnsubscribe = z.object({ endpoint: z.url().max(2048) });
 
 export const ReminderTestResult = z.object({ devices: Count, email: z.boolean() });
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+/** One account, as the admin page lists it. */
+export const AdminAccount = z.object({
+  email: z.email(),
+  displayName: z.string(),
+  /** When the account was created: its first sign-in. */
+  createdAt: Instant,
+  /** The newest sign-in on any device (null if every session has since been removed). */
+  lastSignInAt: Instant.nullable(),
+  /** The last time it used the app, to the hour (null: not since this started being recorded). */
+  lastSeenAt: Instant.nullable(),
+  /** Devices currently signed in. */
+  devices: z.number().int().min(0),
+  theme: z.enum(THEMES),
+});
+export const AdminAccountList = z.object({ accounts: z.array(AdminAccount) });

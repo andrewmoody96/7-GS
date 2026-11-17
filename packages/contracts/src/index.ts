@@ -9,6 +9,8 @@ export * from './endpoints';
 export type CalendarPositionDto = z.infer<typeof S.CalendarPosition>;
 export type CalendarDto = z.infer<typeof S.Calendar>;
 export type AllowancesDto = z.infer<typeof S.Allowances>;
+export type AdminAccountDto = z.infer<typeof S.AdminAccount>;
+export type SignInResultDto = z.infer<typeof S.SignInResult>;
 export type MeDto = z.infer<typeof S.Me>;
 export type MePatchDto = z.infer<typeof S.MePatch>;
 export type DeleteAccountDto = z.infer<typeof S.DeleteAccount>;

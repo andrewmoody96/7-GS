@@ -85,6 +85,20 @@
       "when": 1794900752039,
       "tag": "0011_team_photo_and_release_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794905102466,
+      "tag": "0012_last_seen",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794905534326,
+      "tag": "0013_passwords",
+      "breakpoints": true
     }
   ]
 }

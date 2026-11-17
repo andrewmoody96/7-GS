@@ -12,8 +12,12 @@ import { WhatsNew } from './WhatsNew';
 describe('release notes', () => {
   it('lists what an account hasn’t seen', () => {
     expect(unseenReleases(LATEST_RELEASE)).toEqual([]);
-    expect(unseenReleases(null)).toEqual([RELEASES[0]]);
-    expect(unseenReleases('some-old-id-we-no-longer-list')).toEqual([RELEASES[0]]);
+    // Never saw a popup (or an id we no longer list): every recent release, newest first, up to 3.
+    expect(unseenReleases(null).map((r) => r.id)).toEqual(RELEASES.slice(0, 3).map((r) => r.id));
+    expect(unseenReleases(null).map((r) => r.id)).toEqual(['2026-11-sign-in-lock', '2026-11-team-photo']);
+    expect(unseenReleases('some-old-id-we-no-longer-list')).toEqual(unseenReleases(null));
+    // Someone who saw the team-photo notes gets just the newer ones.
+    expect(unseenReleases('2026-11-team-photo').map((r) => r.id)).toEqual(['2026-11-sign-in-lock']);
   });
 });
 
@@ -30,7 +34,7 @@ describe('What’s new', () => {
       </AppProviders>,
     );
     expect(await screen.findByRole('dialog', { name: /What’s new/ })).toBeInTheDocument();
-    expect(screen.getByText(/Team photo/)).toBeInTheDocument();
+    expect(screen.getByText(/Optional password/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     await waitFor(async () => expect((await api.call('getMe')).seenRelease).toBe(LATEST_RELEASE));
     expect(screen.queryByRole('dialog', { name: /What’s new/ })).toBeNull();
