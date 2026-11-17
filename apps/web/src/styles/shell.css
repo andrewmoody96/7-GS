@@ -847,10 +847,19 @@
 
 .whatsnew__list {
   margin: 0;
-  padding-left: 20px;
-  line-height: 1.5;
+  padding-left: 22px;
+  line-height: 1.45;
+  list-style: disc;
+}
+
+.whatsnew__list li {
+  padding-left: 2px;
+}
+
+.whatsnew__list li::marker {
+  color: var(--text-muted);
 }
 
 .whatsnew__list li + li {
-  margin-top: 4px;
+  margin-top: 8px;
 }
