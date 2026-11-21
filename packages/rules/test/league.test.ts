@@ -116,8 +116,8 @@ describe('standings', () => {
 
   it('gives a dominant season both titles, and a losing one neither', () => {
     const seed = seeds[2]!;
-    expect(seasonStandings(seed, 1, allGames(() => 'W'), 84).titles).toEqual({ division: true, conference: true });
-    expect(seasonStandings(seed, 1, allGames(() => 'L'), 84).titles).toEqual({ division: false, conference: false });
+    expect(seasonStandings(seed, 1, allGames(() => 'W'), 84).titles).toEqual({ division: true, conference: true, league: true });
+    expect(seasonStandings(seed, 1, allGames(() => 'L'), 84).titles).toEqual({ division: false, conference: false, league: false });
   });
 
   it('can win the season and still lose the division to a hot team', () => {
@@ -127,6 +127,24 @@ describe('standings', () => {
       for (let season = 1; season <= 8 && !found; season++) {
         const s = seasonStandings(seed, season, allGames((i) => (i % 84 < 46 ? 'W' : 'L')), 84);
         if (s.titles && !s.titles.division) found = true;
+      }
+    }
+    expect(found).toBe(true);
+  });
+
+  it('ranks all 30 teams for the league title, and a conference champion can still miss it', () => {
+    const seed = seeds[0]!;
+    const s = seasonStandings(seed, 1, allGames((i) => (i % 3 === 0 ? 'L' : 'W')), 84);
+    expect(s.league).toHaveLength(30);
+    expect(s.league[0]!.gamesBack).toBe(0);
+    for (let i = 1; i < 30; i++) expect(s.league[i]!.gamesBack).toBeGreaterThanOrEqual(s.league[i - 1]!.gamesBack);
+    // The league leader leads its own conference too.
+    expect(s.conferences.some((c) => c[0]!.team === s.league[0]!.team)).toBe(true);
+    let found = false;
+    for (const sd of seeds) {
+      for (let season = 1; season <= 8 && !found; season++) {
+        const t = seasonStandings(sd, season, allGames((i) => (i % 84 < 54 ? 'W' : 'L')), 84);
+        if (t.titles?.conference && !t.titles.league) found = true;
       }
     }
     expect(found).toBe(true);

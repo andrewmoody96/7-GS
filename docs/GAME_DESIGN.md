@@ -491,7 +491,8 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
   strength every team gets for the season (a few run hot). A day's games count once it's
   gone final.
 - **Titles, no playoffs:** the best record in your division when the season ends is the
-  division title; the best record in your conference is the conference title. Ties:
+  division title; the best record in your conference is the conference title; the best
+  record across the whole league (all 30 teams) is the league title. Ties:
   overall record, then record in the division, then in the conference, then run
   differential (never head-to-head). Winning the season is still just a winning record (§5); the titles reward
   finishing ahead of everyone else.

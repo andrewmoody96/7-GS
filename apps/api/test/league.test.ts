@@ -68,6 +68,7 @@ describe('standings and titles', () => {
     expect(all.find((r) => r.you)).toMatchObject({ wins: 7, losses: 0, colors: null });
     // Everyone has played the week: 7 games each.
     for (const r of all) expect(r.wins + r.losses).toBe(7);
+    expect(s.league).toHaveLength(30);
     expect(season.titles).toBeNull();
   });
 
@@ -82,11 +83,11 @@ describe('standings and titles', () => {
     const { seasons } = await t.ok('listSeasons', { token });
     const first = seasons.find((s) => s.number === 1)!;
     expect(first.status).not.toBe('active');
-    expect(first.titles).toEqual({ division: false, conference: false });
+    expect(first.titles).toEqual({ division: false, conference: false, league: false });
     const s = await t.ok('getStandings', { token, params: { seasonId: first.id } });
     expect(s.complete).toBe(true);
     for (const r of s.conferences.flatMap((l) => l.rows)) expect(r.wins + r.losses).toBe(84);
-    expect(await t.ok('getCareer', { token })).toMatchObject({ divisionTitles: 0, conferenceTitles: 0 });
+    expect(await t.ok('getCareer', { token })).toMatchObject({ divisionTitles: 0, conferenceTitles: 0, leagueTitles: 0 });
   });
 });
 

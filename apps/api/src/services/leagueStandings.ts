@@ -55,7 +55,7 @@ export async function computeStandings(tx: Db, user: Pick<UserRow, 'id' | 'final
 }
 
 /** A finished season's titles (null while it's still being played). */
-export async function seasonTitles(tx: Db, season: SeasonRow): Promise<{ division: boolean; conference: boolean } | null> {
+export async function seasonTitles(tx: Db, season: SeasonRow): Promise<{ division: boolean; conference: boolean; league: boolean } | null> {
   if (season.status !== 'offseason' && season.status !== 'complete') return null;
   const [user] = await tx.select().from(users).where(eq(users.id, season.userId));
   if (!user) return null;
@@ -100,5 +100,6 @@ export async function standingsView(tx: Db, user: UserRow, season: SeasonRow): P
         return { name: DIVISION_NAMES[d]!, yours: index === myDivision, rows: s.divisions[index]!.map(row) };
       }),
     })),
+    league: s.league.map(row),
   };
 }

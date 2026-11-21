@@ -63,6 +63,7 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 
 ## History
 
+- **1.3.2-beta** (November 2026): a league title for the best record across both conferences.
 - **1.3.1-beta** (November 2026): conferences instead of leagues, a tidier Standings page,
   and shorter team names.
 - **1.3.0-beta** (November 2026): your own league of 29 teams, divisions dealt every season,

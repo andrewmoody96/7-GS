@@ -84,13 +84,16 @@ function Placement({ s }: { s: StandingsDto }) {
   const chips: { label: string; value: string; champion?: boolean }[] = [
     { label: 'Division', value: started ? ordinal(place(division.rows)) : '–', champion: s.titles?.division },
     { label: 'Conference', value: started ? ordinal(place(mine.rows)) : '–', champion: s.titles?.conference },
+    { label: 'League', value: started ? ordinal(place(s.league)) : '–', champion: s.titles?.league },
   ];
   return (
     <div className="placement" aria-label="Your place">
       {chips.map((c) => (
         <div key={c.label} className={`placement__chip${c.champion ? ' is-champion' : ''}`}>
           <span className="placement__label">{c.label}</span>
-          <span className="placement__value">{c.champion ? '🏆 Champions' : c.value}</span>
+          <span className="placement__value" aria-label={c.champion ? `${c.label} champions` : undefined}>
+            {c.champion ? '🏆 1st' : c.value}
+          </span>
         </div>
       ))}
     </div>
@@ -141,9 +144,13 @@ export function StandingsScreen() {
         {ordered.map((c) => (
           <ConferenceSection key={c.name} conference={c} />
         ))}
+        <details className="conference__race">
+          <summary>League: all 30 teams</summary>
+          <Table title="League" note="Best record takes the league title" rows={s.league} />
+        </details>
         <p className="fine">
           Your league is split into two conferences of three divisions, dealt again every {vocab.term.season.toLowerCase()}. The best
-          record when it ends takes each title. Ties go to the better record in the division, then in the conference, then run
+          record when it ends takes each title: division, conference and league. Ties go to the better record in the division, then in the conference, then run
           differential.
         </p>
       </>
