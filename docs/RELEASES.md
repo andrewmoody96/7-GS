@@ -40,8 +40,13 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
    - bump `APP_VERSION` (and `apps/web/package.json`);
    - for a feature or major release, add an entry at the top (`id` and `version` both the new
      version). Short bullets in players' words, what they can do now, not how it works.
+   - for a fix release, add a `patch` to the newest entry (`{ version, fixed }`, newest
+     first). It doesn't pop up; it leads the current-version tile in What's changed.
    - A release that sums up a lot (like 1.1) gets `recap: true`: the popup then shows only it,
      not the notes it covers.
+   - Keep `SINCE_LAST_MAJOR` current: a few bullets for the biggest features and fixes since
+     the last major release (What's changed shows it as the third tile, after the current
+     and previous versions).
 3. Merge that to `main`.
 4. Heroku: **Deploy → Manual deploy → `main` → Deploy Branch**. Database migrations run in
    the release phase.
@@ -63,4 +68,4 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 - **1.1.0-beta** (November 2026, tag `v1.1.0-beta`): the first numbered release. A recap of
   everything since launch, plus badges, a win goal in the guided setup, and one more pass
   through setup for everyone.
-- Before 1.1, releases had no numbers; their notes are in Settings → What's changed.
+- **v0.11.2026_beta** (November 2026): everything before version numbers, as one entry.

@@ -31,7 +31,7 @@ import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings, 
 import { WeekCardView } from './WeekCard';
 import { TeamBadge } from '../components/Badges';
 import { ReleaseNoteView } from '../components/WhatsNew';
-import { APP_VERSION, RELEASES, versionLabel } from '../releaseNotes';
+import { APP_VERSION, latestVersionOf, RELEASES, SINCE_LAST_MAJOR, versionLabel } from '../releaseNotes';
 import { useBadgeCount } from './Badges';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
@@ -298,17 +298,37 @@ export function LineupsScreen() {
   );
 }
 
-/** Settings → What's changed: every release's notes, newest first. */
+/**
+ * Settings → What's changed: the current version (with its fixes), the one before it, and
+ * a summary of everything since the last major release. Opens at the top.
+ */
 export function ChangesScreen() {
+  const [current, previous] = RELEASES;
   return (
     <SubPage title="What’s changed">
       <p className="muted">You’re on {versionLabel(APP_VERSION)}.</p>
-      {RELEASES.map((note) => (
-        <section key={note.id} className="card changes__release">
-          <h2 className="card__title">{note.title}</h2>
-          <ReleaseNoteView note={note} showTitle={false} />
-        </section>
-      ))}
+      {[current, previous].map((note, i) =>
+        note ? (
+          <section key={note.id} className="card changes__release">
+            <header className="changes__head">
+              <h2 className="card__title changes__version">{versionLabel(latestVersionOf(note) ?? note.title)}</h2>
+              <span className={`changes__tag${i === 0 ? ' is-current' : ''}`}>{i === 0 ? 'Current version' : 'Previous version'}</span>
+            </header>
+            <ReleaseNoteView note={note} showTitle={false} />
+          </section>
+        ) : null,
+      )}
+      <section className="card changes__release">
+        <header className="changes__head">
+          <h2 className="card__title">{SINCE_LAST_MAJOR.title}</h2>
+          <span className="changes__tag">Since {SINCE_LAST_MAJOR.since}</span>
+        </header>
+        <ul className="whatsnew__list">
+          {SINCE_LAST_MAJOR.items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </section>
     </SubPage>
   );
 }

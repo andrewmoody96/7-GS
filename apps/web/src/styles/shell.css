@@ -1618,3 +1618,44 @@
 .screen--team .stat {
   align-content: space-between;
 }
+
+/* What's changed: a tile per version. */
+.changes__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.changes__tag {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.changes__tag.is-current {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.whatsnew__version {
+  margin: 12px 0 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Versions read as written: v1.3.1-beta, not V1.3.1-BETA. */
+.changes__version,
+.whatsnew__label--version,
+.changes__tag:not(.is-current) {
+  text-transform: none;
+}

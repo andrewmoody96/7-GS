@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { getMockBackend } from '../api';
 import { isApiError } from '../api/client';
 import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
@@ -301,6 +301,7 @@ function Shell() {
       </a>
       <DemoBar />
       <TopBar />
+      <ScrollToTop />
       <main id="main" className="app__main" tabIndex={-1}>
         <InstallHint />
         <Outlet />
@@ -321,4 +322,17 @@ function Shell() {
       </nav>
     </div>
   );
+}
+
+/**
+ * A page opened from a link starts at the top (the browser would keep the last page's
+ * scroll); going back keeps your place.
+ */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  const type = useNavigationType();
+  useEffect(() => {
+    if (type !== 'POP') window.scrollTo(0, 0);
+  }, [pathname, type]);
+  return null;
 }

@@ -6,7 +6,7 @@ import { createMockApi } from '../api/mock';
 import { CheckoffQueue } from '../api/offlineQueue';
 import { createQueryClient } from '../app/queries';
 import { AppProviders } from '../app/routes';
-import { APP_VERSION, LATEST_RELEASE, RELEASES, unseenReleases } from '../releaseNotes';
+import { APP_VERSION, LATEST_RELEASE, latestVersionOf, RELEASES, unseenReleases } from '../releaseNotes';
 import { WhatsNew } from './WhatsNew';
 
 describe('release notes', () => {
@@ -23,9 +23,9 @@ describe('release notes', () => {
   });
 
   it('keeps the version number in step with the newest release', () => {
-    // A fix release (1.2.1) only bumps the version; its notes join the 1.2 entry.
-    const minor = (v: string) => v.split('.').slice(0, 2).join('.');
-    expect(minor(APP_VERSION)).toBe(minor(RELEASES.find((r) => r.version !== null)!.version!));
+    // A fix release (1.3.1) is a patch on its feature release's entry.
+    expect(APP_VERSION).toBe(latestVersionOf(RELEASES[0]!));
+    expect(RELEASES.at(-1)).toMatchObject({ id: '0.11.2026', title: 'v0.11.2026_beta' });
   });
 });
 
