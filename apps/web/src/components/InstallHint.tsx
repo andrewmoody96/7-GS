@@ -1,7 +1,7 @@
 // A nudge, in a phone's browser only, to put the app on the Home Screen. Gone for good once
 // dismissed, and never shown inside the Home Screen app itself or on desktop.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   canPromptInstall,
   dismissInstallHint,
@@ -11,23 +11,52 @@ import {
   promptInstall,
   type InstallPlatform,
 } from '../lib/install';
+import { IconAddSquare, IconMoreHorizontal, IconMoreVertical, IconShare } from './icons';
 
-/** The steps for each phone, shared with the How it works guide. */
+/** A browser button drawn inline, so the steps show what to look for. */
+function Key({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <span className="installsteps__key" role="img" aria-label={label}>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * The steps for each phone, shared with the How it works guide. Worded for any browser
+ * (Safari, Chrome, DuckDuckGo, …): each puts these buttons in its toolbar or menu.
+ */
 export function InstallSteps({ platform }: { platform: InstallPlatform }) {
   return platform === 'ios' ? (
     <ol className="installsteps">
       <li>
-        Tap <strong>Share</strong> (the square with an arrow) in Safari’s toolbar. You may need to tap <strong>⋯</strong> first.
+        Tap{' '}
+        <Key label="Share">
+          <IconShare />
+        </Key>{' '}
+        <strong>Share</strong> in your browser. Don’t see it? Tap{' '}
+        <Key label="More">
+          <IconMoreHorizontal />
+        </Key>{' '}
+        first.
       </li>
       <li>
-        Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong>.
+        Choose{' '}
+        <Key label="Add">
+          <IconAddSquare />
+        </Key>{' '}
+        <strong>Add to Home Screen</strong>, then <strong>Add</strong>.
       </li>
       <li>Open 7-Game Series from your Home Screen and sign in with the 6-digit code we email you.</li>
     </ol>
   ) : (
     <ol className="installsteps">
       <li>
-        Tap the browser’s <strong>⋮</strong> menu.
+        Tap{' '}
+        <Key label="Menu">
+          <IconMoreVertical />
+        </Key>{' '}
+        <strong>Menu</strong> in your browser.
       </li>
       <li>
         Choose <strong>Add to Home screen</strong> or <strong>Install app</strong>.

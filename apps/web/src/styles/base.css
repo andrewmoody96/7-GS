@@ -734,11 +734,29 @@ code {
   list-style: decimal;
   margin: 0;
   padding-left: 20px;
-  line-height: 1.5;
+  line-height: 1.75;
 }
 
 .installsteps li + li {
   margin-top: 4px;
+}
+
+/* A browser button drawn inline in the steps. */
+.installsteps__key {
+  display: inline-grid;
+  place-items: center;
+  width: 1.45em;
+  height: 1.45em;
+  vertical-align: -0.125em;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.installsteps__key svg {
+  width: 1.05em;
+  height: 1.05em;
 }
 
 .badge--photo {
