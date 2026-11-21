@@ -462,8 +462,13 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
   (`league_teams`, rules `generateLeague`). Each is a real small town and a nickname for
   putting things off, starting with the same letter: the *Pontiac Procrastinators,
   Litchfield Last Minutemen, Walla Walla Wafflers*. Every town, nickname and color pair in
-  a league is different; names are at most 23 characters (rules `TEAM_NAME_MAX`; a long one wraps to two lines in standings; longer
-  ones were renamed at the v1.3.1 deploy); badges show the initials. No real league marks, logos or names.
+  a league is different; a new team's name is at most 23 characters (rules
+  `TEAM_NAME_MAX`; a long one wraps to two lines in standings); badges show the initials.
+  No real league marks, logos or names.
+- **Names never change.** A league is drawn once and kept, and every series keeps the
+  opponent name, colors and badge it was created with (`series.opponent_*`), so Team
+  History reads the same forever. Updates to the name lists only affect teams drawn after
+  them; no release renames existing teams or past series.
 - **The hierarchy is league, conferences, divisions, teams.** Every season your league is
   dealt again into two conferences (the Early Bird Conference and the Night Owl
   Conference, EBC and NOC) of three five-team divisions (EBC Central, NOC West and so on)
@@ -489,8 +494,7 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
   differential (never head-to-head). Winning the season is still just a winning record (§5); the titles reward
   finishing ahead of everyone else.
 - Titles show under the team stats and in Team History, and every finished season has its
-  standings. At the v1.3 deploy every account got its league and every series it had was
-  renamed to it.
+  standings.
 
 ## 9. Core screens (PWA)
 

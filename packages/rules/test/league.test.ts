@@ -9,10 +9,8 @@ import {
   seasonAlignment,
   seasonSchedule,
   seasonStandings,
-  replacementTeamName,
   SERIES_PER_SEASON,
   TEAM_NAME_MAX,
-  teamNameNeedsReplacing,
   YOU,
   type StandingsGame,
 } from '../src';
@@ -140,28 +138,13 @@ describe('standings', () => {
 });
 
 describe('team names that fit', () => {
-  it('keeps every name within TEAM_NAME_MAX and never uses a retired nickname', () => {
+  it('keeps every new team’s name within TEAM_NAME_MAX, with no retired nickname', () => {
     for (let u = 0; u < 200; u++) {
       for (const t of generateLeague(leagueSeedFor(`fit-${u}`))) {
         expect(t.name.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
-        expect(teamNameNeedsReplacing(t.name)).toBe(false);
+        expect(t.mascot).not.toMatch(/Johnny-Come-Latelies|One-More-Episodes/);
       }
     }
-    expect(teamNameNeedsReplacing('Joplin Johnny-Come-Latelies')).toBe(true);
-    expect(teamNameNeedsReplacing('Oxford One-More-Episodes')).toBe(true);
-    expect(teamNameNeedsReplacing('Pontiac Pajamas')).toBe(false);
-    expect(teamNameNeedsReplacing('Pontiac Procrastinators')).toBe(false); // 23: the most allowed
-  });
-
-  it('draws a replacement that fits and clashes with no other team', () => {
-    const league = generateLeague(leagueSeedFor('swap')).map((t) => t.name);
-    const others = league.slice(1);
-    const name = replacementTeamName(others, 42);
-    expect(name.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
-    expect(teamNameNeedsReplacing(name)).toBe(false);
-    const town = (n: string) => n.split(' ').slice(0, -1).join(' ');
-    expect(others.map((n) => n.split(' ').at(-1))).not.toContain(name.split(' ').at(-1));
-    expect(others.some((n) => n.startsWith(`${town(name)} `))).toBe(false);
   });
 
   it('names the two conferences, with short forms for division names', () => {

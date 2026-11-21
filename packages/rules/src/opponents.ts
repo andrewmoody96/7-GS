@@ -56,7 +56,10 @@ const NICKNAMES: Record<string, readonly string[]> = {
   Y: ['Yawners', 'Yesterdays', 'Yeah-Laters', 'Yo-Yos'],
 };
 
-/** The longest a team name may be, so it fits a standings row on a phone. */
+/**
+ * The longest a new team's name may be, so it fits a standings row. Existing teams keep
+ * their names, whatever their length: names never change once given.
+ */
 export const TEAM_NAME_MAX = 23;
 
 /** Every town, in a fixed order. */
@@ -244,38 +247,6 @@ export function generateLeague(seed: number): LeagueTeam[] {
     });
   }
   return teams;
-}
-
-/** A team name that's too long, or uses a nickname that's been retired. */
-export function teamNameNeedsReplacing(name: string): boolean {
-  if (name.length > TEAM_NAME_MAX) return true;
-  const town = OPPONENT_TOWNS.find((t) => name.startsWith(`${t} `));
-  const mascot = town ? name.slice(town.length + 1) : null;
-  return mascot === null || !(NICKNAMES[town![0]!.toUpperCase()] ?? []).includes(mascot);
-}
-
-/**
- * A new name for one team in a league: a town and nickname no other team in it uses, that
- * fits TEAM_NAME_MAX. Same first letter as ever.
- */
-export function replacementTeamName(others: readonly string[], seed: number): string {
-  const random = mulberry32(seed);
-  const usedTowns = new Set<string>();
-  const usedNicknames = new Set<string>();
-  for (const name of others) {
-    const town = OPPONENT_TOWNS.find((t) => name.startsWith(`${t} `));
-    if (!town) continue;
-    usedTowns.add(town);
-    usedNicknames.add(name.slice(town.length + 1));
-  }
-  for (const city of shuffle(OPPONENT_TOWNS, random)) {
-    if (usedTowns.has(city)) continue;
-    const options = (NICKNAMES[city[0]!.toUpperCase()] ?? []).filter(
-      (n) => !usedNicknames.has(n) && `${city} ${n}`.length <= TEAM_NAME_MAX,
-    );
-    if (options.length > 0) return `${city} ${pick(options, random)}`;
-  }
-  return pick(OPPONENT_TOWNS.filter((t) => !usedTowns.has(t)), random);
 }
 
 /** A season's alignment: six divisions of five team ids (0–2 one league, 3–5 the other). */

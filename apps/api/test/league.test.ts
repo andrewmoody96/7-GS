@@ -1,13 +1,12 @@
-import { addDays, generateLeague, leagueSeedFor, scheduledOpponent, TEAM_NAME_MAX } from '@7gs/rules';
-import { and, eq } from 'drizzle-orm';
+import { addDays, generateLeague, leagueSeedFor, scheduledOpponent } from '@7gs/rules';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { leagueTeams, series } from '../src/db/schema';
-import { assignLeagues, shortenTeamNames } from '../src/services/league';
 import { CHICAGO, createTasks, TestApp, useTestDb } from './helpers';
 
 const env = useTestDb();
 
-describe('conferences', () => {
+describe('leagues', () => {
   it('draws a player’s 29-team league once and schedules every series from it', async () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
     const { token, userId } = await t.signIn('league@example.com', CHICAGO);
@@ -25,25 +24,6 @@ describe('conferences', () => {
       const { slot } = scheduledOpponent(leagueSeedFor(userId), 1, row.number);
       expect(row.opponentName).toBe(league.find((l) => l.slot === slot)!.name);
     }
-  });
-
-  it('gives an account from before conferences one, renaming its opponents, once', async () => {
-    const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
-    const { token, userId } = await t.signIn('old-timer@example.com', CHICAGO);
-    t.at('2026-10-06', '09:00', CHICAGO);
-    await t.ok('getToday', { token });
-    // As it was before conferences: no league, and opponents with the old names.
-    await env.db.delete(leagueTeams).where(eq(leagueTeams.userId, userId));
-    await env.db.update(series).set({ opponentName: 'Snooze City Alarms' }).where(eq(series.userId, userId));
-
-    expect(await assignLeagues(env.db)).toBe(1);
-    const rows = await env.db.select().from(series).where(eq(series.userId, userId));
-    expect(rows.every((r) => r.opponentName !== 'Snooze City Alarms')).toBe(true);
-    const league = generateLeague(leagueSeedFor(userId));
-    for (const row of rows) expect(row.opponentName).toBe(league[scheduledOpponent(leagueSeedFor(userId), 1, row.number).slot]!.name);
-
-    // Already done: nothing more to do.
-    expect(await assignLeagues(env.db)).toBe(0);
   });
 });
 
@@ -109,26 +89,26 @@ describe('standings and titles', () => {
   });
 });
 
-describe('team names that fit', () => {
-  it('renames a team whose name is too long, in the league and every series against it', async () => {
+describe('names never change', () => {
+  it('keeps every series’ opponent as it was named, even when the league is drawn later', async () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
-    const { token, userId } = await t.signIn('long-names@example.com', CHICAGO);
-    t.at('2026-10-16', '09:00', CHICAGO);
+    const { token, userId } = await t.signIn('permanent@example.com', CHICAGO);
+    t.at('2026-10-06', '09:00', CHICAGO);
     await t.ok('getToday', { token });
-    // A team named as before 1.3.1: too long, with a retired nickname.
-    const [played] = await env.db.select().from(series).where(eq(series.userId, userId)).limit(1);
-    const [team] = await env.db.select().from(leagueTeams).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.name, played!.opponentName)));
-    await env.db.update(leagueTeams).set({ name: 'Joplin Johnny-Come-Latelies' }).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team!.slot)));
-    await env.db.update(series).set({ opponentName: 'Joplin Johnny-Come-Latelies' }).where(eq(series.id, played!.id));
+    // A series named under an older scheme, and no league yet (as an account from before).
+    await env.db.delete(leagueTeams).where(eq(leagueTeams.userId, userId));
+    await env.db.update(series).set({ opponentName: 'Snooze City Alarms' }).where(eq(series.userId, userId));
+    const before = (await env.db.select().from(series).where(eq(series.userId, userId))).map((r) => r.id);
 
-    expect(await shortenTeamNames(env.db)).toBe(1);
-    const [renamed] = await env.db.select().from(leagueTeams).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team!.slot)));
-    expect(renamed!.name.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
-    expect(renamed!.colors).toEqual(team!.colors);
-    const [after] = await env.db.select().from(series).where(eq(series.id, played!.id));
-    expect(after!.opponentName).toBe(renamed!.name);
-    const names = (await env.db.select().from(leagueTeams).where(eq(leagueTeams.userId, userId))).map((r) => r.name);
-    expect(new Set(names).size).toBe(29);
-    expect(await shortenTeamNames(env.db)).toBe(0);
+    // Weeks go by: new series, and the league gets drawn.
+    for (const date of ['2026-10-13', '2026-10-20']) {
+      t.at(date, '09:00', CHICAGO);
+      await t.ok('getToday', { token });
+    }
+    expect(await env.db.select().from(leagueTeams).where(eq(leagueTeams.userId, userId))).toHaveLength(29);
+    const rows = await env.db.select().from(series).where(eq(series.userId, userId));
+    for (const r of rows.filter((x) => before.includes(x.id))) expect(r.opponentName).toBe('Snooze City Alarms');
+    // Newer series come from the league.
+    expect(rows.filter((x) => !before.includes(x.id)).every((r) => r.opponentName !== 'Snooze City Alarms')).toBe(true);
   });
 });
