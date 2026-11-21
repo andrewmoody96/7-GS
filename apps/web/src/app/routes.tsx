@@ -22,6 +22,7 @@ import { AppShell, AuthGate } from './AppShell';
 import { ApiProvider } from './context';
 import { ToastProvider } from './toast';
 import { AccountsScreen } from '../screens/Accounts';
+import { AchievementsLabScreen, BadgesScreen } from '../screens/Badges';
 
 export function AppProviders({
   api,
@@ -66,6 +67,8 @@ export function AppRoutes() {
         <Route path="team/history/series/:seriesId" element={<PastSeriesScreen />} />
         <Route path="team/settings" element={<SettingsScreen />} />
         <Route path="team/admin/accounts" element={<AccountsScreen />} />
+        <Route path="team/badges" element={<BadgesScreen />} />
+        <Route path="team/badges/lab" element={<AchievementsLabScreen />} />
         {/* Old links from before Team (Film Room and Season). */}
         <Route path="film-room" element={<FilmRoomRedirect />} />
         <Route path="film-room/starters/:weekday" element={<StarterRedirect />} />
