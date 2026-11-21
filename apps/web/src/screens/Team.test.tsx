@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createMockApi } from '../api/mock';
@@ -12,7 +13,7 @@ import { ManagementScreen, RotationScreen, TeamScreen } from './Team';
 function renderAt(path: string, theme: Theme) {
   applyTheme(theme);
   const { api } = createMockApi({ storage: null, realNow: () => Date.parse('2026-10-02T17:00:00Z'), scenario: 'midseason', fresh: true });
-  render(
+  const view = render(
     <AppProviders api={api} queue={new CheckoffQueue()} queryClient={createQueryClient()}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
@@ -23,6 +24,7 @@ function renderAt(path: string, theme: Theme) {
       </MemoryRouter>
     </AppProviders>,
   );
+  return { api, view };
 }
 
 afterEach(() => applyTheme('baseball'));
@@ -51,5 +53,45 @@ describe('Team', () => {
   it('leads back through Coaching from Default Lineups', () => {
     renderAt('/team/rotation', 'basketball');
     expect(screen.getByRole('link', { name: 'Coaching' })).toHaveAttribute('href', '/team/management');
+  });
+});
+
+describe('Default Lineups grid', () => {
+  it('plans every weekday on one grid and saves only the days that changed', async () => {
+    const user = userEvent.setup();
+    const { api } = renderAt('/team/rotation', 'baseball');
+    const grid = await screen.findByRole('table', { name: 'Default Lineups' });
+    const before = (await api.call('listStarters')).starters;
+    // A task in Monday's lineup that isn't a must-hit there.
+    const mon = before.find((s) => s.weekday === 1)!;
+    const tasks = (await api.call('listTasks')).tasks;
+    const slot = mon.lineup.find((l) => !l.required && tasks.find((t) => t.id === l.taskId)?.status === 'active')!;
+    const name = tasks.find((t) => t.id === slot.taskId)!.name;
+
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    const cell = () => within(grid).getByRole('button', { name: new RegExp(`^${name} on Mon:`) });
+    expect(cell()).toHaveAccessibleName(`${name} on Mon: in the lineup`);
+    await user.click(cell());
+    expect(cell()).toHaveAccessibleName(`${name} on Mon: must-hit`);
+
+    // Undo puts it back; then make the change for real and save.
+    await user.click(screen.getByRole('button', { name: 'Undo changes' }));
+    expect(cell()).toHaveAccessibleName(`${name} on Mon: in the lineup`);
+    await user.click(cell());
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const after = (await api.call('listStarters')).starters;
+      expect(after.find((s) => s.weekday === 1)!.lineup.find((l) => l.taskId === slot.taskId)).toMatchObject({ required: true });
+    });
+    const after = (await api.call('listStarters')).starters;
+    // Monday keeps its order, name and bench; the other days are untouched.
+    const monAfter = after.find((s) => s.weekday === 1)!;
+    expect(monAfter.lineup.map((l) => l.taskId)).toEqual(mon.lineup.map((l) => l.taskId));
+    expect(monAfter).toMatchObject({ name: mon.name, lockTime: mon.lockTime, bench: mon.bench });
+    for (const day of [2, 3, 4, 5, 6, 7]) {
+      expect(after.find((s) => s.weekday === day)).toEqual(before.find((s) => s.weekday === day));
+    }
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Save' })).toBeNull());
   });
 });

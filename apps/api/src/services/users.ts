@@ -84,6 +84,7 @@ export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
     seenRelease: user.seenRelease,
     isAdmin: isAdmin(user.email),
     hasPassword: user.passwordHash !== null,
+    setupDone: user.setupDoneAt !== null,
     today,
     position: calendarPosition(user, today),
     allowances: await allowancesView(tx, user.id, today),
@@ -95,13 +96,14 @@ export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
  * the zone they started in (GAME_DESIGN §10). A new default lock time applies to games
  * not built yet, like starter edits.
  */
-export async function updateMe(tx: Db, user: UserRow, patch: MePatchDto): Promise<UserRow> {
+export async function updateMe(tx: Db, user: UserRow, patch: MePatchDto, now: Date): Promise<UserRow> {
   const set: Partial<typeof users.$inferInsert> = {};
   if (patch.displayName !== undefined) set.displayName = patch.displayName;
   if (patch.timezone !== undefined) set.timezone = patch.timezone;
   if (patch.defaultLockTime !== undefined) set.defaultLockTime = patch.defaultLockTime;
   if (patch.theme !== undefined) set.theme = patch.theme;
   if (patch.seenRelease !== undefined) set.seenRelease = patch.seenRelease;
+  if (patch.setupDone === true && user.setupDoneAt === null) set.setupDoneAt = now;
   if (Object.keys(set).length === 0) return user;
   const [row] = await tx.update(users).set(set).where(eq(users.id, user.id)).returning();
   return row ?? user;

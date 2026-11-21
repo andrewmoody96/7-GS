@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { getMockBackend } from '../api';
 import { isApiError } from '../api/client';
 import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
@@ -20,6 +20,7 @@ import { useNow } from './hooks';
 import { TasksModalProvider, useTasksModal } from './tasksModal';
 import { WhatsNew } from '../components/WhatsNew';
 import { LATEST_RELEASE } from '../releaseNotes';
+import { SETUP_PATH } from '../screens/Setup';
 
 /** The Today tab's icon follows the sport: home plate, a basketball, or a stick and puck. */
 const TODAY_ICONS: Record<Theme, typeof IconToday> = {
@@ -76,7 +77,21 @@ function TopBar() {
   // A new account's welcome setup (sport, then look) comes first; then the guide opens by
   // itself the first time on a device, and lives behind the ? button after that.
   const [welcomeStep] = useWelcomeStep();
-  const [helpOpen, setHelpOpen] = useState(() => welcomeStep === null && !hasSeenHowItWorks());
+  const location = useLocation();
+  const navigate = useNavigate();
+  const onSetup = location.pathname === SETUP_PATH;
+  const setupPending = me.data ? !me.data.setupDone : false;
+  const [helpOpen, setHelpOpen] = useState(() => welcomeStep === null && !onSetup && me.data?.setupDone === true && !hasSeenHowItWorks());
+  // The guided setup shows once per account: new ones after the sport and look, everyone
+  // else the first time they open a version that has it.
+  useEffect(() => {
+    if (setupPending && welcomeStep === null && !onSetup) navigate(SETUP_PATH, { replace: true });
+  }, [setupPending, welcomeStep, onSetup, navigate]);
+  // Back from the setup: the How it works guide, the first time on this device.
+  const fromSetup = (location.state as { guide?: boolean } | null)?.guide === true;
+  useEffect(() => {
+    if (fromSetup && !hasSeenHowItWorks()) setHelpOpen(true);
+  }, [fromSetup]);
   const closeHelp = () => {
     markHowItWorksSeen();
     setHelpOpen(false);
@@ -120,13 +135,13 @@ function TopBar() {
       </div>
       <WelcomeSetup
         onDone={() => {
-          setHelpOpen(!hasSeenHowItWorks());
-          // A brand-new account has nothing to catch up on.
+          // A brand-new account has nothing to catch up on; on to the guided setup.
           if (me.data && me.data.seenRelease !== LATEST_RELEASE) updateMe.mutate({ seenRelease: LATEST_RELEASE });
+          navigate(SETUP_PATH, { replace: true });
         }}
       />
       <HowItWorksSheet open={helpOpen} onClose={closeHelp} />
-      {me.data ? <WhatsNew seen={me.data.seenRelease} ready={welcomeStep === null && !helpOpen} /> : null}
+      {me.data ? <WhatsNew seen={me.data.seenRelease} ready={welcomeStep === null && !helpOpen && !onSetup && !setupPending} /> : null}
     </header>
   );
 }
@@ -207,6 +222,17 @@ function DemoBar() {
             Reset this scenario
           </button>
         </div>
+        <button
+          type="button"
+          className="scenario"
+          onClick={() => {
+            setOpen(false);
+            navigate(SETUP_PATH);
+          }}
+        >
+          <strong>Guided setup</strong>
+          <small>The setup new accounts get: team, tasks, your week, and when to start.</small>
+        </button>
         <p className="fine">The demo clock follows real time from a pinned moment, so games still lock and go final on schedule.</p>
       </Sheet>
     </div>

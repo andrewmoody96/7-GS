@@ -33,6 +33,8 @@ export interface UserRow {
   seenRelease?: string | null;
   /** The demo never stores a password, only whether one was "set". */
   hasPassword?: boolean;
+  /** Guided setup finished; absent (the seeded demo, older saves) counts as done. */
+  setupDone?: boolean;
   createdAt: string;
 }
 

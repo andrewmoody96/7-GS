@@ -15,7 +15,7 @@ export function profileRoutes(deps: Deps): AnyRoute[] {
     ),
 
     route('updateMe', ({ auth, body, now }) =>
-      inUserTx(deps.db, auth.user, now, async (tx, user) => meView(tx, await updateMe(tx, user, body), now), {
+      inUserTx(deps.db, auth.user, now, async (tx, user) => meView(tx, await updateMe(tx, user, body, now), now), {
         scope: 'account',
       }),
     ),

@@ -101,6 +101,8 @@ export const users = pgTable('users', {
   lastSeenAt: instant('last_seen_at'),
   /** Optional password (services/passwords: scrypt). When set, sign-in also asks for it. */
   passwordHash: text('password_hash'),
+  /** When the account finished (or skipped) the guided setup; null = still to show it, once. */
+  setupDoneAt: instant('setup_done_at'),
 });
 
 /** The team photo: a small square image, resized on the device before upload. */

@@ -4,12 +4,14 @@
 // Injuries. Then Team History and Settings.
 
 import type { StarterDto, TaskDto } from '@7gs/contracts';
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import type { LocalDate } from '@7gs/rules';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   useCareerQuery,
   useCurrentSeasonQuery,
   useMeQuery,
+  useSaveWeekPlan,
   useSeasonSeriesQuery,
   useSeasonsQuery,
   useStartersQuery,
@@ -18,6 +20,7 @@ import {
 import { useTasksModal } from '../app/tasksModal';
 import { IconChevronRight, IconInfo, IconWarning } from '../components/icons';
 import { RemindersCard } from '../components/RemindersCard';
+import { initialPlan, samePlan, WeekPlanGrid, weekPlanBodies } from '../components/WeekPlanGrid';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { AllowanceChips, IlExplainer, TaskGroup, TaskSheet } from '../components/TaskViews';
 import { formatRange, formatTimeOfDay, formatWinPct, signed } from '../lib/format';
@@ -438,7 +441,10 @@ function Rotation() {
   const me = useMeQuery();
   if (starters.isPending || tasks.isPending) return <Loading label={`Loading the ${vocab.flavor.rotation.toLowerCase()}`} />;
   if (starters.isError) return <ErrorPanel error={starters.error} onRetry={() => void starters.refetch()} />;
-  const byId = new Map((tasks.data ?? []).map((t) => [t.id, t]));
+  if (tasks.isError) return <ErrorPanel error={tasks.error} onRetry={() => void tasks.refetch()} />;
+  const all = tasks.data ?? [];
+  const byId = new Map(all.map((t) => [t.id, t]));
+  const saved = starters.data ?? [];
   return (
     <section aria-label={vocab.flavor.rotation}>
       <aside className="explainer explainer--plan">
@@ -446,19 +452,77 @@ function Rotation() {
         <div>
           <p className="explainer__title">Every week starts here</p>
           <p>
-            A new week copies these when it opens (next week opens Friday). When you save a day, it also updates that day on
-            weeks already open, unless the week has started. To change one day only, use{' '}
-            <Link to="/team/lineups">{TEAM_SECTIONS.lineups}</Link>.
+            A new week copies these when it opens (next week opens Friday). Saving also updates those days on weeks already open,
+            unless the week has started. To change one day only, use <Link to="/team/lineups">{TEAM_SECTIONS.lineups}</Link>.
           </p>
         </div>
       </aside>
+      <WeekPlanCard
+        // A fresh plan whenever the saved lineups change (after a save, or a day edited below).
+        key={saved.map((s) => `${s.weekday}:${s.lineup.map((l) => `${l.taskId}${l.required ? '!' : ''}`).join(',')}`).join('|')}
+        tasks={all}
+        starters={saved}
+        today={me.data?.today ?? null}
+      />
+      <h2 className="taskgroup__title weekplan__days">Day by day</h2>
+      <p className="muted">Open a day for its name, order, {vocab.term.bench.toLowerCase()} and {vocab.terms.lockTime.toLowerCase()}.</p>
       <ol className="rotation">
-        {(starters.data ?? []).map((s) => (
+        {saved.map((s) => (
           <li key={s.weekday}>
             <StarterCard starter={s} tasks={byId} defaultLockTime={me.data?.defaultLockTime ?? null} />
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+/** Every weekday on one grid (components/WeekPlanGrid), saved together. */
+function WeekPlanCard({ tasks, starters, today }: { tasks: TaskDto[]; starters: StarterDto[]; today: string | null }) {
+  const rows = useMemo(() => tasks.filter((t) => t.status === 'active' && t.kind === 'recurring'), [tasks]);
+  const start = useMemo(() => initialPlan(rows, starters, { fillEmpty: false }), [rows, starters]);
+  const [plan, setPlan] = useState(start);
+  const save = useSaveWeekPlan();
+  const dirty = !samePlan(plan, start);
+  const sidelined = tasks.filter((t) => t.status === 'injured' && starters.some((s) => s.lineup.some((l) => l.taskId === t.id)));
+  if (rows.length === 0) {
+    return (
+      <EmptyState title="No tasks yet">
+        <p>Add a task with + Add task and it shows up here to plan.</p>
+      </EmptyState>
+    );
+  }
+  return (
+    <section className="card weekplan" aria-label="Plan the week">
+      <h2 className="card__title">Plan the week</h2>
+      <WeekPlanGrid tasks={rows} allTasks={tasks} starters={starters} plan={plan} onChange={setPlan} label={vocab.flavor.rotation} />
+      {sidelined.length > 0 ? (
+        <p className="field__hint">
+          {sidelined.map((t) => t.name).join(', ')} {sidelined.length === 1 ? 'is' : 'are'} on the {vocab.terms.pausedShort} and
+          {sidelined.length === 1 ? ' keeps its' : ' keep their'} days.
+        </p>
+      ) : null}
+      {dirty || save.isPending ? (
+        <div className="weekplan__bar">
+          <button type="button" className="btn btn--quiet" disabled={save.isPending} onClick={() => setPlan(start)}>
+            Undo changes
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={save.isPending}
+            onClick={() =>
+              save.mutate({
+                bodies: weekPlanBodies(plan, rows, starters),
+                today: (today as LocalDate | null) ?? null,
+                activeIds: new Set(tasks.filter((t) => t.status === 'active').map((t) => t.id)),
+              })
+            }
+          >
+            {save.isPending ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

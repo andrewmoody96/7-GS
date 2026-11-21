@@ -35,6 +35,32 @@ describe('welcome setup on first sign-in', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(document.documentElement.dataset.sport).toBe('basketball');
     await user.click(within(look).getByRole('button', { name: 'Done' }));
+
+    // Then the guided setup: team, tasks, week, start.
+    expect(await screen.findByRole('heading', { name: 'Your team' })).toBeInTheDocument();
+    const name = screen.getByLabelText('Team name');
+    await user.clear(name);
+    await user.type(name, 'Cornland Cornbears');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Your tasks' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '+ Meditate' }));
+    expect(await screen.findByText('Meditate')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Next: plan the week/ }));
+
+    expect(await screen.findByRole('heading', { name: 'Your week' })).toBeInTheDocument();
+    // A new task starts on every day. A tap makes Sunday a must-hit, another takes it off.
+    const sunday = () => screen.getByRole('button', { name: /^Meditate on Sun:/ });
+    expect(sunday()).toHaveAccessibleName('Meditate on Sun: in the lineup');
+    await user.click(sunday());
+    expect(sunday()).toHaveAccessibleName('Meditate on Sun: must-make');
+    await user.click(sunday());
+    expect(sunday()).toHaveAccessibleName('Meditate on Sun: off');
+    await user.click(screen.getByRole('button', { name: 'Save my week' }));
+
+    expect(await screen.findByRole('heading', { name: 'When to start' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Let’s play' }));
+
     expect(await screen.findByRole('dialog', { name: 'How it works' })).toBeInTheDocument();
     expect(screen.getByText(/A task list you play like a basketball season/)).toBeInTheDocument();
   });
@@ -43,5 +69,34 @@ describe('welcome setup on first sign-in', () => {
     renderApp('/');
     expect(await screen.findByRole('dialog', { name: 'How it works' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Pick your look' })).toBeNull();
+  });
+
+  it('shows the guided setup once to an account that hasn’t had it, then never again', async () => {
+    window.localStorage.clear();
+    const user = userEvent.setup();
+    const { api } = createMockApi({ storage: null, realNow: () => Date.parse('2026-10-02T17:00:00Z'), scenario: 'preseason', fresh: true });
+    // A fresh account (as everyone is when this version first loads).
+    const link = await api.call('requestMagicLink', { body: { email: 'returning@example.com' } });
+    await api.call('verifyMagicLink', { body: { token: link.devToken!, timezone: 'America/Chicago' } });
+    expect((await api.call('getMe')).setupDone).toBe(false);
+
+    const show = () =>
+      render(
+        <AppProviders api={api} queue={new CheckoffQueue()} queryClient={createQueryClient()}>
+          <MemoryRouter initialEntries={['/']}>
+            <AppRoutes />
+          </MemoryRouter>
+        </AppProviders>,
+      );
+    const first = show();
+    expect(await screen.findByRole('heading', { name: 'Your team' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'I’ll finish this later' }));
+    expect(await screen.findByRole('dialog', { name: 'How it works' })).toBeInTheDocument();
+    expect((await api.call('getMe')).setupDone).toBe(true);
+    first.unmount();
+
+    show();
+    expect(await screen.findByRole('dialog', { name: 'How it works' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Your team' })).toBeNull();
   });
 });
