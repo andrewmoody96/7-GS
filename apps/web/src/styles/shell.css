@@ -1000,6 +1000,68 @@
 .setup__tasks {
   display: grid;
   gap: 8px;
+
+/* ── Badges ─────────────────────────────────────────────────────────────── */
+
+.teamnav--badges {
+  margin-top: 16px;
+}
+
+.medal {
+  --ring: #b87333;
+  --fill: #f6e6d4;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0, var(--fill) 55%);
+  box-shadow:
+    inset 0 0 0 3px var(--ring),
+    inset 0 0 0 5px rgb(255 255 255 / 0.6),
+    0 3px 8px rgb(0 0 0 / 0.15);
+  line-height: 1;
+}
+
+.medal:not(.is-earned) {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.medal--regular {
+  --ring: #8e9aa6;
+  --fill: #eef1f4;
+}
+
+.medal--all_star {
+  --ring: #d6a21e;
+  --fill: #fbefc8;
+}
+
+.medal--mvp {
+  --ring: #3f8fb3;
+  --fill: #dcf0f8;
+}
+
+.medal--hall_of_fame {
+  --ring: #1e4d3a;
+  --fill: #f3d27a;
+  box-shadow:
+    inset 0 0 0 3px #1e4d3a,
+    inset 0 0 0 6px #e2b23b,
+    0 3px 10px rgb(0 0 0 / 0.25);
+}
+
+.medal__icon {
+  transform: translateY(1px);
+}
+
+.badgetier + .badgetier {
+  margin-top: 12px;
+}
+
+.badgelist {
+  display: grid;
+  gap: 12px;
   margin: 10px 0 0;
   padding: 0;
   list-style: none;
@@ -1157,4 +1219,96 @@
 
 .weekgrid + .field__hint {
   margin-top: 12px;
+}
+
+.badgecard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badgecard__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.badgecard:not(.is-earned) .badgecard__text strong {
+  color: var(--text-muted);
+}
+
+.badgecard__text small {
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.badgecard__progress {
+  position: relative;
+  display: block;
+  height: 16px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.badgecard__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent-soft, #cfe3d6);
+}
+
+.badgecard__count {
+  position: relative;
+  display: block;
+  padding: 0 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.labactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.labstats summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.labstats__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.labstat {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.unlocks {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unlocks li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.unlocks small {
+  display: block;
+  color: var(--text-muted);
 }

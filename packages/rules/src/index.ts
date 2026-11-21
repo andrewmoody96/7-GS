@@ -17,3 +17,4 @@ export * from './week';
 export * from './suspension';
 export * from './injured';
 export * from './themes';
+export * from './achievements';

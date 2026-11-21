@@ -233,6 +233,17 @@ function DemoBar() {
           <strong>Guided setup</strong>
           <small>The setup new accounts get: team, tasks, your week, and when to start.</small>
         </button>
+        <button
+          type="button"
+          className="scenario"
+          onClick={() => {
+            setOpen(false);
+            navigate('/team/badges/lab');
+          }}
+        >
+          <strong>Achievements lab</strong>
+          <small>Badges for a future update: simulate a player and watch them unlock.</small>
+        </button>
         <p className="fine">The demo clock follows real time from a pinned moment, so games still lock and go final on schedule.</p>
       </Sheet>
     </div>

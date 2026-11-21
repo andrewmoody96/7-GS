@@ -29,6 +29,8 @@ import { vocab } from '../vocab';
 import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings } from './Season';
 import { WeekCardView } from './WeekCard';
 import { TeamBadge } from '../components/Badges';
+import { useApi } from '../app/context';
+import { useBadgeCount } from './Badges';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
@@ -77,6 +79,7 @@ function SubPage({
 // ── Overview ─────────────────────────────────────────────────────────────────
 
 export function TeamScreen() {
+  const api = useApi();
   const season = useCurrentSeasonQuery();
   const me = useMeQuery();
   if (season.isPending) return <Loading label="Loading your team" />;
@@ -98,6 +101,8 @@ export function TeamScreen() {
         </div>
       </header>
       {s && totals ? <Standings season={s} total={totals.total} /> : null}
+      {/* Badges are in the demo for now (the Achievements lab's player); real accounts later. */}
+      {api.mode === 'mock' ? <BadgesLink /> : null}
       <nav className="todo teamnav" aria-label={vocab.tabs.team}>
         <TeamLink to="/team/management" title={vocab.flavor.management} sub="This Week, Default Lineups and Injuries." />
         <TeamLink to="/team/history" title={TEAM_SECTIONS.history} sub="Past series and seasons, and your career stats." />
@@ -209,6 +214,16 @@ function FitName({ name }: { name: string }) {
         </span>
       ))}
     </h1>
+  );
+}
+
+/** Team → Badges, with how many are collected. */
+function BadgesLink() {
+  const count = useBadgeCount();
+  return (
+    <nav className="todo teamnav teamnav--badges" aria-label="Badges">
+      <TeamLink to="/team/badges" title={`Badges: ${count}`} sub="Your collection, and what’s next to earn." />
+    </nav>
   );
 }
 
