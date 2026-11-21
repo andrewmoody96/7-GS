@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useUpdateMe } from '../app/queries';
-import { LATEST_RELEASE, unseenReleases, type ReleaseNote } from '../releaseNotes';
+import { LATEST_RELEASE, unseenReleases, versionLabel, type ReleaseNote } from '../releaseNotes';
 import { Sheet } from './Sheet';
 
 const SECTIONS: [keyof Pick<ReleaseNote, 'added' | 'improved' | 'fixed'>, string][] = [
@@ -57,7 +57,7 @@ export function WhatsNew({ seen, ready }: { seen: string | null; ready: boolean 
     <Sheet
       open={open}
       onClose={close}
-      kicker={notes[0]?.version ? `Version ${notes[0].version.replace(/\.0$/, '')}` : 'App update'}
+      kicker={notes[0]?.version ? versionLabel(notes[0].version) : 'App update'}
       title="What’s new"
       footer={
         <div className="actions">

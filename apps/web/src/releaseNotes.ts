@@ -7,7 +7,10 @@
 // - `id` only has to be new and stay the same.
 
 /** The version this build is. Bump with every release, fixes included. */
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.1.0-beta';
+
+/** How a version is shown in the app: "v1.1.0-beta". */
+export const versionLabel = (version: string) => `v${version}`;
 
 export interface ReleaseNote {
   id: string;
@@ -26,9 +29,10 @@ export interface ReleaseNote {
 
 export const RELEASES: readonly ReleaseNote[] = [
   {
+    // The id is what accounts remember having seen: never change it.
     id: '1.1.0',
-    version: '1.1.0',
-    title: 'Version 1.1',
+    version: '1.1.0-beta',
+    title: 'v1.1.0-beta',
     recap: true,
     sections: [
       {

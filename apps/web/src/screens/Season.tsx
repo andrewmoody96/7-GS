@@ -24,7 +24,7 @@ import { AVAILABLE_THEMES, vocab } from '../vocab';
 import { checkForUpdate, useUpdateAvailable } from '../app/update';
 import { squarePhoto } from '../lib/avatar';
 import { TeamBadge } from '../components/Badges';
-import { APP_VERSION } from '../releaseNotes';
+import { APP_VERSION, versionLabel } from '../releaseNotes';
 
 // A function, not a constant: the labels follow the account's theme.
 const statusLabel = (): Record<SeasonDto['status'], string> => ({
@@ -537,7 +537,7 @@ function AppUpdateCheck() {
     <div className="field">
       <span className="field__label">App version</span>
       <p className="appversion">
-        Version {APP_VERSION} · <Link to="/team/settings/changes">What’s changed</Link>
+        {versionLabel(APP_VERSION)} · <Link to="/team/settings/changes">What’s changed</Link>
       </p>
       {waiting ? (
         <button type="button" className="btn btn--primary" onClick={waiting}>

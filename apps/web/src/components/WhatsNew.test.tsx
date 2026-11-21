@@ -13,7 +13,7 @@ describe('release notes', () => {
   it('lists what an account hasn’t seen, up to and including a recap', () => {
     expect(unseenReleases(LATEST_RELEASE)).toEqual([]);
     // 1.1 recaps everything since launch, so it's all anyone who hasn't seen it gets.
-    expect(RELEASES[0]).toMatchObject({ id: '1.1.0', version: '1.1.0', recap: true });
+    expect(RELEASES[0]).toMatchObject({ id: '1.1.0', version: '1.1.0-beta', recap: true });
     expect(unseenReleases(null).map((r) => r.id)).toEqual(['1.1.0']);
     expect(unseenReleases('some-old-id-we-no-longer-list')).toEqual(unseenReleases(null));
     expect(unseenReleases('2026-11-guided-setup').map((r) => r.id)).toEqual(['1.1.0']);

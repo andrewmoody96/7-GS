@@ -10,6 +10,13 @@ How versions are numbered, how often things ship, and what to do on release day.
 | **Feature** | 1.2 | New features, gathered into one release | The What's new popup |
 | **Fix** | 1.2.1 | Bug fixes, typos, small visual tweaks | Nothing pops up. Listed in Settings → What's changed if worth a line |
 
+**Betas** carry a `-beta` suffix (`1.1.0-beta`) while the app is invite-only and still
+being finished.
+
+**Git tags:** the `v` is saved for finished releases. A beta's tag has no `v`
+(`1.1.0-beta`); a finished release's does (`v1.2.0`). In the app, every version shows with
+its `v` (`v1.1.0-beta`, Settings and What's new).
+
 The version lives in one place, `APP_VERSION` in
 [`apps/web/src/releaseNotes.ts`](../apps/web/src/releaseNotes.ts) (and `apps/web/package.json`
 to match). Settings shows it, with a link to every release's notes.
@@ -39,13 +46,14 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 3. Merge that to `main`.
 4. Heroku: **Deploy → Manual deploy → `main` → Deploy Branch**. Database migrations run in
    the release phase.
-5. Tag it so we always know what's live:
-   ```sh
-   git fetch origin main && git tag v1.2.0 origin/main && git push origin v1.2.0
-   ```
+5. Tag it so we always know what's live, on GitHub: **Releases → Draft a new release →
+   Choose a tag** (type the new one: `1.2.0-beta` for a beta, `v1.2.0` for a finished
+   release), target `main`, and **Publish release**. Tick **Set as a pre-release** for a
+   beta. (Claude sessions can't push tags, so this step is yours.)
 
 ## History
 
-- **1.1** (November 2026): the first numbered release. A recap of everything since launch,
-  plus badges, a win goal in the guided setup, and one more pass through setup for everyone.
+- **1.1.0-beta** (November 2026, tag `1.1.0-beta`): the first numbered release. A recap of
+  everything since launch, plus badges, a win goal in the guided setup, and one more pass
+  through setup for everyone.
 - Before 1.1, releases had no numbers; their notes are in Settings → What's changed.
