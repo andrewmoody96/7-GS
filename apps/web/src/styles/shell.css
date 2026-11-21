@@ -1652,10 +1652,3 @@
   font-weight: 700;
   letter-spacing: 0.04em;
 }
-
-/* Versions read as written: v1.3.1-beta, not V1.3.1-BETA. */
-.changes__version,
-.whatsnew__label--version,
-.changes__tag:not(.is-current) {
-  text-transform: none;
-}

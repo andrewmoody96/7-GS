@@ -311,7 +311,7 @@ export function ChangesScreen() {
         note ? (
           <section key={note.id} className="card changes__release">
             <header className="changes__head">
-              <h2 className="card__title changes__version">{versionLabel(latestVersionOf(note) ?? note.title)}</h2>
+              <h2 className="card__title">{versionLabel(latestVersionOf(note) ?? note.title)}</h2>
               <span className={`changes__tag${i === 0 ? ' is-current' : ''}`}>{i === 0 ? 'Current version' : 'Previous version'}</span>
             </header>
             <ReleaseNoteView note={note} showTitle={false} />

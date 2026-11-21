@@ -20,7 +20,7 @@ export function ReleaseNoteView({ note, showTitle }: { note: ReleaseNote; showTi
       {showTitle ? <h3 className="whatsnew__title">{note.title}</h3> : null}
       {note.patches?.map((patch) => (
         <div key={patch.version} className="whatsnew__group whatsnew__group--fixed">
-          <h4 className="whatsnew__label whatsnew__label--version">{versionLabel(patch.version)} fixes</h4>
+          <h4 className="whatsnew__label">{versionLabel(patch.version)} fixes</h4>
           <ul className="whatsnew__list">
             {patch.fixed.map((item) => (
               <li key={item}>{item}</li>
