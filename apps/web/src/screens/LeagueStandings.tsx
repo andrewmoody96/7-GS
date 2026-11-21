@@ -1,6 +1,7 @@
-// Team → Standings: a season's two leagues of three divisions (dealt again every season),
-// with the player's division first, then their league's title race, then the other league.
-// No playoffs: the best record when the season ends takes the title (GAME_DESIGN §8).
+// Team → Standings: a season's two conferences of three divisions (dealt again every
+// season). Your place up top, then your conference (your division first, its other two, and
+// the whole conference's title race), then the other conference. No playoffs: the best
+// record when the season ends takes each title (GAME_DESIGN §8).
 
 import type { StandingsDto, StandingsRowDto } from '@7gs/contracts';
 import { opponentAbbreviation } from '@7gs/rules';
@@ -9,6 +10,14 @@ import { useCurrentSeasonQuery, useStandingsQuery } from '../app/queries';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
 import { formatWinPct } from '../lib/format';
 import { vocab } from '../vocab';
+
+type Conference = StandingsDto['conferences'][number];
+
+function ordinal(n: number): string {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
+  return `${n}${suffix}`;
+}
 
 function TeamMark({ row }: { row: StandingsRowDto }) {
   if (!row.colors) return <span className="standings__mark standings__mark--you" aria-hidden="true">★</span>;
@@ -19,12 +28,21 @@ function TeamMark({ row }: { row: StandingsRowDto }) {
   );
 }
 
-function Table({ title, rows, caption }: { title: string; rows: StandingsRowDto[]; caption?: string }) {
+function Table({ title, rows, note }: { title: string; rows: StandingsRowDto[]; note?: string }) {
   return (
     <section className="card standings" aria-label={title}>
-      <h2 className="card__title">{title}</h2>
-      {caption ? <p className="card__sub">{caption}</p> : null}
+      <header className="standings__head">
+        <h3 className="standings__title">{title}</h3>
+        {note ? <span className="standings__note">{note}</span> : null}
+      </header>
       <table className="standings__table">
+        <colgroup>
+          <col />
+          <col className="standings__num" />
+          <col className="standings__num" />
+          <col className="standings__pct" />
+          <col className="standings__num" />
+        </colgroup>
         <thead>
           <tr>
             <th scope="col" className="standings__team">
@@ -40,8 +58,10 @@ function Table({ title, rows, caption }: { title: string; rows: StandingsRowDto[
           {rows.map((r) => (
             <tr key={r.name} className={r.you ? 'is-you' : undefined}>
               <th scope="row" className="standings__team">
-                <TeamMark row={r} />
-                <span className="standings__name">{r.name}</span>
+                <span className="standings__teamcell">
+                  <TeamMark row={r} />
+                  <span className="standings__name">{r.name}</span>
+                </span>
               </th>
               <td>{r.wins}</td>
               <td>{r.losses}</td>
@@ -55,27 +75,44 @@ function Table({ title, rows, caption }: { title: string; rows: StandingsRowDto[
   );
 }
 
-function TitleBanner({ s }: { s: StandingsDto }) {
-  const mine = s.leagues.find((l) => l.yours)!;
+/** Where you stand: two chips, or your titles once the season is over. */
+function Placement({ s }: { s: StandingsDto }) {
+  const mine = s.conferences.find((c) => c.yours)!;
   const division = mine.divisions.find((d) => d.yours)!;
   const place = (rows: StandingsRowDto[]) => rows.findIndex((r) => r.you) + 1;
-  const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
-  const where = `${mine.name} ${division.name}`;
-  if (!s.complete) {
-    return (
-      <p className="notice standings__race">
-        {ordinal(place(division.rows))} in the {where}, {ordinal(place(mine.rows))} in the {mine.name}. The best record when the{' '}
-        {vocab.term.season.toLowerCase()} ends takes each title.
-      </p>
-    );
-  }
-  const won = [s.titles?.division ? `${where} champions` : null, s.titles?.league ? `${mine.name} champions` : null].filter(Boolean);
+  const started = mine.rows.some((r) => r.wins + r.losses > 0);
+  const chips: { label: string; value: string; champion?: boolean }[] = [
+    { label: 'Division', value: started ? ordinal(place(division.rows)) : '–', champion: s.titles?.division },
+    { label: 'Conference', value: started ? ordinal(place(mine.rows)) : '–', champion: s.titles?.conference },
+  ];
   return (
-    <p className={`notice standings__race${won.length > 0 ? ' is-champion' : ''}`}>
-      {won.length > 0
-        ? `🏆 ${won.join(' · ')}`
-        : `Finished ${ordinal(place(division.rows))} in the ${where} and ${ordinal(place(mine.rows))} in the ${mine.name}.`}
-    </p>
+    <div className="placement" aria-label="Your place">
+      {chips.map((c) => (
+        <div key={c.label} className={`placement__chip${c.champion ? ' is-champion' : ''}`}>
+          <span className="placement__label">{c.label}</span>
+          <span className="placement__value">{c.champion ? '🏆 Champions' : c.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ConferenceSection({ conference }: { conference: Conference }) {
+  const divisions = [...conference.divisions].sort((a, b) => Number(b.yours) - Number(a.yours));
+  return (
+    <section className="conference" aria-label={conference.name}>
+      <header className="conference__head">
+        <h2 className="conference__title">{conference.name}</h2>
+        {conference.yours ? <span className="conference__tag">Yours</span> : null}
+      </header>
+      {divisions.map((d) => (
+        <Table key={d.name} title={`${conference.abbreviation} ${d.name}`} note={d.yours ? 'Your division' : undefined} rows={d.rows} />
+      ))}
+      <details className="conference__race" open={conference.yours}>
+        <summary>{conference.yours ? 'Conference race: all 15 teams' : 'All 15 teams'}</summary>
+        <Table title={conference.name} note="Best record takes the title" rows={conference.rows} />
+      </details>
+    </section>
   );
 }
 
@@ -97,25 +134,17 @@ export function StandingsScreen() {
     if (standings.isPending) return <Loading label="Loading the standings" />;
     if (standings.isError) return <ErrorPanel error={standings.error} onRetry={() => void standings.refetch()} />;
     const s = standings.data;
-    const mine = s.leagues.find((l) => l.yours)!;
-    const other = s.leagues.find((l) => !l.yours)!;
-    const myDivision = mine.divisions.find((d) => d.yours)!;
+    const ordered = [...s.conferences].sort((a, b) => Number(b.yours) - Number(a.yours));
     return (
       <>
-        <TitleBanner s={s} />
-        <Table title={`${mine.name} ${myDivision.name}`} caption="Your division" rows={myDivision.rows} />
-        <Table title={mine.name} caption="Your league: the best record wins it" rows={mine.rows} />
-        {mine.divisions
-          .filter((d) => !d.yours)
-          .map((d) => (
-            <Table key={d.name} title={`${mine.name} ${d.name}`} rows={d.rows} />
-          ))}
-        {other.divisions.map((d) => (
-          <Table key={d.name} title={`${other.name} ${d.name}`} rows={d.rows} />
+        <Placement s={s} />
+        {ordered.map((c) => (
+          <ConferenceSection key={c.name} conference={c} />
         ))}
         <p className="fine">
-          Divisions and leagues are dealt again every {vocab.term.season.toLowerCase()}. Ties go to the better record in the
-          division, then in the league, then run differential.
+          Your league is split into two conferences of three divisions, dealt again every {vocab.term.season.toLowerCase()}. The best
+          record when it ends takes each title. Ties go to the better record in the division, then in the conference, then run
+          differential.
         </p>
       </>
     );

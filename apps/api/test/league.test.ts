@@ -1,13 +1,13 @@
-import { addDays, generateLeague, leagueSeedFor, scheduledOpponent } from '@7gs/rules';
-import { eq } from 'drizzle-orm';
+import { addDays, generateLeague, leagueSeedFor, scheduledOpponent, TEAM_NAME_MAX } from '@7gs/rules';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { leagueTeams, series } from '../src/db/schema';
-import { assignLeagues } from '../src/services/league';
+import { assignLeagues, shortenTeamNames } from '../src/services/league';
 import { CHICAGO, createTasks, TestApp, useTestDb } from './helpers';
 
 const env = useTestDb();
 
-describe('leagues', () => {
+describe('conferences', () => {
   it('draws a player’s 29-team league once and schedules every series from it', async () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
     const { token, userId } = await t.signIn('league@example.com', CHICAGO);
@@ -27,12 +27,12 @@ describe('leagues', () => {
     }
   });
 
-  it('gives an account from before leagues one, renaming its opponents, once', async () => {
+  it('gives an account from before conferences one, renaming its opponents, once', async () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
     const { token, userId } = await t.signIn('old-timer@example.com', CHICAGO);
     t.at('2026-10-06', '09:00', CHICAGO);
     await t.ok('getToday', { token });
-    // As it was before leagues: no league, and opponents with the old names.
+    // As it was before conferences: no league, and opponents with the old names.
     await env.db.delete(leagueTeams).where(eq(leagueTeams.userId, userId));
     await env.db.update(series).set({ opponentName: 'Snooze City Alarms' }).where(eq(series.userId, userId));
 
@@ -70,20 +70,20 @@ describe('standings and titles', () => {
     return { t, token, userId };
   }
 
-  it('shows two leagues of three divisions, with the player 7–0 after a perfect week', async () => {
+  it('shows two conferences of three divisions, with the player 7–0 after a perfect week', async () => {
     const { t, token } = await weekOfWins('standings@example.com');
     t.at('2026-10-12', '09:00', CHICAGO);
     const season = (await t.ok('getCurrentSeason', { token }))!;
     const s = await t.ok('getStandings', { token, params: { seasonId: season.id } });
     expect(s).toMatchObject({ seasonNumber: 1, complete: false, titles: null });
-    expect(s.leagues).toHaveLength(2);
-    expect(s.leagues.filter((l) => l.yours)).toHaveLength(1);
-    for (const lg of s.leagues) {
+    expect(s.conferences).toHaveLength(2);
+    expect(s.conferences.filter((l) => l.yours)).toHaveLength(1);
+    for (const lg of s.conferences) {
       expect(lg.rows).toHaveLength(15);
       expect(lg.divisions).toHaveLength(3);
       for (const d of lg.divisions) expect(d.rows).toHaveLength(5);
     }
-    const all = s.leagues.flatMap((l) => l.rows);
+    const all = s.conferences.flatMap((l) => l.rows);
     expect(all.find((r) => r.you)).toMatchObject({ wins: 7, losses: 0, colors: null });
     // Everyone has played the week: 7 games each.
     for (const r of all) expect(r.wins + r.losses).toBe(7);
@@ -101,10 +101,34 @@ describe('standings and titles', () => {
     const { seasons } = await t.ok('listSeasons', { token });
     const first = seasons.find((s) => s.number === 1)!;
     expect(first.status).not.toBe('active');
-    expect(first.titles).toEqual({ division: false, league: false });
+    expect(first.titles).toEqual({ division: false, conference: false });
     const s = await t.ok('getStandings', { token, params: { seasonId: first.id } });
     expect(s.complete).toBe(true);
-    for (const r of s.leagues.flatMap((l) => l.rows)) expect(r.wins + r.losses).toBe(84);
-    expect(await t.ok('getCareer', { token })).toMatchObject({ divisionTitles: 0, leagueTitles: 0 });
+    for (const r of s.conferences.flatMap((l) => l.rows)) expect(r.wins + r.losses).toBe(84);
+    expect(await t.ok('getCareer', { token })).toMatchObject({ divisionTitles: 0, conferenceTitles: 0 });
+  });
+});
+
+describe('team names that fit', () => {
+  it('renames a team whose name is too long, in the league and every series against it', async () => {
+    const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
+    const { token, userId } = await t.signIn('long-names@example.com', CHICAGO);
+    t.at('2026-10-16', '09:00', CHICAGO);
+    await t.ok('getToday', { token });
+    // A team named as before 1.3.1: too long, with a retired nickname.
+    const [played] = await env.db.select().from(series).where(eq(series.userId, userId)).limit(1);
+    const [team] = await env.db.select().from(leagueTeams).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.name, played!.opponentName)));
+    await env.db.update(leagueTeams).set({ name: 'Joplin Johnny-Come-Latelies' }).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team!.slot)));
+    await env.db.update(series).set({ opponentName: 'Joplin Johnny-Come-Latelies' }).where(eq(series.id, played!.id));
+
+    expect(await shortenTeamNames(env.db)).toBe(1);
+    const [renamed] = await env.db.select().from(leagueTeams).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team!.slot)));
+    expect(renamed!.name.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
+    expect(renamed!.colors).toEqual(team!.colors);
+    const [after] = await env.db.select().from(series).where(eq(series.id, played!.id));
+    expect(after!.opponentName).toBe(renamed!.name);
+    const names = (await env.db.select().from(leagueTeams).where(eq(leagueTeams.userId, userId))).map((r) => r.name);
+    expect(new Set(names).size).toBe(29);
+    expect(await shortenTeamNames(env.db)).toBe(0);
   });
 });

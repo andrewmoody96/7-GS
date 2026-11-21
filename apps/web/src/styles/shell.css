@@ -1334,30 +1334,136 @@
 
 /* ── Standings ──────────────────────────────────────────────────────────── */
 
-.standings + .standings {
-  margin-top: 12px;
+.placement {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.standings__race {
-  margin: 0 0 12px;
+.placement__chip {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
-.standings__race.is-champion {
+.placement__chip.is-champion {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.placement__label {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.placement__value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
   font-weight: 700;
+}
+
+.conference {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.conference__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.conference__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.conference__tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.conference__race > summary {
+  cursor: pointer;
+  padding: 4px 2px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.conference__race[open] > summary {
+  margin-bottom: 8px;
+}
+
+/* A card never grows past the screen: the table fits inside it. */
+.standings {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.standings__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.standings__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.standings__note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .standings__table {
   width: 100%;
   margin-top: 8px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
   font-size: 0.875rem;
 }
 
+.standings__table col.standings__num {
+  width: 2.3em;
+}
+
+.standings__table col.standings__num:last-child {
+  width: 2.8em;
+}
+
+.standings__table col.standings__pct {
+  width: 3.3em;
+}
+
 .standings__table th,
 .standings__table td {
-  padding: 6px 4px;
+  padding: 7px 0 7px 6px;
   text-align: right;
+  letter-spacing: 0.02em;
   border-top: 1px solid var(--border);
 }
 
@@ -1365,36 +1471,38 @@
   border-top: 0;
   font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .standings__table .standings__team {
+  padding-left: 0;
   text-align: left;
   font-weight: 500;
 }
 
-.standings__table tbody .standings__team {
+.standings__teamcell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
 }
 
 .standings__name {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  /* A long name wraps to a second line rather than losing its end. */
+  overflow-wrap: anywhere;
 }
 
 .standings__mark {
   flex: none;
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
   font-size: 0.6rem;
   font-weight: 800;

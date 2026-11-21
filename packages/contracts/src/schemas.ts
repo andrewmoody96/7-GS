@@ -484,7 +484,7 @@ export const Season = z.object({
   currentWinStreak: Count,
   longestWinStreak: Count,
   /** Once the season's play is over: first in the division / league standings. null before. */
-  titles: z.object({ division: z.boolean(), league: z.boolean() }).nullable(),
+  titles: z.object({ division: z.boolean(), conference: z.boolean() }).nullable(),
 });
 
 export const SeasonPatch = z.object({ winGoal: z.number().int().min(1).max(MAX_WIN_GOAL) });
@@ -539,24 +539,26 @@ export const StandingsRow = z.object({
   gamesBack: z.number().min(0),
   divWins: Count,
   divLosses: Count,
-  leagueWins: Count,
-  leagueLosses: Count,
+  conferenceWins: Count,
+  conferenceLosses: Count,
   runDiff: z.number().int(),
 });
 
-/** A season's standings: two leagues of three divisions, dealt for that season. */
+/** A season's standings: two conferences of three divisions, dealt for that season. */
 export const Standings = z.object({
   seasonId: Id,
   seasonNumber: z.number().int().min(1),
   /** Every game in: the titles are decided. */
   complete: z.boolean(),
-  titles: z.object({ division: z.boolean(), league: z.boolean() }).nullable(),
-  leagues: z.array(
+  titles: z.object({ division: z.boolean(), conference: z.boolean() }).nullable(),
+  conferences: z.array(
     z.object({
       name: z.string(),
-      /** The player's league. */
+      /** Its short form, for division names: "EBC" (EBC Central). */
+      abbreviation: z.string(),
+      /** The player's conference. */
       yours: z.boolean(),
-      /** All 15 teams, best first (the league title race). */
+      /** All 15 teams, best first (the conference title race). */
       rows: z.array(StandingsRow),
       divisions: z.array(z.object({ name: z.string(), yours: z.boolean(), rows: z.array(StandingsRow) })),
     }),
@@ -581,7 +583,7 @@ export const Career = z.object({
   longestWinStreak: Count,
   /** Seasons finished first in the division / the league. */
   divisionTitles: Count,
-  leagueTitles: Count,
+  conferenceTitles: Count,
   bestSeason: z
     .object({ number: z.number().int().min(1), wins: Count, losses: Count, winPct: z.number().min(0).max(1) })
     .nullable(),

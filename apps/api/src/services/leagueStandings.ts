@@ -7,7 +7,8 @@ import type { StandingsDto, StandingsRowDto } from '@7gs/contracts';
 import {
   diffDays,
   DIVISION_NAMES,
-  LEAGUE_NAMES,
+  CONFERENCE_ABBREVIATIONS,
+  CONFERENCE_NAMES,
   leagueSeedFor,
   scoreline,
   seasonStandings,
@@ -54,7 +55,7 @@ export async function computeStandings(tx: Db, user: Pick<UserRow, 'id' | 'final
 }
 
 /** A finished season's titles (null while it's still being played). */
-export async function seasonTitles(tx: Db, season: SeasonRow): Promise<{ division: boolean; league: boolean } | null> {
+export async function seasonTitles(tx: Db, season: SeasonRow): Promise<{ division: boolean; conference: boolean } | null> {
   if (season.status !== 'offseason' && season.status !== 'complete') return null;
   const [user] = await tx.select().from(users).where(eq(users.id, season.userId));
   if (!user) return null;
@@ -77,22 +78,23 @@ export async function standingsView(tx: Db, user: UserRow, season: SeasonRow): P
       gamesBack: r.gamesBack,
       divWins: r.divWins,
       divLosses: r.divLosses,
-      leagueWins: r.leagueWins,
-      leagueLosses: r.leagueLosses,
+      conferenceWins: r.conferenceWins,
+      conferenceLosses: r.conferenceLosses,
       runDiff: r.runDiff,
     };
   };
-  const myLeague = s.alignment.leagueOf(YOU);
+  const myConference = s.alignment.conferenceOf(YOU);
   const myDivision = s.alignment.divisionOf(YOU);
   return {
     seasonId: season.id,
     seasonNumber: season.number,
     complete: s.complete,
     titles: s.titles,
-    leagues: [0, 1].map((lg) => ({
-      name: LEAGUE_NAMES[lg]!,
-      yours: lg === myLeague,
-      rows: s.leagues[lg]!.map(row),
+    conferences: [0, 1].map((lg) => ({
+      name: CONFERENCE_NAMES[lg]!,
+      abbreviation: CONFERENCE_ABBREVIATIONS[lg]!,
+      yours: lg === myConference,
+      rows: s.conferences[lg]!.map(row),
       divisions: [0, 1, 2].map((d) => {
         const index = lg * 3 + d;
         return { name: DIVISION_NAMES[d]!, yours: index === myDivision, rows: s.divisions[index]!.map(row) };

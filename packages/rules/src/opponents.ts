@@ -41,12 +41,12 @@ const NICKNAMES: Record<string, readonly string[]> = {
   G: ['Goof-Offs', 'Groggies', 'Get-Arounders', 'Grumblers'],
   H: ['Hibernators', 'Hesitators', 'Homebodies', 'Hammocks'],
   I: ['Idlers', 'Idle Hands', 'Indecisives', 'In-a-Minutes'],
-  J: ['Just-a-Minutes', 'Jammies', 'Johnny-Come-Latelies', 'Junk Drawers'],
+  J: ['Just-a-Minutes', 'Jammies', 'Junk Drawers', 'Jet Laggers'],
   K: ['Kickbacks', 'Kick-the-Cans', 'Kettle Watchers', 'Kill-Times'],
   L: ['Last Minutemen', 'Lazies', 'Loafers', 'Loungers', 'Layabouts', 'Latecomers'],
   M: ['Mañanas', 'Meanderers', 'Moseyers', 'Mopers'],
   N: ['Nappers', 'Nightcaps', 'Not-Todays', 'Nodders'],
-  O: ['Oversleepers', 'One-More-Episodes', 'Off-Days', 'Ottomans'],
+  O: ['Oversleepers', 'Old Habits', 'Off-Days', 'Ottomans'],
   P: ['Procrastinators', 'Pajamas', 'Ponderers', 'Putter-Offers'],
   Q: ['Quiet Quitters', 'Quick Breaks', 'Quilts'],
   R: ['Reschedulers', 'Recliners', 'Remotes', 'Rerunners'],
@@ -55,6 +55,9 @@ const NICKNAMES: Record<string, readonly string[]> = {
   W: ['Wafflers', 'Wait-and-Sees', 'Wanderers', 'Whenevers'],
   Y: ['Yawners', 'Yesterdays', 'Yeah-Laters', 'Yo-Yos'],
 };
+
+/** The longest a team name may be, so it fits a standings row on a phone. */
+export const TEAM_NAME_MAX = 23;
 
 /** Every town, in a fixed order. */
 export const OPPONENT_TOWNS: readonly string[] = Object.values(TOWNS).flat();
@@ -131,7 +134,7 @@ function pick<T>(list: readonly T[], random: () => number): T {
 /** Up to three letters for a badge, from a team name: "Litchfield Last Minutemen" → "LLM". */
 export function opponentAbbreviation(name: string): string {
   return name
-    .split(/[\s-]+/)
+    .split(/\s+/)
     .filter((word) => /^\p{L}/u.test(word))
     .map((word) => word[0]!.toUpperCase())
     .join('')
@@ -164,11 +167,12 @@ export function generateOpponent(seed: number, played: Iterable<string> = []): O
 
 // ── Leagues (v1.3) ──────────────────────────────────────────────────────────
 //
-// Each player has their own league of 29 teams; they're the 30th. Every season the 30 are
-// dealt into two leagues of three five-team divisions, like MLB, and every team plays 84
-// games. The player's 12 series: their 4 division rivals, 5 teams from the rest of their
-// league and 3 from the other one (MLB's balanced schedule, scaled), choosing teams they
-// haven't faced in longest first. The other teams play each other every week too, their
+// Each player has their own league of 29 teams; they're the 30th. The hierarchy is league,
+// conferences, divisions, teams: every season the 30 are dealt into two conferences of three
+// five-team divisions, like MLB, and every team plays 84 games. The player's 12 series:
+// their 4 division rivals, 5 teams from the rest of their conference and 3 from the other
+// conference (MLB's balanced schedule, scaled), choosing teams they haven't faced in longest
+// first. The other teams play each other every week too, their
 // results drawn from a strength each team gets for the season, so the standings are a
 // real race. No playoffs: titles go to the best regular-season record.
 
@@ -182,8 +186,10 @@ export const DIVISION_SIZE = 5;
 export const SCHEDULE_TIERS = { division: 4, regular: 5, irregular: 3 } as const;
 export type OpponentTier = keyof typeof SCHEDULE_TIERS;
 
-/** The two leagues and their divisions, as shown in standings. */
-export const LEAGUE_NAMES = ['Early Bird League', 'Night Owl League'] as const;
+/** The two conferences and their divisions, as shown in standings. */
+export const CONFERENCE_NAMES = ['Early Bird Conference', 'Night Owl Conference'] as const;
+/** Short forms for the division names: "EBC Central". */
+export const CONFERENCE_ABBREVIATIONS = ['EBC', 'NOC'] as const;
 export const DIVISION_NAMES = ['East', 'Central', 'West'] as const;
 
 export interface LeagueTeam {
@@ -222,7 +228,9 @@ export function generateLeague(seed: number): LeagueTeam[] {
   const teams: LeagueTeam[] = [];
   for (const city of towns) {
     if (teams.length === LEAGUE_SIZE) break;
-    const options = (NICKNAMES[city[0]!.toUpperCase()] ?? []).filter((n) => !usedNicknames.has(n));
+    const options = (NICKNAMES[city[0]!.toUpperCase()] ?? []).filter(
+      (n) => !usedNicknames.has(n) && `${city} ${n}`.length <= TEAM_NAME_MAX,
+    );
     if (options.length === 0) continue;
     const mascot = pick(options, random);
     usedNicknames.add(mascot);
@@ -238,14 +246,46 @@ export function generateLeague(seed: number): LeagueTeam[] {
   return teams;
 }
 
+/** A team name that's too long, or uses a nickname that's been retired. */
+export function teamNameNeedsReplacing(name: string): boolean {
+  if (name.length > TEAM_NAME_MAX) return true;
+  const town = OPPONENT_TOWNS.find((t) => name.startsWith(`${t} `));
+  const mascot = town ? name.slice(town.length + 1) : null;
+  return mascot === null || !(NICKNAMES[town![0]!.toUpperCase()] ?? []).includes(mascot);
+}
+
+/**
+ * A new name for one team in a league: a town and nickname no other team in it uses, that
+ * fits TEAM_NAME_MAX. Same first letter as ever.
+ */
+export function replacementTeamName(others: readonly string[], seed: number): string {
+  const random = mulberry32(seed);
+  const usedTowns = new Set<string>();
+  const usedNicknames = new Set<string>();
+  for (const name of others) {
+    const town = OPPONENT_TOWNS.find((t) => name.startsWith(`${t} `));
+    if (!town) continue;
+    usedTowns.add(town);
+    usedNicknames.add(name.slice(town.length + 1));
+  }
+  for (const city of shuffle(OPPONENT_TOWNS, random)) {
+    if (usedTowns.has(city)) continue;
+    const options = (NICKNAMES[city[0]!.toUpperCase()] ?? []).filter(
+      (n) => !usedNicknames.has(n) && `${city} ${n}`.length <= TEAM_NAME_MAX,
+    );
+    if (options.length > 0) return `${city} ${pick(options, random)}`;
+  }
+  return pick(OPPONENT_TOWNS.filter((t) => !usedTowns.has(t)), random);
+}
+
 /** A season's alignment: six divisions of five team ids (0–2 one league, 3–5 the other). */
 export interface SeasonAlignment {
   divisions: number[][];
   divisionOf: (team: number) => number;
-  leagueOf: (team: number) => 0 | 1;
+  conferenceOf: (team: number) => 0 | 1;
 }
 
-/** The season's two leagues and six divisions, dealt again every season. */
+/** The season's two conferences and six divisions, dealt again every season. */
 export function seasonAlignment(leagueSeed: number, seasonNumber: number): SeasonAlignment {
   const random = mulberry32(hashSeed(`${leagueSeed}:align:${seasonNumber}`));
   const ids = shuffle(
@@ -258,7 +298,7 @@ export function seasonAlignment(leagueSeed: number, seasonNumber: number): Seaso
   return {
     divisions,
     divisionOf: (team) => division.get(team)!,
-    leagueOf: (team) => (division.get(team)! < 3 ? 0 : 1),
+    conferenceOf: (team) => (division.get(team)! < 3 ? 0 : 1),
   };
 }
 
@@ -281,7 +321,7 @@ function seasonPlan(leagueSeed: number, seasonNumber: number): { list: Scheduled
   const random = mulberry32(hashSeed(`${leagueSeed}:schedule:${seasonNumber}`));
   const align = seasonAlignment(leagueSeed, seasonNumber);
   const mine = align.divisionOf(YOU);
-  const myLeague = align.leagueOf(YOU);
+  const myConference = align.conferenceOf(YOU);
   const others = Array.from({ length: LEAGUE_SIZE }, (_, i) => i);
   const rivals = align.divisions[mine]!.filter((t) => t !== YOU);
   const staleFirst = (teams: number[], count: number) =>
@@ -289,11 +329,11 @@ function seasonPlan(leagueSeed: number, seasonNumber: number): { list: Scheduled
       .sort((a, b) => (before.lastSeen.get(a) ?? 0) - (before.lastSeen.get(b) ?? 0))
       .slice(0, count);
   const regular = staleFirst(
-    others.filter((t) => align.leagueOf(t) === myLeague && align.divisionOf(t) !== mine),
+    others.filter((t) => align.conferenceOf(t) === myConference && align.divisionOf(t) !== mine),
     SCHEDULE_TIERS.regular,
   );
   const irregular = staleFirst(
-    others.filter((t) => align.leagueOf(t) !== myLeague),
+    others.filter((t) => align.conferenceOf(t) !== myConference),
     SCHEDULE_TIERS.irregular,
   );
   const list = shuffle(
@@ -325,7 +365,7 @@ export function seasonSchedule(leagueSeed: number, seasonNumber: number): Schedu
 
 /**
  * Which league team a series is against (`seriesNumber` 1–12). A Head Start week (series 0)
- * gets a team from the other league that isn't on the season's schedule.
+ * gets a team from the other conference that isn't on the season's schedule.
  */
 export function scheduledOpponent(leagueSeed: number, seasonNumber: number, seriesNumber: number): ScheduledOpponent {
   const list = seasonSchedule(leagueSeed, seasonNumber);
@@ -333,7 +373,7 @@ export function scheduledOpponent(leagueSeed: number, seasonNumber: number, seri
   const align = seasonAlignment(leagueSeed, seasonNumber);
   const onSchedule = new Set(list.map((x) => x.slot));
   const slot = Array.from({ length: LEAGUE_SIZE }, (_, i) => i).find(
-    (t) => align.leagueOf(t) !== align.leagueOf(YOU) && !onSchedule.has(t),
+    (t) => align.conferenceOf(t) !== align.conferenceOf(YOU) && !onSchedule.has(t),
   )!;
   return { slot, tier: 'irregular' };
 }
@@ -358,8 +398,8 @@ export interface StandingsRow {
   losses: number;
   divWins: number;
   divLosses: number;
-  leagueWins: number;
-  leagueLosses: number;
+  conferenceWins: number;
+  conferenceLosses: number;
   runDiff: number;
   /** Behind the leader of the table it's shown in. */
   gamesBack: number;
@@ -370,11 +410,11 @@ export interface SeasonStandings {
   /** Each division's rows, best first. */
   divisions: StandingsRow[][];
   /** Each league's 15 rows, best first. */
-  leagues: StandingsRow[][];
+  conferences: StandingsRow[][];
   /** Every game of the season is in. */
   complete: boolean;
   /** Once complete: whether the player finished first in their division / league. */
-  titles: { division: boolean; league: boolean } | null;
+  titles: { division: boolean; conference: boolean } | null;
 }
 
 const GAMES_PER_TEAM = 84;
@@ -393,7 +433,7 @@ const pct = (w: number, l: number) => (w + l === 0 ? 0 : w / (w + l));
 /**
  * A season's standings so far. `daysSettled` (0–84) is how many of the season's days have
  * gone final: the other teams' games through then count, and the player's decided games.
- * Ties: overall record, then record in the division, then in the league, then run
+ * Ties: overall record, then record in the division, then in the conference, then run
  * differential (no head-to-head).
  */
 export function seasonStandings(leagueSeed: number, seasonNumber: number, games: readonly StandingsGame[], daysSettled: number): SeasonStandings {
@@ -406,8 +446,8 @@ export function seasonStandings(leagueSeed: number, seasonNumber: number, games:
     losses: 0,
     divWins: 0,
     divLosses: 0,
-    leagueWins: 0,
-    leagueLosses: 0,
+    conferenceWins: 0,
+    conferenceLosses: 0,
     runDiff: 0,
     gamesBack: 0,
   }));
@@ -422,9 +462,9 @@ export function seasonStandings(leagueSeed: number, seasonNumber: number, games:
       w.divWins++;
       l.divLosses++;
     }
-    if (alignment.leagueOf(winner) === alignment.leagueOf(loser)) {
-      w.leagueWins++;
-      l.leagueLosses++;
+    if (alignment.conferenceOf(winner) === alignment.conferenceOf(loser)) {
+      w.conferenceWins++;
+      l.conferenceLosses++;
     }
   };
 
@@ -466,7 +506,7 @@ export function seasonStandings(leagueSeed: number, seasonNumber: number, games:
       (x, y) =>
         pct(y.wins, y.losses) - pct(x.wins, x.losses) ||
         pct(y.divWins, y.divLosses) - pct(x.divWins, x.divLosses) ||
-        pct(y.leagueWins, y.leagueLosses) - pct(x.leagueWins, x.leagueLosses) ||
+        pct(y.conferenceWins, y.conferenceLosses) - pct(x.conferenceWins, x.conferenceLosses) ||
         y.runDiff - x.runDiff ||
         x.team - y.team,
     );
@@ -475,15 +515,15 @@ export function seasonStandings(leagueSeed: number, seasonNumber: number, games:
     return list.map((r) => ({ ...r, gamesBack: (leader.wins - r.wins + (r.losses - leader.losses)) / 2 }));
   };
   const divisions = alignment.divisions.map((teams) => withGamesBack(order(teams.map((t) => rows[t]!))));
-  const leagues = [0, 1].map((lg) => withGamesBack(order(rows.filter((r) => alignment.leagueOf(r.team) === lg))));
+  const conferences = [0, 1].map((lg) => withGamesBack(order(rows.filter((r) => alignment.conferenceOf(r.team) === lg))));
 
   const playerDone = games.filter((g) => g.seriesNumber >= 1 && g.seriesNumber <= schedule.length).length >= GAMES_PER_TEAM;
   const complete = days >= GAMES_PER_TEAM && playerDone;
   const titles = complete
     ? {
         division: divisions[alignment.divisionOf(YOU)]![0]!.team === YOU,
-        league: leagues[alignment.leagueOf(YOU)]![0]!.team === YOU,
+        conference: conferences[alignment.conferenceOf(YOU)]![0]!.team === YOU,
       }
     : null;
-  return { alignment, divisions, leagues, complete, titles };
+  return { alignment, divisions, conferences, complete, titles };
 }

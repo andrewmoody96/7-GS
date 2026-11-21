@@ -235,7 +235,7 @@ function badgesStat(count: number | null): StatItem {
 function titleStats(c: CareerDto | undefined): StatItem[] {
   return [
     { label: 'Division titles', value: c ? String(c.divisionTitles) : '–' },
-    { label: 'League titles', value: c ? String(c.leagueTitles) : '–' },
+    { label: 'Conference titles', value: c ? String(c.conferenceTitles) : '–' },
   ];
 }
 
@@ -246,11 +246,11 @@ function StandingsLine({ seasonId }: { seasonId: string }) {
   const standings = useStandingsQuery(seasonId);
   let text = 'Standings';
   if (standings.data) {
-    const league = standings.data.leagues.find((l) => l.yours)!;
-    const division = league.divisions.find((d) => d.yours)!;
+    const conference = standings.data.conferences.find((l) => l.yours)!;
+    const division = conference.divisions.find((d) => d.yours)!;
     const place = division.rows.findIndex((r) => r.you) + 1;
     const me = division.rows[place - 1]!;
-    const where = `${league.name} ${division.name}`;
+    const where = `${conference.abbreviation} ${division.name}`;
     const played = division.rows.some((r) => r.wins + r.losses > 0);
     text = !played
       ? `${where} · Standings`
@@ -443,9 +443,9 @@ function SeasonHistory({ season: s, defaultOpen }: { season: SeasonDto; defaultO
             {STATUS_WORD[s.status]} · {formatRange(s.startDate, s.playEndDate)} · {vocab.terms.seriesRecord} {s.seriesWon}–{s.seriesLost}
             {s.winGoal !== null ? ` · Goal ${s.winGoal}` : ''}
           </span>
-          {s.titles?.division || s.titles?.league ? (
+          {s.titles?.division || s.titles?.conference ? (
             <span className="seasonhist__titles">
-              🏆 {[s.titles.division ? 'Division champions' : null, s.titles.league ? 'League champions' : null].filter(Boolean).join(' · ')}
+              🏆 {[s.titles.division ? 'Division champions' : null, s.titles.conference ? 'Conference champions' : null].filter(Boolean).join(' · ')}
             </span>
           ) : null}
         </summary>

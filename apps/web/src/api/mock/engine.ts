@@ -93,7 +93,8 @@ import {
   DIVISION_NAMES,
   diffDays as diffLocalDays,
   generateLeague,
-  LEAGUE_NAMES,
+  CONFERENCE_ABBREVIATIONS,
+  CONFERENCE_NAMES,
   leagueSeedFor,
   scheduledOpponent,
   scoreline,
@@ -241,14 +242,14 @@ function ensureSeason(world: UserWorld, env: Env, number: number): SeasonRow {
   return season;
 }
 
-const leagues = new Map<string, LeagueTeam[]>();
+const conferences = new Map<string, LeagueTeam[]>();
 
 /** The demo player's league (rules generateLeague): drawn from their id, so it never changes. */
-function leagueOf(userId: string): LeagueTeam[] {
-  let league = leagues.get(userId);
+function leagueTeamsOf(userId: string): LeagueTeam[] {
+  let league = conferences.get(userId);
   if (!league) {
     league = generateLeague(leagueSeedFor(userId));
-    leagues.set(userId, league);
+    conferences.set(userId, league);
   }
   return league;
 }
@@ -257,7 +258,7 @@ function ensureSeries(world: UserWorld, env: Env, seasonNumber: number, number: 
   let series = world.series.find((s) => s.seasonNumber === seasonNumber && s.number === number);
   if (series) return series;
   // From the player's league, on the season's schedule, as the API does (services/league).
-  const opp = leagueOf(world.user.id)[scheduledOpponent(leagueSeedFor(world.user.id), seasonNumber, number).slot]!;
+  const opp = leagueTeamsOf(world.user.id)[scheduledOpponent(leagueSeedFor(world.user.id), seasonNumber, number).slot]!;
   series = {
     id: env.ids(),
     seasonNumber,
@@ -1000,7 +1001,7 @@ function computeStandings(world: UserWorld, season: SeasonRow, now: Date): Seaso
 export function standings(world: UserWorld, seasonId: string, now: Date): StandingsDto {
   const season = seasonById(world, seasonId);
   const s = computeStandings(world, season, now);
-  const league = leagueOf(world.user.id);
+  const league = leagueTeamsOf(world.user.id);
   const row = (r: StandingsRow): StandingsRowDto => {
     const you = r.team === YOU;
     const played = r.wins + r.losses;
@@ -1014,22 +1015,23 @@ export function standings(world: UserWorld, seasonId: string, now: Date): Standi
       gamesBack: r.gamesBack,
       divWins: r.divWins,
       divLosses: r.divLosses,
-      leagueWins: r.leagueWins,
-      leagueLosses: r.leagueLosses,
+      conferenceWins: r.conferenceWins,
+      conferenceLosses: r.conferenceLosses,
       runDiff: r.runDiff,
     };
   };
-  const myLeague = s.alignment.leagueOf(YOU);
+  const myConference = s.alignment.conferenceOf(YOU);
   const myDivision = s.alignment.divisionOf(YOU);
   return {
     seasonId: season.id,
     seasonNumber: season.number,
     complete: s.complete,
     titles: s.titles,
-    leagues: [0, 1].map((lg) => ({
-      name: LEAGUE_NAMES[lg]!,
-      yours: lg === myLeague,
-      rows: s.leagues[lg]!.map(row),
+    conferences: [0, 1].map((lg) => ({
+      name: CONFERENCE_NAMES[lg]!,
+      abbreviation: CONFERENCE_ABBREVIATIONS[lg]!,
+      yours: lg === myConference,
+      rows: s.conferences[lg]!.map(row),
       divisions: [0, 1, 2].map((d) => ({
         name: DIVISION_NAMES[d]!,
         yours: lg * 3 + d === myDivision,
@@ -1080,7 +1082,7 @@ export function career(world: UserWorld, now: Date): CareerDto {
     currentWinStreak: currentWinStreak(results),
     longestWinStreak: longestWinStreak(results),
     divisionTitles: rows.filter((r) => r.titles?.division).length,
-    leagueTitles: rows.filter((r) => r.titles?.league).length,
+    conferenceTitles: rows.filter((r) => r.titles?.conference).length,
     bestSeason: best ? { number: best.number, wins: best.wins, losses: best.losses, winPct: best.winPct } : null,
   };
 }
