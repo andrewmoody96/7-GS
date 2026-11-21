@@ -444,8 +444,10 @@ describe('mock backend editing and deleting tasks mid-week', () => {
     const { api } = setup('midseason');
     const today = (await api.call('getToday')).games[0]!;
     const entry = today.entries.find((e) => e.role === 'lineup')!;
-    const edited = await api.call('updateTask', { params: { taskId: entry.taskId }, body: { points: entry.points + 3, name: 'Renamed' } });
-    expect(edited).toMatchObject({ points: entry.points + 3, lockedPoints: entry.points });
+    // A different worth, within the 4-run cap.
+    const changed = entry.points === 4 ? 1 : 4;
+    const edited = await api.call('updateTask', { params: { taskId: entry.taskId }, body: { points: changed, name: 'Renamed' } });
+    expect(edited).toMatchObject({ points: changed, lockedPoints: entry.points });
     const after = (await api.call('getToday')).games[0]!;
     expect(after.entries.find((e) => e.id === entry.id)).toMatchObject({ points: entry.points, taskName: 'Renamed' });
     expect(after.threshold).toBe(today.threshold);

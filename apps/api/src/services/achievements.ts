@@ -7,7 +7,7 @@
 
 import type { AchievementsDto } from '@7gs/contracts';
 import { achievementStatsFromHistory, localDateOf, type LocalDate } from '@7gs/rules';
-import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { dayTemplates, dayTemplateTasks, games, lineupEntries, seasons, series, userAvatars, userOpenDays, type UserRow } from '../db/schema';
 
@@ -22,13 +22,14 @@ export async function achievements(tx: Db, user: UserRow): Promise<AchievementsD
       result: games.result,
       resultDetail: games.resultDetail,
       tasksDone: games.tasksDone,
+      threshold: games.threshold,
     })
     .from(games)
     .where(and(eq(games.userId, user.id), eq(games.status, 'final')));
 
   // A game is all done when every lineup task in it was checked off.
   const open = new Set<string>();
-  const withLineup = new Set<string>();
+  const lineupSize = new Map<string, number>();
   if (finals.length > 0) {
     const entries = await tx
       .select({ gameId: lineupEntries.gameId, completedAt: lineupEntries.completedClientAt })
@@ -43,15 +44,17 @@ export async function achievements(tx: Db, user: UserRow): Promise<AchievementsD
         ),
       );
     for (const e of entries) {
-      withLineup.add(e.gameId);
+      lineupSize.set(e.gameId, (lineupSize.get(e.gameId) ?? 0) + 1);
       if (e.completedAt === null) open.add(e.gameId);
     }
   }
 
-  const closed = await tx
-    .select({ id: series.id, result: series.result, wins: series.wins, ironMan: series.ironMan })
+  // A series counts the moment it's decided (the 4th W or L), as it does in the season's
+  // series record; Iron Man waits for the week to finish (series.iron_man is null until then).
+  const decided = await tx
+    .select({ id: series.id, startDate: series.startDate, result: series.result, wins: series.wins, ironMan: series.ironMan })
     .from(series)
-    .where(and(eq(series.userId, user.id), isNotNull(series.closedAt)));
+    .where(and(eq(series.userId, user.id), or(isNotNull(series.result), isNotNull(series.closedAt))));
   const seasonRows = await tx.select().from(seasons).where(eq(seasons.userId, user.id));
 
   const opened = await tx.select({ day: userOpenDays.day }).from(userOpenDays).where(eq(userOpenDays.userId, user.id));
@@ -80,9 +83,11 @@ export async function achievements(tx: Db, user: UserRow): Promise<AchievementsD
       result: g.result === 'W' || g.result === 'L' ? g.result : null,
       rally: g.resultDetail === 'rally',
       tasksDone: g.tasksDone,
-      allDone: withLineup.has(g.id) && !open.has(g.id),
+      allDone: (lineupSize.get(g.id) ?? 0) > 0 && !open.has(g.id),
+      threshold: g.threshold ?? 0,
+      lineupSize: lineupSize.get(g.id) ?? 0,
     })),
-    series: closed.map((s) => ({ id: s.id, result: s.result, wins: s.wins, ironMan: s.ironMan === true })),
+    series: decided.map((s) => ({ id: s.id, startDate: s.startDate, result: s.result, wins: s.wins, ironMan: s.ironMan })),
     seasons: seasonRows.map((s) => ({
       wins: s.wins,
       losses: s.losses,

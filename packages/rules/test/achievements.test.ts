@@ -40,7 +40,16 @@ describe('achievement catalog', () => {
 describe('simulating days', () => {
   it('earns the first-day badges', () => {
     const sim = play(newSim(), [P]);
-    expect(earned(sim)).toEqual(['first-pitch', 'on-the-board', 'perfect-game']);
+    expect(earned(sim)).toEqual(['first-pitch', 'on-the-board']);
+  });
+
+  it('needs 5 perfect games for Perfect Game, 15 for Sharp', () => {
+    const four = play(newSim(), [P, P, P, P]);
+    expect(earned(four)).not.toContain('perfect-game');
+    const five = play(four, [P]);
+    expect(earned(five)).toContain('perfect-game');
+    expect(earned(five)).not.toContain('sharp');
+    expect(earned(play(five, Array<SimDay>(10).fill(P)))).toContain('sharp');
   });
 
   it('counts a week of check-offs, and an empty day breaks it', () => {
@@ -54,11 +63,11 @@ describe('simulating days', () => {
 
   it('wins a series, a sweep, a reverse sweep and a Game 7', () => {
     const sweep = play(newSim(), [W, W, W, W, W, W, W]);
-    expect(sweep.stats).toMatchObject({ seriesWon: 1, sweeps: 1, ironMans: 1, longestWinStreak: 7 });
+    expect(sweep.stats).toMatchObject({ seriesWon: 1, sweeps: 1, ironManWins: 1, longestIronManRun: 1, longestWinStreak: 7 });
     const reverse = play(newSim(), [L, L, L, W, W, W, W]);
     expect(reverse.stats).toMatchObject({ seriesWon: 1, reverseSweeps: 1, game7Wins: 1, sweeps: 0 });
     const lost = play(newSim(), [W, W, W, L, L, L, L]);
-    expect(lost.stats).toMatchObject({ seriesWon: 0, game7Wins: 0, bounceBacks: 0 });
+    expect(lost.stats).toMatchObject({ seriesWon: 0, game7Wins: 0, bounceBacks: 0, ironManWins: 0, longestIronManRun: 1 });
   });
 
   it('closes a season: winning, goal reached, perfect', () => {
@@ -93,6 +102,8 @@ describe('stats from history', () => {
     rally: false,
     tasksDone: result === null ? 0 : 3,
     allDone: false,
+    threshold: 6,
+    lineupSize: 4,
     ...more,
   });
   const base: AchievementHistory = { openDays: [], teamPhoto: false, defaultLineupsSet: 0, games: [], series: [], seasons: [] };
@@ -144,13 +155,44 @@ describe('stats from history', () => {
       ...base,
       games: [...sweep, ...reverse, ...lost, ...game7],
       series: [
-        { id: 's0', result: 'won', wins: 7, ironMan: true },
-        { id: 's1', result: 'won', wins: 4, ironMan: true },
-        { id: 's2', result: 'lost', wins: 3, ironMan: false },
-        { id: 's3', result: 'won', wins: 4, ironMan: true },
+        { id: 's0', startDate: day(0), result: 'won', wins: 7, ironMan: true },
+        { id: 's1', startDate: day(7), result: 'won', wins: 4, ironMan: true },
+        { id: 's2', startDate: day(14), result: 'lost', wins: 3, ironMan: false },
+        { id: 's3', startDate: day(21), result: 'won', wins: 4, ironMan: true },
       ],
     });
-    expect(s).toMatchObject({ seriesWon: 3, sweeps: 1, reverseSweeps: 1, game7Wins: 2, ironMans: 3 });
+    expect(s).toMatchObject({ seriesWon: 3, sweeps: 1, reverseSweeps: 1, game7Wins: 2, ironManWins: 3, longestIronManRun: 2 });
+  });
+
+  it('runs Iron Man weeks in order, and a week still being played neither adds nor breaks the run', () => {
+    const iron = (n: number, ironMan: boolean | null, result: 'won' | 'lost' | null = 'won') => ({
+      id: `s${n}`,
+      startDate: day(n * 7),
+      result,
+      wins: result === 'won' ? 4 : 2,
+      ironMan,
+    });
+    const s = achievementStatsFromHistory({
+      ...base,
+      // Out of order on purpose; week 4 is decided but still being played.
+      series: [iron(3, true, 'lost'), iron(0, true), iron(2, true), iron(1, true, 'lost'), iron(4, null)],
+    });
+    expect(s).toMatchObject({ longestIronManRun: 4, ironManWins: 2, seriesWon: 3 });
+    const broken = achievementStatsFromHistory({ ...base, series: [iron(0, true), iron(1, false), iron(2, true), iron(3, true), iron(4, true)] });
+    expect(broken.longestIronManRun).toBe(3);
+  });
+
+  it('only counts perfect games with 5+ runs to win and 3+ tasks', () => {
+    const s = achievementStatsFromHistory({
+      ...base,
+      games: [
+        game(0, 'W', { allDone: true, threshold: 5, lineupSize: 3 }), // counts
+        game(1, 'W', { allDone: true, threshold: 4, lineupSize: 5 }), // runs to win too low
+        game(2, 'W', { allDone: true, threshold: 8, lineupSize: 2 }), // two big tasks: too few
+        game(3, 'W', { allDone: false, threshold: 9, lineupSize: 6 }), // not all done
+      ],
+    });
+    expect(s).toMatchObject({ perfectGames: 1, bestPerfectInSeries: 1, wins: 4 });
   });
 
   it('counts a win goal when reached, and season results once the season is over', () => {

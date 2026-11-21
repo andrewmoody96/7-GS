@@ -178,13 +178,13 @@ export function TaskSheet({ task, today, onClose }: { task: TaskDto; today: Loca
           label="Worth"
           value={points}
           min={1}
-          max={LIMITS.pointsMax}
-          suffix={points === 1 ? 'run' : 'runs'}
+          max={LIMITS.taskPointsMax}
+          suffix={vocab.runs(points).replace(/^\d+ /, '')}
           onChange={setPoints}
           hint={
             task.lockedThrough && !retired
               ? `Days already under way (through ${weekdayShort(task.lockedThrough)}) keep ${vocab.runs(task.lockedPoints ?? task.points)}. A new value starts ${weekdayShort(addDays(task.lockedThrough, 1))}.`
-              : `Days you’ve already started keep the ${vocab.term.points.toLowerCase()} they were planned with.`
+              : `${vocab.taskMaxHint} Days you’ve already started keep the ${vocab.term.points.toLowerCase()} they were planned with.`
           }
         />
         {newPointsFrom(task) && !retired ? (

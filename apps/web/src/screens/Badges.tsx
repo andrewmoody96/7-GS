@@ -29,6 +29,11 @@ import { Sheet } from '../components/Sheet';
 import { LAB_PRESETS, setLabSim, useLabSim } from '../lab/achievementsLab';
 import { vocab } from '../vocab';
 
+/** A badge in the account's sport: its name, icon and wording (vocab.badges); what earns it is the same. */
+export function inSport(a: Achievement): Achievement {
+  return { ...a, ...vocab.badges[a.id] };
+}
+
 const earnedIds = (stats: AchievementStats) =>
   evaluateAchievements(stats)
     .filter((p) => p.earned)
@@ -65,7 +70,7 @@ export function NewBadgeNotices() {
     }
     if (seen) {
       const had = new Set(seen);
-      for (const a of ACHIEVEMENTS_BY_ID(now.filter((id) => !had.has(id)))) notify(`Badge earned: ${a.icon} ${a.name}. ${a.description}`, 'success');
+      for (const a of ACHIEVEMENTS_BY_ID(now.filter((id) => !had.has(id))).map(inSport)) notify(`Badge earned: ${a.icon} ${a.name}. ${a.description}`, 'success');
     }
     try {
       window.localStorage.setItem(seenKey(userId), JSON.stringify(now));
@@ -90,7 +95,8 @@ function Crumbs({ lab }: { lab?: boolean }) {
 }
 
 function BadgeCard({ progress: p }: { progress: AchievementProgress }) {
-  const { achievement: a, earned, current } = p;
+  const { earned, current } = p;
+  const a = inSport(p.achievement);
   return (
     <li className={`badgecard${earned ? ' is-earned' : ''}`}>
       <BadgeMedal achievement={a} earned={earned} />
@@ -185,15 +191,16 @@ const STAT_LABELS: Record<AchievementMetric, string> = {
   gamesPlayed: 'Games played',
   wins: 'Wins',
   longestWinStreak: 'Longest win streak',
-  perfectGames: 'Perfect games',
-  bestPerfectInSeries: 'Most perfect games in a series',
+  perfectGames: 'Perfect games (5+ runs to win, 3+ tasks)',
+  bestPerfectInSeries: 'Most of those in a series',
   bounceBacks: 'Wins right after a loss',
   rallyWins: 'Rally Cap wins',
   seriesWon: 'Series won',
   sweeps: 'Sweeps (7–0)',
   reverseSweeps: 'Series won from 0–3 down',
   game7Wins: 'Game 7 wins',
-  ironMans: 'Iron Man weeks',
+  ironManWins: 'Series won in Iron Man weeks',
+  longestIronManRun: 'Iron Man weeks in a row',
   winningSeasons: 'Winning seasons',
   goalsReached: 'Season goals reached',
   perfectSeasons: 'Perfect seasons',
@@ -351,7 +358,7 @@ export function AchievementsLabScreen() {
         }
       >
         <ul className="unlocks">
-          {unlocked.map((a) => (
+          {unlocked.map(inSport).map((a) => (
             <li key={a.id}>
               <BadgeMedal achievement={a} earned size={64} />
               <div>

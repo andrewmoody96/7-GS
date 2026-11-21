@@ -6,13 +6,14 @@ import { CHICAGO, createTasks, TestApp, useTestDb } from './helpers';
 const env = useTestDb();
 
 /**
- * Chicago user, sign-up Friday 2026-10-02. Every day: Gym (2) and Read must-hits, Walk and
- * Stretch. Runs to win: 3 + half of 2 = 4. Gym, Read and Walk win; all four is perfect.
+ * Chicago user, sign-up Friday 2026-10-02. Every day: Gym (3) and Read must-hits, Walk and
+ * Stretch. Runs to win: 4 + half of 2 = 5. Gym, Read and Walk win; all four is perfect
+ * (and counts for badges: 5+ runs to win, 3+ tasks).
  */
 async function setup(email: string) {
   const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
   const { token } = await t.signIn(email, CHICAGO);
-  const ids = await createTasks(t, token, [{ name: 'Gym', points: 2 }, { name: 'Read' }, { name: 'Walk' }, { name: 'Stretch' }]);
+  const ids = await createTasks(t, token, [{ name: 'Gym', points: 3 }, { name: 'Read' }, { name: 'Walk' }, { name: 'Stretch' }]);
   for (const weekday of [1, 2, 3, 4, 5, 6, 7]) {
     await t.ok('putStarter', {
       token,
@@ -77,13 +78,14 @@ describe('badges', () => {
       tasksDone: 4 + 4 + 3 + 3 * 4,
       longestCheckStreak: 7,
       seriesWon: 1,
-      ironMans: 1,
+      ironManWins: 1,
+      longestIronManRun: 1,
     });
     // Opened on sign-up day, each evening it played, and this morning: Oct 2 and Oct 5–12.
     expect(stats.daysOpened).toBe(9);
     expect(stats.longestOpenStreak).toBe(8);
     expect(earnedIds(stats)).toEqual(
-      expect.arrayContaining(['first-pitch', 'game-plan', 'on-the-board', 'perfect-game', 'on-a-roll', 'series-winner', 'hot-hand', 'regular', 'iron-man']),
+      expect.arrayContaining(['first-pitch', 'game-plan', 'on-the-board', 'on-a-roll', 'series-winner', 'hot-hand', 'regular', 'iron-man']),
     );
   });
 

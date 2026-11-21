@@ -108,7 +108,7 @@ function NewTaskInline({ onCreated }: { onCreated: (taskId: string) => void }) {
             <IconPlus /> Create
           </button>
         </div>
-        <Stepper label="Worth" value={points} min={1} max={LIMITS.pointsMax} suffix={points === 1 ? 'run' : 'runs'} onChange={setPoints} />
+        <Stepper label="Worth" value={points} min={1} max={LIMITS.taskPointsMax} suffix={vocab.runs(points).replace(/^\d+ /, '')} onChange={setPoints} hint={vocab.taskMaxHint} />
         <label className="radio">
           <input type="checkbox" checked={oneOff} onChange={(e) => setOneOff(e.target.checked)} />
           <span className="radio__label">{vocab.taskKind.one_off}: just this once, not a repeating habit</span>

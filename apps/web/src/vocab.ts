@@ -194,6 +194,13 @@ export interface Vocab {
   tabs: { today: string; series: string; team: string; addTask: string };
   /** "1 run", "3 runs". */
   runs: (n: number) => string;
+  /** Why a task tops out at LIMITS.taskPointsMax, in the sport's terms. */
+  taskMaxHint: string;
+  /**
+   * Badge wording that differs from the catalog (rules ACHIEVEMENTS, written for baseball),
+   * by badge id. What earns a badge never changes with the sport; only its words do.
+   */
+  badges: Record<string, { name?: string; icon?: string; description?: string }>;
   hits: (n: number) => string;
   gameLabel: (gameNumber: number) => string;
   seriesLabel: (status: SeriesStatus) => string;
@@ -434,6 +441,8 @@ export const baseball: Vocab = {
   },
   tabs: { today: 'Today', series: 'Series', team: 'Team', addTask: 'Add task' },
   runs: (n) => plural(n, 'run', 'runs'),
+  taskMaxHint: 'Up to 4 runs: no play scores more than a grand slam.',
+  badges: {},
   hits: (n) => plural(n, 'hit', 'hits'),
   gameLabel: (n) => `Game ${n}`,
   seriesLabel: (status) => status.label,
@@ -678,6 +687,19 @@ export const basketball: Vocab = overlay(baseball, {
     },
   },
   runs: (n) => plural(n, 'bucket', 'buckets'),
+  taskMaxHint: 'Up to 4 buckets: no play scores more than a four-point play.',
+  badges: {
+    'first-pitch': { name: 'Tip-Off', icon: '🏀' },
+    'perfect-game': { name: 'Flawless', description: 'Play 5 flawless games: every task done, with 5+ buckets to win and 3+ tasks.' },
+    sharp: { description: 'Play 15 flawless games (5+ buckets to win, 3+ tasks).' },
+    'locked-in': { description: 'Play 5 flawless games (5+ buckets to win, 3+ tasks) in one series.' },
+    precision: { description: 'Play 50 flawless games (5+ buckets to win, 3+ tasks).' },
+    'rally-believer': { name: 'Challenge Won', icon: '🚩', description: 'Turn a loss into a win with a Coach’s challenge.' },
+    'iron-man': { description: 'Win a series in a week played as scheduled: no Postponements, no Suspended games.' },
+    ironclad: { description: 'Play 4 Iron Man weeks in a row: a month with no Postponements or Suspended games.' },
+    'every-day-player': { name: 'Gym Rat' },
+    'iron-horse': { name: 'Never Missed a Practice' },
+  },
   hits: (n) => plural(n, 'make', 'makes'),
   resultDetail: {
     rally: 'Challenge W',
@@ -827,6 +849,19 @@ export const hockey: Vocab = overlay(baseball, {
     },
   },
   runs: (n) => plural(n, 'shot', 'shots'),
+  taskMaxHint: 'Up to 4 shots: bigger jobs are better split into two tasks.',
+  badges: {
+    'first-pitch': { name: 'Puck Drop', icon: '🏒' },
+    'perfect-game': { name: 'Shutout', icon: '🥅', description: 'Play 5 shutouts: every task done, with 5+ shots to win and 3+ tasks.' },
+    sharp: { description: 'Play 15 shutouts (5+ shots to win, 3+ tasks).' },
+    'locked-in': { description: 'Play 5 shutouts (5+ shots to win, 3+ tasks) in one series.' },
+    precision: { description: 'Play 50 shutouts (5+ shots to win, 3+ tasks).' },
+    'rally-believer': { name: 'Challenge Won', icon: '🚩', description: 'Turn a loss into a win with a Coach’s challenge.' },
+    'iron-man': { description: 'Win a series in a week played as scheduled: no Postponements, no Suspended games.' },
+    ironclad: { description: 'Play 4 Iron Man weeks in a row: a month with no Postponements or Suspended games.' },
+    'every-day-player': { name: 'Rink Rat' },
+    'iron-horse': { name: 'Never Missed a Shift' },
+  },
   hits: (n) => plural(n, 'shot', 'shots'),
   resultDetail: {
     rally: 'Challenge W',
