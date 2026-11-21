@@ -734,7 +734,7 @@ code {
   list-style: decimal;
   margin: 0;
   padding-left: 20px;
-  line-height: 1.5;
+  line-height: 1.75;
 }
 
 .installsteps li + li {
@@ -745,9 +745,9 @@ code {
 .installsteps__key {
   display: inline-grid;
   place-items: center;
-  width: 1.6em;
-  height: 1.6em;
-  vertical-align: -0.2em;
+  width: 1.45em;
+  height: 1.45em;
+  vertical-align: -0.125em;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface-2);
