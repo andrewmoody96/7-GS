@@ -456,15 +456,38 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 - When a task leaves a lineup, the batting order closes up (1, 2, 3), and substitutions
   stay paired in the box score.
 
-## 8. Opponents (generic teams)
+## 8. Opponents: your league
 
-- A new opponent each week: a real small town and a nickname for putting things off,
-  starting with the same letter, e.g. *Pontiac Procrastinators, Litchfield Last
-  Minutemen, Lincoln Lazies, Walla Walla Wafflers* (rules `generateOpponent`).
-- No town comes round twice until every town (about 130) has been played. Opponents from
-  before the small towns were renamed at the v1.2.1 deploy (`services/opponents`).
-- Each opponent has a color pair and a simple generated badge (initials from its name). No
-  real league marks, logos, or team names.
+- **Your own league of 29 teams** (you're the 30th, like MLB), drawn once and kept
+  (`league_teams`, rules `generateLeague`). Each is a real small town and a nickname for
+  putting things off, starting with the same letter: the *Pontiac Procrastinators,
+  Litchfield Last Minutemen, Walla Walla Wafflers*. Every town, nickname and color pair in
+  a league is different; badges show the initials. No real league marks, logos or names.
+- **Dealt again every season** into two leagues (the Early Bird League and the Night Owl
+  League) of three five-team divisions (East, Central, West) (rules `seasonAlignment`).
+- **Your 12 series** (rules `seasonSchedule`), MLB's balanced schedule scaled down:
+
+  | Tier | Who | Series |
+  |---|---|---|
+  | Division | your 4 rivals, each once | 4 |
+  | Regular | 5 of the 10 others in your league | 5 |
+  | Irregular | 3 of the 15 in the other league | 3 |
+
+  Teams you've faced longest ago come first, so all 29 come up within about a year.
+  Never the same team two weeks running. A Head Start week faces an irregular team that
+  isn't on the season's schedule.
+- **Standings** (rules `seasonStandings`): every team plays 84 games. Your games count as
+  you played them; the other teams play each other every week, each game drawn from a
+  strength every team gets for the season (a few run hot). A day's games count once it's
+  gone final.
+- **Titles, no playoffs:** the best record in your division when the season ends is the
+  division title; the best record in your league is the league title. Ties: overall
+  record, then record in the division, then in the league, then run differential (never
+  head-to-head). Winning the season is still just a winning record (§5); the titles reward
+  finishing ahead of everyone else.
+- Titles show under the team stats and in Team History, and every finished season has its
+  standings. At the v1.3 deploy every account got its league and every series it had was
+  renamed to it.
 
 ## 9. Core screens (PWA)
 

@@ -483,6 +483,8 @@ export const Season = z.object({
   displayDifferential: z.number().int(),
   currentWinStreak: Count,
   longestWinStreak: Count,
+  /** Once the season's play is over: first in the division / league standings. null before. */
+  titles: z.object({ division: z.boolean(), league: z.boolean() }).nullable(),
 });
 
 export const SeasonPatch = z.object({ winGoal: z.number().int().min(1).max(MAX_WIN_GOAL) });
@@ -523,6 +525,44 @@ export const AchievementStats = z.object({
 
 export const Achievements = z.object({ stats: AchievementStats });
 
+/** One team in a standings table. */
+export const StandingsRow = z.object({
+  /** The player's own team. */
+  you: z.boolean(),
+  name: z.string(),
+  /** null for the player (their badge is their team photo). */
+  colors: z.tuple([HexColor, HexColor]).nullable(),
+  wins: Count,
+  losses: Count,
+  winPct: z.number().min(0).max(1),
+  /** Behind the table's leader (half games show as .5). */
+  gamesBack: z.number().min(0),
+  divWins: Count,
+  divLosses: Count,
+  leagueWins: Count,
+  leagueLosses: Count,
+  runDiff: z.number().int(),
+});
+
+/** A season's standings: two leagues of three divisions, dealt for that season. */
+export const Standings = z.object({
+  seasonId: Id,
+  seasonNumber: z.number().int().min(1),
+  /** Every game in: the titles are decided. */
+  complete: z.boolean(),
+  titles: z.object({ division: z.boolean(), league: z.boolean() }).nullable(),
+  leagues: z.array(
+    z.object({
+      name: z.string(),
+      /** The player's league. */
+      yours: z.boolean(),
+      /** All 15 teams, best first (the league title race). */
+      rows: z.array(StandingsRow),
+      divisions: z.array(z.object({ name: z.string(), yours: z.boolean(), rows: z.array(StandingsRow) })),
+    }),
+  ),
+});
+
 export const Career = z.object({
   /** Seasons with at least one decided game. */
   seasonsPlayed: Count,
@@ -539,6 +579,9 @@ export const Career = z.object({
   /** Win streaks run on across Review Weeks here (they pause, never break). */
   currentWinStreak: Count,
   longestWinStreak: Count,
+  /** Seasons finished first in the division / the league. */
+  divisionTitles: Count,
+  leagueTitles: Count,
   bestSeason: z
     .object({ number: z.number().int().min(1), wins: Count, losses: Count, winPct: z.number().min(0).max(1) })
     .nullable(),

@@ -82,6 +82,7 @@ function SubPage({
 export function TeamScreen() {
   const season = useCurrentSeasonQuery();
   const me = useMeQuery();
+  const career = useCareerQuery();
   if (season.isPending) return <Loading label="Loading your team" />;
   if (season.isError) return <ErrorPanel error={season.error} onRetry={() => void season.refetch()} />;
   const s = season.data;
@@ -100,7 +101,7 @@ export function TeamScreen() {
           <AllowanceChips allowances={me.data?.allowances} />
         </div>
       </header>
-      {s && totals ? <Standings season={s} total={totals.total} /> : null}
+      {s && totals ? <Standings season={s} total={totals.total} extra={titleStats(career.data)} /> : null}
       <BadgesLink />
       <nav className="todo teamnav" aria-label={vocab.tabs.team}>
         <TeamLink to="/team/management" title={vocab.flavor.management} sub="This Week, Default Lineups and Injuries." />
@@ -221,9 +222,19 @@ function BadgesLink() {
   const count = useBadgeCount();
   return (
     <nav className="todo teamnav teamnav--badges" aria-label="Badges">
+      <TeamLink to="/team/standings" title="Standings" sub="Your division and league this season, and the title races." />
       <TeamLink to="/team/badges" title={count === null ? 'Badges' : `Badges: ${count}`} sub="Your collection, and what’s next to earn." />
     </nav>
   );
+}
+
+/** Championships across every season, for the team stats. */
+function titleStats(c: CareerDto | undefined): [string, string][] {
+  if (!c) return [];
+  return [
+    ['Division titles', String(c.divisionTitles)],
+    ['League titles', String(c.leagueTitles)],
+  ];
 }
 
 function TeamLink({ to, title, sub }: { to: string; title: string; sub: string }) {
@@ -353,6 +364,7 @@ function CareerCard({ career: c }: { career: CareerDto }) {
     [vocab.terms.longestWinStreak, String(c.longestWinStreak)],
     [vocab.terms.rallyWins, String(c.rallyWins)],
     [vocab.terms.runDifferential, signed(c.displayDifferential)],
+    ...titleStats(c),
   ];
   return (
     <section className="card career" aria-labelledby="career-title">
@@ -402,8 +414,18 @@ function SeasonHistory({ season: s, defaultOpen }: { season: SeasonDto; defaultO
             {STATUS_WORD[s.status]} · {formatRange(s.startDate, s.playEndDate)} · {vocab.terms.seriesRecord} {s.seriesWon}–{s.seriesLost}
             {s.winGoal !== null ? ` · Goal ${s.winGoal}` : ''}
           </span>
+          {s.titles?.division || s.titles?.league ? (
+            <span className="seasonhist__titles">
+              🏆 {[s.titles.division ? 'Division champions' : null, s.titles.league ? 'League champions' : null].filter(Boolean).join(' · ')}
+            </span>
+          ) : null}
         </summary>
         {series.isPending && open ? <p className="loading-line">Loading series…</p> : null}
+        {open ? (
+          <p className="seasonhist__standings">
+            <Link to={`/team/standings?season=${s.id}`}>Standings</Link>
+          </p>
+        ) : null}
         {series.data ? (
           <ol className="todo seasonhist__series">
             {series.data.map((x) => (

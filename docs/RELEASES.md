@@ -52,6 +52,8 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 
 ## History
 
+- **1.3.0-beta** (November 2026): your own league of 29 teams, divisions dealt every season,
+  standings, and division and league titles.
 - **1.2.1-beta** (November 2026): opponents from real small towns (every past one renamed);
   the device count is gone from the admin Accounts page.
 - **1.2.0-beta** (November 2026): a task is worth up to 4; badges count a series once it's

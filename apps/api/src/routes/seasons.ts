@@ -1,4 +1,5 @@
 import { achievements } from '../services/achievements';
+import { standingsView } from '../services/leagueStandings';
 import type { Deps } from '../deps';
 import { route, type AnyRoute } from '../http/router';
 import { currentSeason, currentSeries, loadUserSeason, loadUserSeries, setWinGoal } from '../services/seasons';
@@ -58,6 +59,12 @@ export function seasonRoutes(deps: Deps): AnyRoute[] {
 
     route('listSeasonSeries', ({ auth, params, now }) =>
       inUserTx(db, auth.user, now, async (tx, user) => ({ series: await listSeasonSeries(tx, user, params.seasonId) }), {
+        scope: 'account',
+      }),
+    ),
+
+    route('getStandings', ({ auth, params, now }) =>
+      inUserTx(db, auth.user, now, async (tx, user) => standingsView(tx, user, await loadUserSeason(tx, user.id, params.seasonId)), {
         scope: 'account',
       }),
     ),

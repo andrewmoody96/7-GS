@@ -45,7 +45,7 @@ export function seasonTotals(me: MeDto | undefined, season: SeasonDto): { total:
   };
 }
 
-export function Standings({ season: s, total }: { season: SeasonDto; total: number }) {
+export function Standings({ season: s, total, extra = [] }: { season: SeasonDto; total: number; extra?: [string, string][] }) {
   const played = s.wins + s.losses;
   const winPct = played === 0 ? null : Math.round((s.wins / played) * 1000) / 1000;
   const stats: [string, string][] = [
@@ -58,6 +58,7 @@ export function Standings({ season: s, total }: { season: SeasonDto; total: numb
   ];
   // Suspended games that ended with no decision: neither a W nor an L.
   if (s.noDecisions > 0) stats.splice(2, 0, [vocab.terms.noDecisions, String(s.noDecisions)]);
+  stats.push(...extra);
   return (
     <>
       <section className="board board--record" aria-label={vocab.terms.record}>

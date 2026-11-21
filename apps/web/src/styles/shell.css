@@ -1331,3 +1331,96 @@
 .whatsnew__group--section .whatsnew__label {
   color: var(--accent);
 }
+
+/* ── Standings ──────────────────────────────────────────────────────────── */
+
+.standings + .standings {
+  margin-top: 12px;
+}
+
+.standings__race {
+  margin: 0 0 12px;
+}
+
+.standings__race.is-champion {
+  font-weight: 700;
+}
+
+.standings__table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+}
+
+.standings__table th,
+.standings__table td {
+  padding: 6px 4px;
+  text-align: right;
+  border-top: 1px solid var(--border);
+}
+
+.standings__table thead th {
+  border-top: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.standings__table .standings__team {
+  text-align: left;
+  font-weight: 500;
+}
+
+.standings__table tbody .standings__team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.standings__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standings__mark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.standings__mark--you {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.8rem;
+}
+
+.standings__table tr.is-you {
+  background: var(--accent-soft);
+}
+
+.standings__table tr.is-you .standings__team {
+  font-weight: 800;
+}
+
+.seasonhist__titles {
+  display: block;
+  margin-top: 2px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.seasonhist__standings {
+  margin: 4px 0 8px;
+}

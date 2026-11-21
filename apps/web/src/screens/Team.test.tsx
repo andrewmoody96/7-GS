@@ -65,7 +65,7 @@ describe('Badges', () => {
     expect(stats.wins).toBeGreaterThan(0);
     expect(earned).toBeGreaterThan(2);
     const nav = await screen.findByRole('navigation', { name: 'Badges' });
-    await waitFor(() => expect(nav.querySelector('strong')?.textContent).toBe(`Badges: ${earned}`));
+    await waitFor(() => expect([...nav.querySelectorAll('strong')].map((el) => el.textContent)).toEqual(['Standings', `Badges: ${earned}`]));
   });
 });
 

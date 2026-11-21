@@ -13,7 +13,7 @@ import {
   type SeasonStatus,
 } from '@7gs/rules';
 import { and, asc, eq, ne } from 'drizzle-orm';
-import { nextOpponent } from './opponents';
+import { ensureLeague, opponentFor } from './league';
 import type { Db } from '../db/client';
 import { games, seasons, series, type GameRow, type SeasonRow, type SeriesRow, type UserRow } from '../db/schema';
 import { uuidv7 } from '../ids';
@@ -109,8 +109,8 @@ export async function ensureSeries(
 ): Promise<SeriesRow> {
   const existing = await findSeriesByStart(tx, user.id, startDate);
   if (existing) return existing;
-  // No town twice until every town has been played (services/opponents).
-  const opponent = await nextOpponent(tx, user.id, season.number, number);
+  // From the player's league, on the season's schedule (services/league).
+  const opponent = opponentFor(await ensureLeague(tx, user), user.id, season.number, number);
   await tx
     .insert(series)
     .values({

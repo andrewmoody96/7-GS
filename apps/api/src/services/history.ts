@@ -6,6 +6,7 @@ import { bestSeason, currentWinStreak, displayMargin, longestWinStreak, type Gam
 import { and, asc, desc, eq, isNotNull } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { games, seasons, series, type UserRow } from '../db/schema';
+import { seasonTitles } from './leagueStandings';
 import { loadUserSeason } from './seasons';
 import { themeOf } from './users';
 import { seasonView, seriesSummaryView } from './views';
@@ -30,6 +31,17 @@ async function careerDisplayDifferential(tx: Db, user: UserRow): Promise<number>
     .from(games)
     .where(and(eq(games.userId, user.id), eq(games.status, 'final')));
   return finals.reduce((n, g) => n + displayMargin(theme, { ...g, threshold: g.threshold ?? 1 }), 0);
+}
+
+async function titleCounts(tx: Db, rows: (typeof seasons.$inferSelect)[]): Promise<{ divisionTitles: number; leagueTitles: number }> {
+  let divisionTitles = 0;
+  let leagueTitles = 0;
+  for (const row of rows) {
+    const titles = await seasonTitles(tx, row);
+    if (titles?.division) divisionTitles++;
+    if (titles?.league) leagueTitles++;
+  }
+  return { divisionTitles, leagueTitles };
 }
 
 export async function career(tx: Db, user: UserRow): Promise<CareerDto> {
@@ -58,6 +70,7 @@ export async function career(tx: Db, user: UserRow): Promise<CareerDto> {
     displayDifferential: await careerDisplayDifferential(tx, user),
     currentWinStreak: currentWinStreak(results),
     longestWinStreak: longestWinStreak(results),
+    ...(await titleCounts(tx, rows)),
     bestSeason: best ? { number: best.number, wins: best.wins, losses: best.losses, winPct: best.winPct } : null,
   };
 }

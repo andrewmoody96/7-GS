@@ -381,6 +381,7 @@ export class MockBackend {
     listSeasons: ({ world, now }) => ({ seasons: engine.listSeasons(world(), now) }),
     listSeasonSeries: ({ world, params }) => ({ series: engine.listSeasonSeries(world(), params.seasonId ?? '') }),
     getCareer: ({ world, now }) => engine.career(world(), now),
+    getStandings: ({ world, params, now }) => engine.standings(world(), params.seasonId ?? '', now),
     getAchievements: ({ world, now }) => engine.achievements(world(), now),
     getSeason: ({ world, params, now }) => {
       const w = world();

@@ -127,6 +127,13 @@
       "when": 1795256951914,
       "tag": "0017_task_points_cap",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795296857273,
+      "tag": "0018_league_teams",
+      "breakpoints": true
     }
   ]
 }

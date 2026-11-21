@@ -198,6 +198,16 @@ export function useAchievementsQuery() {
   return useQuery({ queryKey: qk.achievements, queryFn: () => api.call('getAchievements') });
 }
 
+/** A season's standings (two leagues of three divisions), refreshed with the game day. */
+export function useStandingsQuery(seasonId: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['standings', seasonId],
+    queryFn: () => api.call('getStandings', { params: { seasonId: seasonId! } }),
+    enabled: seasonId !== null,
+  });
+}
+
 export function useCareerQuery() {
   const api = useApi();
   return useQuery({ queryKey: ['career'], queryFn: () => api.call('getCareer') });
@@ -296,7 +306,7 @@ function invalidate(qc: QueryClient, ...keys: QueryKey[]): void {
 
 /** Everything a game-day change can ripple into. */
 export function invalidateGameDay(qc: QueryClient): void {
-  invalidate(qc, qk.today, ['series'], qk.currentSeason, qk.me, ['game'], ['week'], qk.weeks, ['suspension'], ['rally'], qk.achievements);
+  invalidate(qc, qk.today, ['series'], qk.currentSeason, qk.me, ['game'], ['week'], qk.weeks, ['suspension'], ['rally'], qk.achievements, ['standings'], ['career']);
 }
 
 // ── Check-offs (optimistic, offline-capable) ─────────────────────────────────
