@@ -9,8 +9,10 @@ import {
   seasonAlignment,
   seasonSchedule,
   seasonStandings,
+  replacementTeamName,
   SERIES_PER_SEASON,
   TEAM_NAME_MAX,
+  teamNameNeedsReplacing,
   YOU,
   type StandingsGame,
 } from '../src';
@@ -145,6 +147,17 @@ describe('team names that fit', () => {
         expect(t.mascot).not.toMatch(/Johnny-Come-Latelies|One-More-Episodes/);
       }
     }
+  });
+
+  it('tells which names break the rules, and draws a replacement that fits and clashes with nothing', () => {
+    expect(teamNameNeedsReplacing('Joplin Johnny-Come-Latelies')).toBe(true);
+    expect(teamNameNeedsReplacing('Oxford One-More-Episodes')).toBe(true);
+    expect(teamNameNeedsReplacing('Pontiac Procrastinators')).toBe(false);
+    const others = generateLeague(leagueSeedFor('swap')).map((t) => t.name).slice(1);
+    const name = replacementTeamName(others, 42);
+    expect(name.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
+    expect(teamNameNeedsReplacing(name)).toBe(false);
+    expect(others.map((n) => n.split(' ').at(-1))).not.toContain(name.split(' ').at(-1));
   });
 
   it('names the two conferences, with short forms for division names', () => {

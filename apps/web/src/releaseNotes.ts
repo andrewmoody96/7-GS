@@ -50,7 +50,12 @@ export const RELEASES: readonly ReleaseNote[] = [
     patches: [
       {
         version: '1.3.1-beta',
-        fixed: ['Leagues are now conferences.', 'Cleaner standings that fit the screen.', 'Pages open at the top.'],
+        fixed: [
+          'Leagues are now conferences.',
+          'Cleaner standings that fit the screen.',
+          'Long team names got shorter ones, one last time. Names won’t change again.',
+          'Pages open at the top.',
+        ],
       },
     ],
   },

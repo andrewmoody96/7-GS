@@ -468,7 +468,9 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 - **Names never change.** A league is drawn once and kept, and every series keeps the
   opponent name, colors and badge it was created with (`series.opponent_*`), so Team
   History reads the same forever. Updates to the name lists only affect teams drawn after
-  them; no release renames existing teams or past series.
+  them; no release renames existing teams or past series. The one exception was the v1.3.1
+  deploy, which renamed, once, the teams whose names broke the 23-character rule or used a
+  retired nickname (`finalTeamRename`, recorded so it can't run again).
 - **The hierarchy is league, conferences, divisions, teams.** Every season your league is
   dealt again into two conferences (the Early Bird Conference and the Night Owl
   Conference, EBC and NOC) of three five-team divisions (EBC Central, NOC West and so on)

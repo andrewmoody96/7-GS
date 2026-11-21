@@ -1,7 +1,8 @@
-import { addDays, generateLeague, leagueSeedFor, scheduledOpponent } from '@7gs/rules';
-import { eq } from 'drizzle-orm';
+import { addDays, generateLeague, leagueSeedFor, scheduledOpponent, TEAM_NAME_MAX } from '@7gs/rules';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { leagueTeams, series } from '../src/db/schema';
+import { finalTeamRename } from '../src/services/league';
 import { CHICAGO, createTasks, TestApp, useTestDb } from './helpers';
 
 const env = useTestDb();
@@ -110,5 +111,33 @@ describe('names never change', () => {
     for (const r of rows.filter((x) => before.includes(x.id))) expect(r.opponentName).toBe('Snooze City Alarms');
     // Newer series come from the league.
     expect(rows.filter((x) => !before.includes(x.id)).every((r) => r.opponentName !== 'Snooze City Alarms')).toBe(true);
+  });
+});
+
+describe('the final rename', () => {
+  it('renames teams that break the new rules, past series included, exactly once ever', async () => {
+    const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
+    const { token, userId } = await t.signIn('final-rename@example.com', CHICAGO);
+    t.at('2026-10-16', '09:00', CHICAGO);
+    await t.ok('getToday', { token });
+    const [played] = await env.db.select().from(series).where(eq(series.userId, userId)).limit(1);
+    const [team] = await env.db.select().from(leagueTeams).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.name, played!.opponentName)));
+    // A name from before the new rules: too long, retired nickname.
+    await env.db.update(leagueTeams).set({ name: 'Joplin Johnny-Come-Latelies' }).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team!.slot)));
+    await env.db.update(series).set({ opponentName: 'Joplin Johnny-Come-Latelies' }).where(eq(series.id, played!.id));
+
+    expect(await finalTeamRename(env.db)).toBe(1);
+    const [renamed] = await env.db.select().from(leagueTeams).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team!.slot)));
+    expect(renamed!.name.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
+    expect(renamed!.colors).toEqual(team!.colors);
+    const [after] = await env.db.select().from(series).where(eq(series.id, played!.id));
+    expect(after!.opponentName).toBe(renamed!.name);
+    expect(new Set((await env.db.select().from(leagueTeams).where(eq(leagueTeams.userId, userId))).map((r) => r.name)).size).toBe(29);
+
+    // Never again: a name that breaks the rules later is left as it is.
+    await env.db.update(leagueTeams).set({ name: 'Oxford One-More-Episodes' }).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team!.slot)));
+    expect(await finalTeamRename(env.db)).toBeNull();
+    const [kept] = await env.db.select().from(leagueTeams).where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team!.slot)));
+    expect(kept!.name).toBe('Oxford One-More-Episodes');
   });
 });

@@ -59,7 +59,7 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 
 - **Renaming teams.** A team's name, and the opponent name on every series already
   created, never changes (GAME_DESIGN §8). New name lists or rules apply to teams drawn from
-  then on.
+  then on. (v1.3.1 did a final, one-time rename by request; it records that it ran.)
 
 ## History
 
