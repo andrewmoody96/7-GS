@@ -185,7 +185,7 @@ With `NODE_ENV=production` set, the server also does the following automatically
 Reminders arrive as notifications (and by email for anyone who turns that on, once email
 is set up). Each person turns them on per device in **Team → Settings → Reminders**:
 
-- **iPhone:** only in the Home Screen app (Safari → Share → Add to Home Screen first).
+- **iOS:** only in the Home Screen app (Share → Add to Home Screen in the browser first).
 - **Desktop:** Chrome, Edge, Firefox or Safari, in a normal tab.
 
 Nothing to configure on Heroku: the server creates its push keys on first start. They

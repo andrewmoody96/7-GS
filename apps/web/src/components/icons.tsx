@@ -231,3 +231,37 @@ export const IconPause = (p: IconProps) => (
     <path d="M10 9v6M14 9v6" />
   </Icon>
 );
+
+/** The share button on iPhone and iPad: a box with an arrow out of the top. */
+export const IconShare = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M8 9H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2" />
+    <path d="M12 15V3M8 7l4-4 4 4" />
+  </Icon>
+);
+
+/** Add to Home Screen: a plus in a rounded square. */
+export const IconAddSquare = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="16" height="16" rx="4" />
+    <path d="M12 8v8M8 12h8" />
+  </Icon>
+);
+
+/** A "more" menu: three dots in a row. */
+export const IconMoreHorizontal = (p: IconProps) => (
+  <Icon {...p} fill="currentColor" stroke="none">
+    <circle cx="5" cy="12" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="19" cy="12" r="2" />
+  </Icon>
+);
+
+/** A "more" menu: three dots stacked. */
+export const IconMoreVertical = (p: IconProps) => (
+  <Icon {...p} fill="currentColor" stroke="none">
+    <circle cx="12" cy="5" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="12" cy="19" r="2" />
+  </Icon>
+);

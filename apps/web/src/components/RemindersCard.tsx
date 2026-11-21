@@ -80,9 +80,9 @@ function Reminders({ settings: s }: { settings: ReminderSettingsDto }) {
 
 const STATE_COPY: Record<PushState, string> = {
   'needs-install':
-    'On iPhone, reminders work in the Home Screen app. In Safari, tap Share → Add to Home Screen, open 7-Game Series from there, and turn them on here.',
+    'On iOS, reminders work in the Home Screen app. In your browser, tap Share → Add to Home Screen, open 7-Game Series from there, and turn them on here.',
   unsupported: 'This browser can’t show notifications. Try Chrome, Edge, Firefox or Safari.',
-  blocked: 'Notifications are blocked for 7-Game Series. Allow them in your browser’s site settings (on iPhone: Settings → Notifications → 7GS), then come back.',
+  blocked: 'Notifications are blocked for 7-Game Series. Allow them in your browser’s site settings (on iOS: Settings → Notifications → 7GS), then come back.',
   off: 'Get reminders on this device as notifications.',
   on: 'Reminders are on for this device.',
 };
