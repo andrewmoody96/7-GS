@@ -42,27 +42,15 @@ export const RELEASES: readonly ReleaseNote[] = [
     version: '1.3.0-beta',
     title: 'v1.3.0-beta',
     added: [
-      'Your own league: 29 teams from small towns. You’re the 30th.',
-      'Every season your league splits into two conferences of three divisions, dealt fresh each time.',
-      'Each season you play your 4 division rivals, 5 teams from your conference and 3 from the other one. Everyone comes up within about a year.',
-      'Standings (Team → Standings): the other teams play each other every week, so there’s a real race.',
-      'Division and conference titles go to the best record when the season ends. No playoffs. Winning the season still just takes a winning record.',
-      'Title counts under your team stats and in Team History.',
+      'Your own league of 29 small-town teams, split into conferences and divisions each season.',
+      'Standings, with division and conference titles for the best record. No playoffs.',
+      'Title counts in your team stats and Team History.',
     ],
-    improved: [
-      'The Team page is tidier: the scoreboard says Season record, your place in the division sits right under it, and Badges is a tile with the rest of your stats.',
-    ],
+    improved: ['A tidier Team page.'],
     patches: [
       {
         version: '1.3.1-beta',
-        fixed: [
-          'Leagues are now conferences: your league splits into the Early Bird and Night Owl Conferences, each with three divisions (EBC Central, NOC West…).',
-          'Conference titles replace league titles, everywhere they show.',
-          'Standings fit the screen, show your place as two chips (Division, Conference), and group each conference’s divisions together.',
-          'More room between the W, L, Pct and GB columns; long team names wrap instead of getting cut off.',
-          'The longest team names got shorter ones (no more Johnny-Come-Latelies).',
-          'Pages open at the top, including this one.',
-        ],
+        fixed: ['Leagues are now conferences.', 'Cleaner standings that fit the screen.', 'Shorter team names.', 'Pages open at the top.'],
       },
     ],
   },
@@ -70,24 +58,13 @@ export const RELEASES: readonly ReleaseNote[] = [
     id: '1.2.0',
     version: '1.2.0-beta',
     title: 'v1.2.0-beta',
-    added: [
-      'Ironclad, a new MVP badge: 4 Iron Man weeks in a row.',
-      'Badges speak your sport: Tip-Off and Flawless in basketball, Puck Drop and Shutout in hockey.',
-    ],
-    patches: [
-      {
-        version: '1.2.1-beta',
-        fixed: [
-          'Opponents come from real small towns, like the Pontiac Procrastinators, and every past opponent was renamed. No town twice until you’ve played them all.',
-        ],
-      },
-    ],
+    added: ['Ironclad, a new MVP badge.', 'Badges in your sport’s words.'],
     improved: [
-      'A task is worth up to 4: no play scores more than a grand slam. Bigger tasks were set to 4.',
-      'Series badges arrive the moment you clinch, not on Sunday.',
-      'Perfect games count for badges with 5+ to win and 3+ tasks. Perfect Game now takes 5 of them, Sharp 15.',
-      'Iron Man now means winning the series in a week played as scheduled.',
+      'A task is worth up to 4.',
+      'Series badges arrive the moment you clinch.',
+      'Tougher perfect-game and Iron Man badges.',
     ],
+    patches: [{ version: '1.2.1-beta', fixed: ['Opponents from real small towns.'] }],
   },
   {
     // The id is what accounts remember having seen: never change it.
@@ -99,23 +76,16 @@ export const RELEASES: readonly ReleaseNote[] = [
       {
         title: '1.0: everything since launch',
         items: [
-          'Every day is a game and every week a best-of-7. Runs to win comes from your lineup: must-hits plus half the rest.',
-          'Rally Caps flip a close loss into a W the next morning. Up to 3 a month, and saving them up boosts the odds.',
-          'Rainouts move a day to later in the week. The Injured List puts a task on hold without costing you games.',
-          'Checked something off before midnight while offline? It counts if it syncs by noon.',
-          'Plan the whole week on one grid in Management → Default Lineups.',
-          'Make it yours: baseball, basketball or hockey, a day or night look, and a team name and photo.',
-          'Add it to your Home Screen for reminders, sign in with a 6-digit code, and add a password if you like. It updates itself.',
+          'Every day is a game, every week a best-of-7.',
+          'Rally Caps, Rainouts and the Injured List.',
+          'Plan your whole week on one grid.',
+          'Baseball, basketball or hockey, with your own team name and photo.',
+          'Home Screen app with reminders and automatic updates.',
         ],
       },
       {
         title: '1.1: Badges',
-        items: [
-          '35 badges in 5 tiers, from Rookie to Hall of Fame. Find them in Team → Badges.',
-          'Everything you’ve already played counts, so you may have a few waiting.',
-          'New badges pop up the moment you earn them.',
-          'A quick pass through setup, now with your season win goal.',
-        ],
+        items: ['Badges for everything you’ve played, in Team → Badges.', 'A season win goal in the guided setup.'],
       },
     ],
   },
@@ -125,20 +95,15 @@ export const RELEASES: readonly ReleaseNote[] = [
     version: '0.11.2026_beta',
     title: 'v0.11.2026_beta',
     added: [
-      'Guided setup: name your team, add your tasks, plan your week on one grid and pick when to start.',
-      'Default Lineups shows your whole week on one grid.',
-      'Team photo: it fills your team badge, initials on top.',
-      'Optional password: signing in takes your email code plus the password.',
-      'A 3rd Rally Cap each month for a 7-game win streak with 3 perfect days in it; Rally Caps you hold add 3% to a roll.',
-      'Check-offs made offline before midnight count if they sync by noon.',
-      'The app updates itself, and Settings has Check for updates.',
+      'Guided setup.',
+      'Team photo.',
+      'Optional password.',
+      'A 3rd Rally Cap each month.',
+      'Offline check-offs count until noon.',
+      'Automatic updates.',
     ],
-    improved: [
-      'Runs to win comes from each day’s lineup: your must-hits plus half the rest.',
-      'Team is simpler: Management, Team History and Settings, with your photo large next to your name.',
-      'A loss just says Loss.',
-    ],
-    fixed: ['A day you add tasks to can always be won, even one that started empty.', 'Unchecking a task while offline now sticks.'],
+    improved: ['Runs to win comes from your lineup.', 'A simpler Team page.'],
+    fixed: ['Every day with tasks can be won.', 'Offline unchecks stick.'],
   },
 ];
 
@@ -149,13 +114,12 @@ export const SINCE_LAST_MAJOR = {
   title: 'Since the last major release',
   since: 'v0.11.2026_beta',
   items: [
-    'Your own league: 29 small-town teams, split every season into two conferences of three divisions.',
-    'Standings, plus division and conference titles for the best record when a season ends. No playoffs.',
-    'Badges: 36 in five tiers, earned for everything you’ve played, in your sport’s words.',
-    'Series badges arrive the moment you clinch.',
-    'A season win goal in the guided setup.',
-    'A task is worth up to 4 (no play scores more than a grand slam).',
-    'Version numbers, with What’s changed in Settings.',
+    'Your own league, with conferences, divisions and standings.',
+    'Division and conference titles.',
+    'Badges.',
+    'A season win goal in setup.',
+    'Tasks are worth up to 4.',
+    'Version numbers and What’s changed.',
   ],
 } as const;
 
