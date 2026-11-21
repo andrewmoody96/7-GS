@@ -1651,4 +1651,5 @@
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
