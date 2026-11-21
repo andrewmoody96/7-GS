@@ -558,6 +558,57 @@ export function useActivateFromInjuredList() {
  * open in This Week gets the new lineup too, as long as that week hasn't started (a week
  * copies its days from the defaults when it's first opened, so it wouldn't see the change).
  */
+type ApiClient = ReturnType<typeof useApi>;
+
+/**
+ * Copy saved default lineups onto the days of weeks already open, for each weekday in
+ * `bodies`. A day already played, or in a week that has started, keeps its lineup (`kept`).
+ * Tasks on the IL or retired can't go in a week's lineup; the rest of the day still updates.
+ */
+async function applyToOpenWeeks(
+  api: ApiClient,
+  bodies: ReadonlyMap<number, StarterPutDto>,
+  today: LocalDate,
+  activeIds: ReadonlySet<string>,
+): Promise<{ updated: LocalDate[]; kept: LocalDate[] }> {
+  const updated: LocalDate[] = [];
+  const kept: LocalDate[] = [];
+  if (bodies.size === 0) return { updated, kept };
+  const usable = <T extends { taskId: string }>(slots: T[]) => slots.filter((s) => activeIds.has(s.taskId));
+  const { weeks } = await api.call('listWeeks');
+  for (const w of weeks) {
+    const week = await api.call('getWeek', { params: { startDate: w.startDate } });
+    for (const game of week.games) {
+      const body = bodies.get(weekday(game.scheduledDate));
+      if (!body || game.playedDate < today || game.status === 'final') continue;
+      if (game.editPolicy !== 'free') {
+        kept.push(game.playedDate);
+        continue;
+      }
+      await api.call('patchLineup', {
+        params: { gameId: game.id },
+        body: {
+          entries: [
+            ...usable(body.lineup).map((s) => ({ ...s, role: 'lineup' as const })),
+            ...usable(body.bench).map((s) => ({ ...s, required: false, role: 'bench' as const })),
+          ],
+        },
+      });
+      updated.push(game.playedDate);
+    }
+  }
+  return { updated, kept };
+}
+
+function savedMessage(first: string, updated: LocalDate[], kept: LocalDate[]): string {
+  const parts = [first];
+  if (updated.length > 0) parts.push(`Also updated ${updated.map(formatMonthDayShort).join(' and ')} on This Week.`);
+  if (kept.length > 0) {
+    parts.push(`${kept.map(formatMonthDayShort).join(' and ')} ${kept.length === 1 ? 'keeps its' : 'keep their'} lineup: that week has started.`);
+  }
+  return parts.join(' ');
+}
+
 export function usePutStarter() {
   const api = useApi();
   const qc = useQueryClient();
@@ -565,47 +616,42 @@ export function usePutStarter() {
   return useMutation({
     mutationFn: async (v: { weekday: number; body: StarterPutDto; alsoThisWeek?: { today: LocalDate; activeIds: ReadonlySet<string> } }) => {
       const starter = await api.call('putStarter', { params: { weekday: v.weekday }, body: v.body });
-      const updated: string[] = [];
-      const kept: string[] = [];
-      if (v.alsoThisWeek) {
-        const { today, activeIds } = v.alsoThisWeek;
-        // Tasks on the IL or retired can't go in a week's lineup; the rest of the day still updates.
-        const usable = <T extends { taskId: string }>(slots: T[]) => slots.filter((s) => activeIds.has(s.taskId));
-        const { weeks } = await api.call('listWeeks');
-        for (const w of weeks) {
-          const week = await api.call('getWeek', { params: { startDate: w.startDate } });
-          for (const game of week.games) {
-            if (weekday(game.scheduledDate) !== v.weekday || game.playedDate < today || game.status === 'final') continue;
-            if (game.editPolicy !== 'free') {
-              kept.push(game.playedDate);
-              continue;
-            }
-            await api.call('patchLineup', {
-              params: { gameId: game.id },
-              body: {
-                entries: [
-                  ...usable(v.body.lineup).map((s) => ({ ...s, role: 'lineup' as const })),
-                  ...usable(v.body.bench).map((s) => ({ ...s, required: false, role: 'bench' as const })),
-                ],
-              },
-            });
-            updated.push(game.playedDate);
-          }
-        }
-      }
+      const { updated, kept } = v.alsoThisWeek
+        ? await applyToOpenWeeks(api, new Map([[v.weekday, v.body]]), v.alsoThisWeek.today, v.alsoThisWeek.activeIds)
+        : { updated: [], kept: [] };
       return { starter, updated, kept };
     },
     onSuccess: ({ updated, kept }) => {
       invalidate(qc, qk.starters, ['series']);
       if (updated.length > 0 || kept.length > 0) invalidateGameDay(qc);
-      const parts = ['Default lineup saved.'];
-      if (updated.length > 0) parts.push(`Also updated ${updated.map(formatMonthDayShort).join(' and ')} on This Week.`);
-      if (kept.length > 0) {
-        parts.push(`${kept.map(formatMonthDayShort).join(' and ')} ${kept.length === 1 ? 'keeps its' : 'keep their'} lineup: that week has started.`);
-      }
-      notify(parts.join(' '), 'success');
+      notify(savedMessage('Default lineup saved.', updated, kept), 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
+/**
+ * Save several weekdays' default lineups at once (the week grid), and the same days on
+ * weeks already open, unless started.
+ */
+export function useSaveWeekPlan({ quiet = false }: { quiet?: boolean } = {}) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: async (v: { bodies: ReadonlyMap<number, StarterPutDto>; today: LocalDate | null; activeIds: ReadonlySet<string> }) => {
+      for (const [day, body] of v.bodies) await api.call('putStarter', { params: { weekday: day }, body });
+      const { updated, kept } = v.today ? await applyToOpenWeeks(api, v.bodies, v.today, v.activeIds) : { updated: [], kept: [] };
+      return { days: v.bodies.size, updated, kept };
+    },
+    onSuccess: ({ days, updated, kept }) => {
+      invalidate(qc, qk.starters, ['series']);
+      if (updated.length > 0 || kept.length > 0) invalidateGameDay(qc);
+      if (!quiet && days > 0) notify(savedMessage(days === 1 ? 'Default lineup saved.' : 'Default lineups saved.', updated, kept), 'success');
+    },
+    onError: (error) => {
+      if (!quiet) notify(errorMessage(error), 'error');
+    },
   });
 }
 

@@ -688,7 +688,7 @@
 .daychip.is-selected {
   border-color: var(--accent);
   background: var(--accent);
-  color: var(--on-accent, #fff);
+  color: var(--accent-text);
 }
 
 .daychip:has(input:focus-visible) {
@@ -1074,13 +1074,20 @@
   color: var(--loss, #a33);
 }
 
+.weekgrid__slot {
+  display: grid;
+}
+
 .weekgrid__cell {
   display: grid;
   place-items: center;
   height: 36px;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
   font-weight: 700;
   cursor: pointer;
 }
@@ -1091,8 +1098,52 @@
 }
 
 .weekgrid__cell.is-must {
-  box-shadow: inset 0 0 0 2px var(--accent, #1e4d3a);
+  background: var(--accent, #1e4d3a);
+  border-color: transparent;
+  color: var(--accent-text);
 }
+
+.weekgrid__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.weekgrid__cell--key {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: default;
+}
+
+.weekgrid__cell--key:not(:first-child) {
+  margin-left: 8px;
+}
+
+.weekplan__days {
+  margin: 24px 0 2px;
+}
+
+.weekplan__bar {
+  position: sticky;
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 8px);
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 12px -8px -8px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 -4px 16px rgb(0 0 0 / 0.08);
+}
+
 
 .weekgrid__row--foot .weekgrid__day {
   font-size: 1rem;

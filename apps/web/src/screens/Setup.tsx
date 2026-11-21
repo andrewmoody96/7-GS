@@ -4,16 +4,17 @@
 //
 // The step lives in the address (/setup?step=…), so a reload or a sport switch keeps it.
 
-import type { StarterDto, StarterPutDto, TaskDto } from '@7gs/contracts';
-import { LIMITS, lineupThreshold, weekday, type LocalDate } from '@7gs/rules';
+import type { StarterDto, TaskDto } from '@7gs/contracts';
+import { LIMITS, type LocalDate } from '@7gs/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApi } from '../app/context';
 import { errorMessage } from '../app/errors';
-import { invalidateGameDay, qk, useMeQuery, useSetAvatar, useStartersQuery, useStartHeadStart, useTasksQuery, useUpdateMe } from '../app/queries';
+import { qk, useMeQuery, useSaveWeekPlan, useSetAvatar, useStartersQuery, useStartHeadStart, useTasksQuery, useUpdateMe } from '../app/queries';
 import { TeamBadge } from '../components/Badges';
 import { Stepper } from '../components/Controls';
+import { initialPlan, WeekPlanGrid, weekPlanBodies } from '../components/WeekPlanGrid';
 import { EmptyState, Loading } from '../components/States';
 import { squarePhoto } from '../lib/avatar';
 import { formatMonthDay, weekdayLong } from '../lib/format';
@@ -21,7 +22,6 @@ import { vocab } from '../vocab';
 
 const STEPS = ['team', 'tasks', 'week', 'start'] as const;
 type Step = (typeof STEPS)[number];
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 /** Where a new account goes after the sport and look. */
 export const SETUP_PATH = '/setup';
@@ -271,33 +271,6 @@ function TasksStep({ onNext, onBack }: { onNext: () => void; onBack: (() => void
 
 // ── 3. Week ──────────────────────────────────────────────────────────────────
 
-interface Plan {
-  days: Set<number>;
-  /** Days it's a must-hit (a subset of `days`), so a mixed plan from before survives. */
-  mustDays: Set<number>;
-}
-
-/** From the saved default lineups; a task not in any yet starts on every day. */
-function initialPlan(tasks: TaskDto[], starters: StarterDto[]): Map<string, Plan> {
-  const plan = new Map<string, Plan>();
-  for (const t of tasks) {
-    const days = new Set<number>();
-    const mustDays = new Set<number>();
-    for (const s of starters) {
-      const slot = s.lineup.find((l) => l.taskId === t.id);
-      if (slot) {
-        days.add(s.weekday);
-        if (slot.required) mustDays.add(s.weekday);
-      }
-    }
-    plan.set(t.id, { days: days.size > 0 ? days : new Set([1, 2, 3, 4, 5, 6, 7]), mustDays });
-  }
-  return plan;
-}
-
-const sameLineup = (a: StarterDto['lineup'], b: StarterDto['lineup']) =>
-  a.length === b.length && a.every((x, i) => x.taskId === b[i]?.taskId && x.required === b[i]?.required);
-
 function WeekStep({ onNext, onBack }: { onNext: () => void; onBack: (() => void) | null }) {
   const tasks = useTasksQuery();
   const starters = useStartersQuery();
@@ -317,175 +290,47 @@ function WeekStep({ onNext, onBack }: { onNext: () => void; onBack: (() => void)
       </>
     );
   }
-  return <WeekGrid tasks={mine} starters={starters.data ?? []} onNext={onNext} onBack={onBack} />;
+  return <WeekPlanner tasks={mine} allTasks={tasks.data ?? []} starters={starters.data ?? []} onNext={onNext} onBack={onBack} />;
 }
 
-function WeekGrid({
+function WeekPlanner({
   tasks,
+  allTasks,
   starters,
   onNext,
   onBack,
 }: {
   tasks: TaskDto[];
+  allTasks: TaskDto[];
   starters: StarterDto[];
   onNext: () => void;
   onBack: (() => void) | null;
 }) {
-  const api = useApi();
-  const qc = useQueryClient();
   const me = useMeQuery();
-  const [plan, setPlan] = useState(() => initialPlan(tasks, starters));
-  const update = (taskId: string, change: (p: Plan) => Plan) =>
-    setPlan((prev) => new Map(prev).set(taskId, change(prev.get(taskId) ?? { days: new Set(), mustDays: new Set() })));
-  const toggleDay = (taskId: string, day: number) =>
-    update(taskId, (p) => {
-      const days = new Set(p.days);
-      const mustDays = new Set(p.mustDays);
-      if (days.has(day)) {
-        days.delete(day);
-        mustDays.delete(day);
-      } else {
-        days.add(day);
-        // A day added to a must-hit everywhere is a must-hit there too.
-        if (p.mustDays.size > 0 && p.mustDays.size === p.days.size) mustDays.add(day);
-      }
-      return { days, mustDays };
-    });
-  /** All its days a must-hit, or none. */
-  const setMust = (taskId: string, on: boolean) => update(taskId, (p) => ({ ...p, mustDays: on ? new Set(p.days) : new Set() }));
-  const isMust = (p: Plan, day: number) => p.mustDays.has(day);
-
-  const lineupFor = (day: number) => tasks.filter((t) => plan.get(t.id)?.days.has(day));
-  const save = useMutation({
-    mutationFn: async () => {
-      const today = me.data?.today as LocalDate | undefined;
-      const bodies = new Map<number, StarterPutDto>();
-      for (let day = 1; day <= 7; day++) {
-        const existing = starters.find((s) => s.weekday === day);
-        // Keep the saved order for tasks already there; new ones go after.
-        const before = existing?.lineup ?? [];
-        const chosen = lineupFor(day).sort((x, y) => {
-          const ix = before.findIndex((l) => l.taskId === x.id);
-          const iy = before.findIndex((l) => l.taskId === y.id);
-          return (ix === -1 ? 999 : ix) - (iy === -1 ? 999 : iy);
-        });
-        const lineup = chosen.map((t, i) => ({ taskId: t.id, position: i + 1, required: isMust(plan.get(t.id)!, day) }));
-        const body = {
-          name: existing?.name ?? `${DAYS[day - 1]} lineup`,
-          lockTime: existing?.lockTime ?? null,
-          lineup,
-          bench: (existing?.bench ?? []).filter((b) => !lineup.some((l) => l.taskId === b.taskId)),
-        };
-        // Only days that changed are saved, so an existing plan isn't touched for nothing.
-        if (existing && sameLineup(before, lineup)) continue;
-        bodies.set(day, body);
-        await api.call('putStarter', { params: { weekday: day }, body });
-      }
-      // A week already opened copied its days before this; plan those too, if not started.
-      if (today && bodies.size > 0) {
-        const { weeks } = await api.call('listWeeks');
-        for (const w of weeks) {
-          const week = await api.call('getWeek', { params: { startDate: w.startDate } });
-          for (const g of week.games) {
-            if (g.editPolicy !== 'free' || g.playedDate < today || g.status === 'final') continue;
-            const body = bodies.get(weekday(g.scheduledDate));
-            if (!body) continue;
-            await api.call('patchLineup', {
-              params: { gameId: g.id },
-              body: {
-                entries: [
-                  ...body.lineup.map((l) => ({ ...l, role: 'lineup' as const })),
-                  ...body.bench.map((b) => ({ ...b, required: false, role: 'bench' as const })),
-                ],
-              },
-            });
-          }
-        }
-      }
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: qk.starters });
-      invalidateGameDay(qc);
-      onNext();
-    },
-  });
+  const [plan, setPlan] = useState(() => initialPlan(tasks, starters, { fillEmpty: true }));
+  const save = useSaveWeekPlan({ quiet: true });
+  const submit = () =>
+    save.mutate(
+      {
+        bodies: weekPlanBodies(plan, tasks, starters),
+        today: (me.data?.today as LocalDate | undefined) ?? null,
+        activeIds: new Set(allTasks.filter((t) => t.status === 'active').map((t) => t.id)),
+      },
+      { onSuccess: onNext },
+    );
 
   return (
     <>
       <section className="card">
         <p className="lede">
-          Tap the days each task belongs on. Turn on <strong>{vocab.term.required}</strong> for the ones a day can’t be won without.
-          Every week starts from this plan.
+          Tap the days each task belongs on, and tap again for a <strong>{vocab.term.required}</strong>: a task a day can’t be won
+          without. Every week starts from this plan.
         </p>
-        <div className="weekgrid" role="table" aria-label="Your default week">
-          <div className="weekgrid__row weekgrid__row--head" role="row">
-            {DAYS.map((d) => (
-              <span key={d} role="columnheader" className="weekgrid__day">
-                {d.slice(0, 2)}
-              </span>
-            ))}
-          </div>
-          {tasks.map((t) => {
-            const p = plan.get(t.id)!;
-            return (
-              <div key={t.id} className="weekgrid__row" role="row">
-                <span role="rowheader" className="weekgrid__task">
-                  <strong>{t.name}</strong>
-                  <label className="weekgrid__must">
-                    <input
-                      type="checkbox"
-                      checked={p.mustDays.size > 0 && p.mustDays.size === p.days.size}
-                      ref={(el) => {
-                        // Some days but not all: a must-hit plan from before, shown as mixed.
-                        if (el) el.indeterminate = p.mustDays.size > 0 && p.mustDays.size < p.days.size;
-                      }}
-                      onChange={(e) => setMust(t.id, e.target.checked)}
-                    />
-                    {vocab.term.required}
-                    {p.mustDays.size > 0 && p.mustDays.size < p.days.size ? <span className="muted"> (some days)</span> : null}
-                  </label>
-                </span>
-                {DAYS.map((d, i) => (
-                  <label
-                    key={d}
-                    role="cell"
-                    className={`weekgrid__cell${p.days.has(i + 1) ? ' is-on' : ''}${isMust(p, i + 1) ? ' is-must' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={p.days.has(i + 1)}
-                      aria-label={`${t.name} on ${d}`}
-                      onChange={() => toggleDay(t.id, i + 1)}
-                    />
-                    <span aria-hidden="true">{p.days.has(i + 1) ? '✓' : ''}</span>
-                  </label>
-                ))}
-              </div>
-            );
-          })}
-          <div className="weekgrid__row weekgrid__row--foot" role="row">
-            <span role="rowheader" className="weekgrid__task">
-              {vocab.terms.threshold}
-            </span>
-            {DAYS.map((d, i) => {
-              const lineup = lineupFor(i + 1);
-              return (
-                <span key={d} role="cell" className={`weekgrid__day${lineup.length === 0 ? ' is-empty' : ''}`}>
-                  {lineup.length === 0 ? '–' : lineupThreshold(lineup.map((t) => ({ points: t.points, required: isMust(plan.get(t.id)!, i + 1) })))}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-        <p className="field__hint">
-          {vocab.terms.threshold} is worked out for you: {vocab.term.required.toLowerCase()}s plus half the rest. An empty day (–)
-          can’t be won, so give every day at least one task.
-        </p>
+        <WeekPlanGrid tasks={tasks} allTasks={allTasks} starters={starters} plan={plan} onChange={setPlan} label="Your default week" />
         {save.isError ? <p className="notice notice--error">{errorMessage(save.error)}</p> : null}
       </section>
       <StepActions onBack={onBack}>
-        <button type="button" className="btn btn--primary" disabled={save.isPending} onClick={() => save.mutate()}>
+        <button type="button" className="btn btn--primary" disabled={save.isPending} onClick={submit}>
           {save.isPending ? 'Saving…' : 'Save my week'}
         </button>
       </StepActions>

@@ -49,8 +49,13 @@ describe('welcome setup on first sign-in', () => {
     await user.click(screen.getByRole('button', { name: /Next: plan the week/ }));
 
     expect(await screen.findByRole('heading', { name: 'Your week' })).toBeInTheDocument();
-    // A new task starts on every day; take it off Sunday.
-    await user.click(screen.getByLabelText('Meditate on Sun'));
+    // A new task starts on every day. A tap makes Sunday a must-hit, another takes it off.
+    const sunday = () => screen.getByRole('button', { name: /^Meditate on Sun:/ });
+    expect(sunday()).toHaveAccessibleName('Meditate on Sun: in the lineup');
+    await user.click(sunday());
+    expect(sunday()).toHaveAccessibleName('Meditate on Sun: must-make');
+    await user.click(sunday());
+    expect(sunday()).toHaveAccessibleName('Meditate on Sun: off');
     await user.click(screen.getByRole('button', { name: 'Save my week' }));
 
     expect(await screen.findByRole('heading', { name: 'When to start' })).toBeInTheDocument();
