@@ -1000,6 +1000,10 @@
 .setup__tasks {
   display: grid;
   gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
 
 /* ── Badges ─────────────────────────────────────────────────────────────── */
 
@@ -1311,4 +1315,19 @@
 .unlocks small {
   display: block;
   color: var(--text-muted);
+}
+
+/* ── Version and What's changed ─────────────────────────────────────────── */
+
+.appversion {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+}
+
+.changes__release + .changes__release {
+  margin-top: 12px;
+}
+
+.whatsnew__group--section .whatsnew__label {
+  color: var(--accent);
 }

@@ -1,11 +1,10 @@
-// Team → Badges: the collection, by tier, with progress toward the ones still to earn.
+// Team → Badges: the collection, by tier, with progress toward the ones still to earn. The
+// stats come from the server, worked out from the account's whole history.
 // And Team → Badges → Lab (demo only): simulate a player to see badges unlock.
-//
-// For now badges come from the Achievements lab's simulated player (lab/achievementsLab):
-// real accounts get them once the server tracks these stats.
 
 import {
   ACHIEVEMENT_TIERS,
+  EMPTY_STATS,
   evaluateAchievements,
   newlyEarned,
   newSim,
@@ -16,19 +15,70 @@ import {
   type AchievementMetric,
   type AchievementProgress,
   type AchievementSim,
+  type AchievementStats,
   type SimDay,
 } from '@7gs/rules';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useApi } from '../app/context';
+import { useAchievementsQuery, useMeQuery } from '../app/queries';
+import { useNotify } from '../app/toast';
 import { BadgeMedal } from '../components/BadgeMedal';
+import { ErrorPanel, Loading } from '../components/States';
 import { Sheet } from '../components/Sheet';
 import { LAB_PRESETS, setLabSim, useLabSim } from '../lab/achievementsLab';
 import { vocab } from '../vocab';
 
-/** How many badges the lab player has earned. */
-export function useBadgeCount(): number {
-  const sim = useLabSim();
-  return evaluateAchievements(sim.stats).filter((p) => p.earned).length;
+const earnedIds = (stats: AchievementStats) =>
+  evaluateAchievements(stats)
+    .filter((p) => p.earned)
+    .map((p) => p.achievement.id);
+
+/** How many badges the account has earned; null while loading. */
+export function useBadgeCount(): number | null {
+  const q = useAchievementsQuery();
+  return q.data ? earnedIds(q.data.stats).length : null;
+}
+
+const seenKey = (userId: string) => `7gs.badges.seen.${userId}`;
+
+/**
+ * A toast for each badge earned since this device last looked. The first time (or after
+ * clearing site data) it just remembers what's already earned, quietly: the release notes
+ * announce badges, and a pile of toasts would bury that.
+ */
+export function NewBadgeNotices() {
+  const me = useMeQuery();
+  const q = useAchievementsQuery();
+  const notify = useNotify();
+  const userId = me.data?.id;
+  const stats = q.data?.stats;
+  useEffect(() => {
+    if (!userId || !stats) return;
+    const now = earnedIds(stats);
+    let seen: string[] | null = null;
+    try {
+      const raw = window.localStorage.getItem(seenKey(userId));
+      seen = raw ? (JSON.parse(raw) as string[]) : null;
+    } catch {
+      seen = null;
+    }
+    if (seen) {
+      const had = new Set(seen);
+      for (const a of ACHIEVEMENTS_BY_ID(now.filter((id) => !had.has(id)))) notify(`Badge earned: ${a.icon} ${a.name}. ${a.description}`, 'success');
+    }
+    try {
+      window.localStorage.setItem(seenKey(userId), JSON.stringify(now));
+    } catch {
+      // Private mode and the like: no toasts, nothing breaks.
+    }
+  }, [userId, stats, notify]);
+  return null;
+}
+
+function ACHIEVEMENTS_BY_ID(ids: string[]): Achievement[] {
+  const byId = new Map(evaluateAchievements(EMPTY_STATS).map((p) => [p.achievement.id, p.achievement]));
+  return ids.flatMap((id) => byId.get(id) ?? []);
 }
 
 function Crumbs({ lab }: { lab?: boolean }) {
@@ -60,8 +110,8 @@ function BadgeCard({ progress: p }: { progress: AchievementProgress }) {
   );
 }
 
-function BadgeGrid({ sim }: { sim: AchievementSim }) {
-  const progress = evaluateAchievements(sim.stats);
+function BadgeGrid({ stats }: { stats: AchievementStats }) {
+  const progress = evaluateAchievements(stats);
   return (
     <>
       {ACHIEVEMENT_TIERS.map((tier) => {
@@ -94,20 +144,31 @@ function BadgeGrid({ sim }: { sim: AchievementSim }) {
 }
 
 export function BadgesScreen() {
-  const sim = useLabSim();
-  const count = evaluateAchievements(sim.stats).filter((p) => p.earned).length;
+  const api = useApi();
+  const q = useAchievementsQuery();
   return (
     <div className="screen screen--team">
       <header className="screen__head">
         <div>
           <Crumbs />
-          <h1 className="screen__title">Badges: {count}</h1>
+          <h1 className="screen__title">Badges{q.data ? `: ${earnedIds(q.data.stats).length}` : ''}</h1>
         </div>
       </header>
-      <p className="notice">
-        Badges are coming in a future update. In the demo, they follow the <Link to="/team/badges/lab">Achievements lab</Link>’s player.
-      </p>
-      <BadgeGrid sim={sim} />
+      {q.isPending ? (
+        <Loading label="Loading your badges" />
+      ) : q.isError ? (
+        <ErrorPanel error={q.error} onRetry={() => void q.refetch()} />
+      ) : (
+        <>
+          <p className="muted">Earned for everything you’ve played, from your first day. New ones pop up as you earn them.</p>
+          {api.mode === 'mock' ? (
+            <p className="notice">
+              Demo: these are the demo team’s badges. To watch badges unlock, try the <Link to="/team/badges/lab">Achievements lab</Link>.
+            </p>
+          ) : null}
+          <BadgeGrid stats={q.data.stats} />
+        </>
+      )}
     </div>
   );
 }
@@ -274,7 +335,7 @@ export function AchievementsLabScreen() {
         </div>
       </details>
 
-      <BadgeGrid sim={sim} />
+      <BadgeGrid stats={sim.stats} />
 
       <Sheet
         open={unlocked.length > 0}

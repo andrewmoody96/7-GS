@@ -1,11 +1,12 @@
-// Achievements (badges): a proposal for a future update, tried out in the demo's
-// Achievements lab before any real account sees them. Pure: a catalog, the stats they're
-// judged on, and a small day-by-day simulator for testing unlocks.
+// Achievements (badges). Pure: a catalog, the stats they're judged on, those stats worked
+// out from an account's history (so a badge is earned for play from before badges existed),
+// and a small day-by-day simulator for the demo's Achievements lab.
 //
 // Every badge is "this stat reached this number", so progress bars come for free and a
 // badge can be retuned by changing one number.
 
 import { SERIES_LENGTH, SERIES_PER_SEASON } from './constants';
+import { addDays, type LocalDate } from './dates';
 
 /** Easiest to hardest. Rookie badges come in the first days; Hall of Fame takes a year or more. */
 export const ACHIEVEMENT_TIERS = ['rookie', 'regular', 'all_star', 'mvp', 'hall_of_fame'] as const;
@@ -176,6 +177,119 @@ export const EMPTY_STATS: AchievementStats = {
   goalsReached: 0,
   perfectSeasons: 0,
 };
+
+// ── From history ─────────────────────────────────────────────────────────────
+
+/** An account's history, as the API and the demo store it, boiled down to what badges need. */
+export interface AchievementHistory {
+  /** Local dates the app was used on, any order, duplicates allowed. */
+  openDays: readonly LocalDate[];
+  teamPhoto: boolean;
+  /** Weekdays (0–7) whose default lineup has at least one task. */
+  defaultLineupsSet: number;
+  /** Every final game. */
+  games: readonly {
+    seriesId: string;
+    gameNumber: number;
+    playedDate: LocalDate;
+    slot: number;
+    /** null: a no-decision. */
+    result: 'W' | 'L' | null;
+    rally: boolean;
+    tasksDone: number;
+    /** Every lineup task done. */
+    allDone: boolean;
+  }[];
+  /** Every series that has finished. */
+  series: readonly { id: string; result: 'won' | 'lost' | null; wins: number; ironMan: boolean }[];
+  seasons: readonly {
+    wins: number;
+    losses: number;
+    winGoal: number | null;
+    /** Played out (in its Review Week, or later). */
+    finished: boolean;
+    seriesWon: number;
+    seriesLost: number;
+  }[];
+}
+
+/** The longest run of consecutive dates in `dates`. */
+function longestRun(dates: Iterable<LocalDate>): number {
+  const sorted = [...new Set(dates)].sort();
+  let best = 0;
+  let run = 0;
+  let prev: LocalDate | null = null;
+  for (const d of sorted) {
+    run = prev !== null && addDays(prev, 1) === d ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = d;
+  }
+  return best;
+}
+
+/**
+ * Badge stats from an account's history. The same rules as the simulator: a perfect game
+ * is a W with every lineup task done (not a Rally W); win streaks and bounce-backs follow
+ * decided games in order, skipping no-decisions; a series counts once it has finished.
+ */
+export function achievementStatsFromHistory(h: AchievementHistory): AchievementStats {
+  const games = [...h.games].sort((a, b) => (a.playedDate === b.playedDate ? a.slot - b.slot : a.playedDate < b.playedDate ? -1 : 1));
+  const s: AchievementStats = { ...EMPTY_STATS };
+
+  const openDays = new Set(h.openDays);
+  s.daysOpened = openDays.size;
+  s.longestOpenStreak = longestRun(openDays);
+  s.teamPhoto = h.teamPhoto ? 1 : 0;
+  s.defaultLineupsSet = h.defaultLineupsSet;
+  s.tasksDone = games.reduce((n, g) => n + g.tasksDone, 0);
+  s.longestCheckStreak = longestRun(games.filter((g) => g.tasksDone > 0).map((g) => g.playedDate));
+
+  const perfect = (g: (typeof games)[number]) => g.result === 'W' && !g.rally && g.allDone;
+  let streak = 0;
+  let last: 'W' | 'L' | null = null;
+  const perfectBySeries = new Map<string, number>();
+  for (const g of games) {
+    if (g.result === null) continue;
+    s.gamesPlayed += 1;
+    if (g.result === 'W') {
+      s.wins += 1;
+      streak += 1;
+      s.longestWinStreak = Math.max(s.longestWinStreak, streak);
+      if (last === 'L') s.bounceBacks += 1;
+      if (g.rally) s.rallyWins += 1;
+      if (perfect(g)) {
+        s.perfectGames += 1;
+        const n = (perfectBySeries.get(g.seriesId) ?? 0) + 1;
+        perfectBySeries.set(g.seriesId, n);
+        s.bestPerfectInSeries = Math.max(s.bestPerfectInSeries, n);
+      }
+    } else {
+      streak = 0;
+    }
+    last = g.result;
+  }
+
+  for (const sr of h.series) {
+    if (sr.ironMan) s.ironMans += 1;
+    if (sr.result !== 'won') continue;
+    s.seriesWon += 1;
+    if (sr.wins === SERIES_LENGTH) s.sweeps += 1;
+    const byNumber = new Map(games.filter((g) => g.seriesId === sr.id).map((g) => [g.gameNumber, g.result]));
+    if ([1, 2, 3].every((n) => byNumber.get(n) === 'L')) s.reverseSweeps += 1;
+    const firstSixWins = [1, 2, 3, 4, 5, 6].filter((n) => byNumber.get(n) === 'W').length;
+    const firstSixLosses = [1, 2, 3, 4, 5, 6].filter((n) => byNumber.get(n) === 'L').length;
+    if (firstSixWins === 3 && firstSixLosses === 3 && byNumber.get(7) === 'W') s.game7Wins += 1;
+  }
+
+  for (const se of h.seasons) {
+    // A goal counts the day it's reached; the others wait for the season to finish.
+    if (se.winGoal !== null && se.wins >= se.winGoal) s.goalsReached += 1;
+    if (!se.finished) continue;
+    if (se.wins > se.losses) s.winningSeasons += 1;
+    if (se.seriesWon > 0 && se.seriesLost === 0) s.perfectSeasons += 1;
+  }
+  return s;
+}
 
 // ── Simulator (for the lab) ──────────────────────────────────────────────────
 

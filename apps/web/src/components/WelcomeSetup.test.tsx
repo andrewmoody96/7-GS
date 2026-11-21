@@ -58,6 +58,10 @@ describe('welcome setup on first sign-in', () => {
     expect(sunday()).toHaveAccessibleName('Meditate on Sun: off');
     await user.click(screen.getByRole('button', { name: 'Save my week' }));
 
+    // Before the season starts, the win goal is open: the suggestion is ready to take.
+    expect(await screen.findByRole('heading', { name: /^Your .*goal$/i })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Set my goal' }));
+
     expect(await screen.findByRole('heading', { name: 'When to start' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Let’s play' }));
 

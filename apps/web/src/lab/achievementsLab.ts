@@ -1,6 +1,6 @@
-// The Achievements lab's player: a simulated set of stats, kept in this browser
-// (localStorage), so the lab and the Badges page show the same collection. Demo only:
-// real accounts get badges once the server tracks these stats (a future update).
+// The Achievements lab's player (demo only): a simulated set of stats, kept in this browser
+// (localStorage), for watching badges unlock. The Badges page itself shows the account's
+// real stats from the server (GET /v1/achievements).
 
 import { EMPTY_STATS, newSim, type AchievementSim, type AchievementStats } from '@7gs/rules';
 import { useSyncExternalStore } from 'react';

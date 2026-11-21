@@ -6,7 +6,7 @@ import { createMockApi } from '../api/mock';
 import { CheckoffQueue } from '../api/offlineQueue';
 import { createQueryClient } from '../app/queries';
 import { AppProviders } from '../app/routes';
-import type { Theme } from '@7gs/rules';
+import { evaluateAchievements, type Theme } from '@7gs/rules';
 import { applyTheme } from '../vocab';
 import { ManagementScreen, RotationScreen, TeamScreen } from './Team';
 
@@ -53,6 +53,19 @@ describe('Team', () => {
   it('leads back through Coaching from Default Lineups', () => {
     renderAt('/team/rotation', 'basketball');
     expect(screen.getByRole('link', { name: 'Coaching' })).toHaveAttribute('href', '/team/management');
+  });
+});
+
+describe('Badges', () => {
+  it('shows the count earned from the account’s own history', async () => {
+    const { api } = renderAt('/team', 'baseball');
+    const { stats } = await api.call('getAchievements');
+    const earned = evaluateAchievements(stats).filter((p) => p.earned).length;
+    // A team mid-season has played and won: more than the first-day badges.
+    expect(stats.wins).toBeGreaterThan(0);
+    expect(earned).toBeGreaterThan(2);
+    const nav = await screen.findByRole('navigation', { name: 'Badges' });
+    await waitFor(() => expect(nav.querySelector('strong')?.textContent).toBe(`Badges: ${earned}`));
   });
 });
 

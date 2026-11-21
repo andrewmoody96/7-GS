@@ -13,6 +13,37 @@ const SECTIONS: [keyof Pick<ReleaseNote, 'added' | 'improved' | 'fixed'>, string
   ['fixed', 'Fixed'],
 ];
 
+/** One release's notes: its named sections, then New / Improved / Fixed. */
+export function ReleaseNoteView({ note, showTitle }: { note: ReleaseNote; showTitle: boolean }) {
+  return (
+    <section className="whatsnew">
+      {showTitle ? <h3 className="whatsnew__title">{note.title}</h3> : null}
+      {note.sections?.map((section) => (
+        <div key={section.title} className="whatsnew__group whatsnew__group--section">
+          <h4 className="whatsnew__label">{section.title}</h4>
+          <ul className="whatsnew__list">
+            {section.items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      {SECTIONS.map(([key, label]) =>
+        note[key]?.length ? (
+          <div key={key} className={`whatsnew__group whatsnew__group--${key}`}>
+            <h4 className="whatsnew__label">{label}</h4>
+            <ul className="whatsnew__list">
+              {note[key]!.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null,
+      )}
+    </section>
+  );
+}
+
 export function WhatsNew({ seen, ready }: { seen: string | null; ready: boolean }) {
   const updateMe = useUpdateMe();
   const [closed, setClosed] = useState(false);
@@ -26,7 +57,7 @@ export function WhatsNew({ seen, ready }: { seen: string | null; ready: boolean 
     <Sheet
       open={open}
       onClose={close}
-      kicker="App update"
+      kicker={notes[0]?.version ? `Version ${notes[0].version.replace(/\.0$/, '')}` : 'App update'}
       title="What’s new"
       footer={
         <div className="actions">
@@ -37,21 +68,7 @@ export function WhatsNew({ seen, ready }: { seen: string | null; ready: boolean 
       }
     >
       {notes.map((note) => (
-        <section key={note.id} className="whatsnew">
-          {notes.length > 1 ? <h3 className="whatsnew__title">{note.title}</h3> : null}
-          {SECTIONS.map(([key, label]) =>
-            note[key]?.length ? (
-              <div key={key} className={`whatsnew__group whatsnew__group--${key}`}>
-                <h4 className="whatsnew__label">{label}</h4>
-                <ul className="whatsnew__list">
-                  {note[key]!.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null,
-          )}
-        </section>
+        <ReleaseNoteView key={note.id} note={note} showTitle={notes.length > 1} />
       ))}
     </Sheet>
   );

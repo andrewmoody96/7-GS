@@ -1,8 +1,12 @@
-# Achievements (badges): proposal
+# Achievements (badges)
 
-A future update. Tried out in the demo's **Achievements lab** (Demo controls → Achievements lab, or Team → Badges → the lab link), which simulates a player; nothing reaches real accounts yet. The catalog and rules live in `packages/rules/src/achievements.ts`: each badge is one stat reaching one number, so retuning a badge is a one-number change.
+Shipped in 1.1, for every account: **Team → Badges**. The catalog and rules live in `packages/rules/src/achievements.ts`: each badge is one stat reaching one number, so retuning a badge is a one-number change.
 
-Real accounts need the server to track these stats first. Most come from data the app already keeps (games, series, seasons, check-offs); "days opened" and the open streak need a new per-day record, like last seen.
+**Where the stats come from.** The server works them out from the account's whole history every time they're asked (`GET /v1/achievements`, `apps/api/src/services/achievements.ts`, via `rules.achievementStatsFromHistory`), so play from before badges existed counts and nothing can drift. Games, series, seasons, check-offs, the team photo and default lineups are all data the app already kept. "Days opened" is recorded from 1.1 on (`user_open_days`, once a day per account); before that, any day with a check-off, and the sign-up day, count as opened.
+
+**New badges** show as a toast the first time the app sees them on a device. The first look after 1.1 stays quiet (the release notes announce badges).
+
+**The demo** shows the demo team's real badges, and the **Achievements lab** (Demo controls → Achievements lab, or the link on the Badges page) simulates a player to watch badges unlock.
 
 ## Rookie
 

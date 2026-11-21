@@ -27,6 +27,7 @@ export type OpponentDto = z.infer<typeof S.Opponent>;
 export type SeriesDto = z.infer<typeof S.Series>;
 export type SeriesSummaryDto = z.infer<typeof S.SeriesSummary>;
 export type CareerDto = z.infer<typeof S.Career>;
+export type AchievementsDto = z.infer<typeof S.Achievements>;
 export type ReminderSettingsDto = z.infer<typeof S.ReminderSettings>;
 export type ReminderPrefsDto = z.infer<typeof S.ReminderPrefs>;
 export type PushSubscriptionDto = z.infer<typeof S.PushSubscription>;

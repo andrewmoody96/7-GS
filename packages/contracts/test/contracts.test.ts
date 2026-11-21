@@ -1,4 +1,5 @@
-import { generateOpponent, hashSeed, rallyOdds } from '@7gs/rules';
+import { EMPTY_STATS, generateOpponent, hashSeed, rallyOdds } from '@7gs/rules';
+import * as S from '../src/schemas';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   buildPath,
@@ -116,5 +117,11 @@ describe('endpoint registry', () => {
     expectTypeOf<RequestBody<'createTask'>>().toMatchTypeOf<{ name: string; points?: number }>();
     expectTypeOf<RequestBody<'getToday'>>().toEqualTypeOf<undefined>();
     expectTypeOf<ResponseBody<'getCurrentSeries'>>().toMatchTypeOf<{ number: number } | null>();
+  });
+});
+
+describe('badge stats', () => {
+  it('match the rules’ stat list exactly', () => {
+    expect(Object.keys(S.AchievementStats.shape).sort()).toEqual(Object.keys(EMPTY_STATS).sort());
   });
 });

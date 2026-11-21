@@ -47,6 +47,8 @@ but never take things off. Your Default Lineups fill in every new week for you.
   Week to look back and reset. Set a win goal, track your record, streaks and career stats.
 - 🏀🏒 **Pick your sport.** Baseball, basketball or hockey. Same game, different words,
   scoreboard and colors. Switch any time, mid-season included.
+- 🏅 **Badges.** 35 of them in five tiers, from Rookie to Hall of Fame, for streaks, sweeps,
+  perfect games and more. Everything you've played counts.
 - 🖼️ **Make it yours.** Name your team and add a team photo for your badge.
 - 🔔 **Reminders.** A nudge to check in, a last call before midnight, and a heads-up when
   a Rally Cap is waiting, as notifications or email.
@@ -59,8 +61,9 @@ but never take things off. Your Default Lineups fill in every new week for you.
   The **Demo controls** button jumps between scenarios: mid-season, a Rally Cap morning, a
   doubleheader, Spring Training and more.
 - **Ready to play?** Ask for an invite. Sign-in is by email, and you'll get a 6-digit code.
-  Add the app to your Home Screen, pick your sport and look, add a few tasks, and your season
-  starts the next Monday (or right away with a Head Start).
+  Add the app to your Home Screen, pick your sport and look, and a short guided setup walks you
+  through your team, tasks, week and win goal. Your season starts the next Monday (or right away
+  with a Head Start).
 
 The full rules, from scoring to Rally Cap odds, are in
 [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md). The app has a **How it works** guide behind
@@ -73,6 +76,9 @@ the **?** button too.
 - Game rules: [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)
 - Data model and API: [`docs/DATA_MODEL_AND_API.md`](docs/DATA_MODEL_AND_API.md)
 - Putting it online (GitHub Pages demo, Heroku for real): [`docs/DEPLOY.md`](docs/DEPLOY.md)
+- Versions and release day: [`docs/RELEASES.md`](docs/RELEASES.md)
+- What's planned: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- Badges: [`docs/ACHIEVEMENTS.md`](docs/ACHIEVEMENTS.md)
 
 ### How changes ship
 
@@ -83,9 +89,8 @@ and CI runs on every pull request. After merging:
 - **Heroku** (the real app) deploys from the dashboard: **Deploy → Manual deploy → `main`
   → Deploy Branch**. Database migrations run during the release.
 
-With each release worth telling people about, add an entry to
-[`apps/web/src/releaseNotes.ts`](apps/web/src/releaseNotes.ts); the app shows it once in
-its What's new popup.
+The deploy is the release: version numbers, how often things ship and the release-day steps
+are in [`docs/RELEASES.md`](docs/RELEASES.md).
 
 ### Repository layout
 

@@ -1,0 +1,96 @@
+// Badges (rules achievements): an account's stats, worked out from its history every time
+// it's asked, so play from before badges existed counts and nothing can drift.
+//
+// Days opened come from user_open_days (recorded since badges arrived), plus every day
+// with a check-off and the sign-up day: an account that checked something off that day
+// had the app open.
+
+import type { AchievementsDto } from '@7gs/contracts';
+import { achievementStatsFromHistory, localDateOf, type LocalDate } from '@7gs/rules';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import type { Db } from '../db/client';
+import { dayTemplates, dayTemplateTasks, games, lineupEntries, seasons, series, userAvatars, userOpenDays, type UserRow } from '../db/schema';
+
+export async function achievements(tx: Db, user: UserRow): Promise<AchievementsDto> {
+  const finals = await tx
+    .select({
+      id: games.id,
+      seriesId: games.seriesId,
+      gameNumber: games.gameNumber,
+      playedDate: games.playedDate,
+      slot: games.slot,
+      result: games.result,
+      resultDetail: games.resultDetail,
+      tasksDone: games.tasksDone,
+    })
+    .from(games)
+    .where(and(eq(games.userId, user.id), eq(games.status, 'final')));
+
+  // A game is all done when every lineup task in it was checked off.
+  const open = new Set<string>();
+  const withLineup = new Set<string>();
+  if (finals.length > 0) {
+    const entries = await tx
+      .select({ gameId: lineupEntries.gameId, completedAt: lineupEntries.completedClientAt })
+      .from(lineupEntries)
+      .where(
+        and(
+          inArray(
+            lineupEntries.gameId,
+            finals.map((g) => g.id),
+          ),
+          eq(lineupEntries.role, 'lineup'),
+        ),
+      );
+    for (const e of entries) {
+      withLineup.add(e.gameId);
+      if (e.completedAt === null) open.add(e.gameId);
+    }
+  }
+
+  const closed = await tx
+    .select({ id: series.id, result: series.result, wins: series.wins, ironMan: series.ironMan })
+    .from(series)
+    .where(and(eq(series.userId, user.id), isNotNull(series.closedAt)));
+  const seasonRows = await tx.select().from(seasons).where(eq(seasons.userId, user.id));
+
+  const opened = await tx.select({ day: userOpenDays.day }).from(userOpenDays).where(eq(userOpenDays.userId, user.id));
+  const openDays: LocalDate[] = [
+    ...opened.map((r) => r.day),
+    ...finals.filter((g) => g.tasksDone > 0).map((g) => g.playedDate),
+    localDateOf(user.createdAt, user.timezone),
+  ];
+
+  const [photo] = await tx.select({ userId: userAvatars.userId }).from(userAvatars).where(eq(userAvatars.userId, user.id));
+  const planned = await tx
+    .selectDistinct({ weekday: dayTemplates.weekday })
+    .from(dayTemplates)
+    .innerJoin(dayTemplateTasks, eq(dayTemplateTasks.templateId, dayTemplates.id))
+    .where(and(eq(dayTemplates.userId, user.id), eq(dayTemplateTasks.role, 'lineup')));
+
+  const stats = achievementStatsFromHistory({
+    openDays,
+    teamPhoto: photo !== undefined,
+    defaultLineupsSet: planned.length,
+    games: finals.map((g) => ({
+      seriesId: g.seriesId,
+      gameNumber: g.gameNumber,
+      playedDate: g.playedDate,
+      slot: g.slot,
+      result: g.result === 'W' || g.result === 'L' ? g.result : null,
+      rally: g.resultDetail === 'rally',
+      tasksDone: g.tasksDone,
+      allDone: withLineup.has(g.id) && !open.has(g.id),
+    })),
+    series: closed.map((s) => ({ id: s.id, result: s.result, wins: s.wins, ironMan: s.ironMan === true })),
+    seasons: seasonRows.map((s) => ({
+      wins: s.wins,
+      losses: s.losses,
+      winGoal: s.winGoal,
+      finished: s.status === 'offseason' || s.status === 'complete',
+      seriesWon: s.seriesWon,
+      seriesLost: s.seriesLost,
+    })),
+  });
+  return { stats };
+}

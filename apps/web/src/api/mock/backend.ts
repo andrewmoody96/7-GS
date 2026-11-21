@@ -382,6 +382,7 @@ export class MockBackend {
     listSeasons: ({ world, now }) => ({ seasons: engine.listSeasons(world(), now) }),
     listSeasonSeries: ({ world, params }) => ({ series: engine.listSeasonSeries(world(), params.seasonId ?? '') }),
     getCareer: ({ world, now }) => engine.career(world(), now),
+    getAchievements: ({ world, now }) => engine.achievements(world(), now),
     getSeason: ({ world, params, now }) => {
       const w = world();
       return engine.toSeasonDto(w, engine.seasonById(w, params.seasonId ?? ''), now);

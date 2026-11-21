@@ -14,6 +14,7 @@ import {
   ManagementScreen,
   RotationScreen,
   SettingsScreen,
+  ChangesScreen,
   StarterRedirect,
   TeamScreen,
 } from '../screens/Team';
@@ -68,6 +69,7 @@ export function AppRoutes() {
         <Route path="team/history/series/:seriesId" element={<PastSeriesScreen />} />
         <Route path="setup" element={<SetupScreen />} />
         <Route path="team/settings" element={<SettingsScreen />} />
+        <Route path="team/settings/changes" element={<ChangesScreen />} />
         <Route path="team/admin/accounts" element={<AccountsScreen />} />
         <Route path="team/badges" element={<BadgesScreen />} />
         <Route path="team/badges/lab" element={<AchievementsLabScreen />} />
