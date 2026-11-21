@@ -932,3 +932,178 @@
 .password__form .teamphoto__actions {
   margin-top: 4px;
 }
+
+/* ── Guided setup ───────────────────────────────────────────────────────── */
+
+.setup .card + .card,
+.setup .card + .state {
+  margin-top: 12px;
+}
+
+.setup__dots {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.setup__dots li {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.setup__dots li.is-done,
+.setup__dots li.is-current {
+  background: var(--accent, #1e4d3a);
+}
+
+.setup__dots li.is-current {
+  opacity: 0.6;
+}
+
+.setup__actions {
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.setup__skip {
+  display: block;
+  margin: 12px auto 0;
+}
+
+.setup__add {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.setup__ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.setup__ideas .ideachip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--surface-2);
+  font: inherit;
+  font-size: 0.875rem;
+  color: inherit;
+  cursor: pointer;
+}
+
+.setup__tasks {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup__tasks li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.weekgrid {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.weekgrid__row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px 6px;
+}
+
+.weekgrid__row + .weekgrid__row:not(.weekgrid__row--foot) {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* The task's name and Must-hit toggle get the full width; its seven days sit below. */
+.weekgrid__task {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-width: 0;
+  font-size: 0.9375rem;
+}
+
+.weekgrid__row--head,
+.weekgrid__row--foot {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.weekgrid__row--foot {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.weekgrid__must {
+  display: flex;
+  white-space: nowrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.weekgrid__day {
+  text-align: center;
+}
+
+.weekgrid__day.is-empty {
+  color: var(--loss, #a33);
+}
+
+.weekgrid__cell {
+  display: grid;
+  place-items: center;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.weekgrid__cell.is-on {
+  background: var(--accent-soft, #cfe3d6);
+  border-color: transparent;
+}
+
+.weekgrid__cell.is-must {
+  box-shadow: inset 0 0 0 2px var(--accent, #1e4d3a);
+}
+
+.weekgrid__row--foot .weekgrid__day {
+  font-size: 1rem;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.weekgrid__row--foot .weekgrid__day.is-empty {
+  color: var(--loss, #a33);
+}
+
+.weekgrid + .field__hint {
+  margin-top: 12px;
+}

@@ -49,3 +49,14 @@ describe('release notes seen', () => {
     expect((await t.ok('getMe', { token })).seenRelease).toBe('2026-11-team-photo');
   });
 });
+
+describe('guided setup', () => {
+  it('is pending for every account until finished or skipped, then stays done', async () => {
+    const { t, token } = await signedUp('setup@example.com');
+    expect((await t.ok('getMe', { token })).setupDone).toBe(false);
+    expect((await t.ok('updateMe', { token, body: { setupDone: true } })).setupDone).toBe(true);
+    expect((await t.ok('getMe', { token })).setupDone).toBe(true);
+    // There's no going back.
+    expect((await t.fails('updateMe', { token, body: { setupDone: false } }, 400)).code).toBe('VALIDATION_FAILED');
+  });
+});

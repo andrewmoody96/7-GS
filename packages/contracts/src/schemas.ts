@@ -109,6 +109,8 @@ export const Me = z.object({
   isAdmin: z.boolean(),
   /** A password is set: sign-in asks for it after the email code or link. */
   hasPassword: z.boolean(),
+  /** The guided setup (team, tasks, week, start) was finished or skipped. Shown once until then. */
+  setupDone: z.boolean(),
   today: LocalDate,
   position: CalendarPosition,
   allowances: Allowances,
@@ -121,6 +123,8 @@ export const MePatch = z
     defaultLockTime: TimeOfDay.nullable(),
     theme: z.enum(THEMES),
     seenRelease: z.string().min(1).max(32),
+    /** Mark the guided setup finished (or skipped). There's no un-finishing it. */
+    setupDone: z.literal(true),
   })
   .partial();
 

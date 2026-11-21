@@ -201,6 +201,7 @@ export class MockBackend {
           startDate: localDateOf(now, timezone),
           defaultLockTime: null,
           createdAt: now.toISOString(),
+          setupDone: false,
         });
         this.db.worlds.push(world);
       }
@@ -223,6 +224,7 @@ export class MockBackend {
       if (patch.defaultLockTime !== undefined) w.user.defaultLockTime = patch.defaultLockTime;
       if (patch.theme !== undefined) w.user.theme = patch.theme;
       if (patch.seenRelease !== undefined) w.user.seenRelease = patch.seenRelease;
+      if (patch.setupDone === true) w.user.setupDone = true;
       return engine.toMeDto(w, now);
     },
     // The demo signs straight in and never stores a password; it only notes one was set.

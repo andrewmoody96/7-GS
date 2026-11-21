@@ -13,6 +13,14 @@ export interface ReleaseNote {
 
 export const RELEASES: readonly ReleaseNote[] = [
   {
+    id: '2026-11-guided-setup',
+    title: 'November 2026: guided setup',
+    added: [
+      'Guided setup: name your team, add your tasks and plan your week on one grid, then pick when to start.',
+      'Plan your week walks you through every task and day at once and shows the runs to win for each day as you go.',
+    ],
+  },
+  {
     id: '2026-11-sign-in-lock',
     title: 'November 2026: passwords',
     added: [
