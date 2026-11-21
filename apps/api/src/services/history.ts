@@ -33,15 +33,15 @@ async function careerDisplayDifferential(tx: Db, user: UserRow): Promise<number>
   return finals.reduce((n, g) => n + displayMargin(theme, { ...g, threshold: g.threshold ?? 1 }), 0);
 }
 
-async function titleCounts(tx: Db, rows: (typeof seasons.$inferSelect)[]): Promise<{ divisionTitles: number; leagueTitles: number }> {
+async function titleCounts(tx: Db, rows: (typeof seasons.$inferSelect)[]): Promise<{ divisionTitles: number; conferenceTitles: number }> {
   let divisionTitles = 0;
-  let leagueTitles = 0;
+  let conferenceTitles = 0;
   for (const row of rows) {
     const titles = await seasonTitles(tx, row);
     if (titles?.division) divisionTitles++;
-    if (titles?.league) leagueTitles++;
+    if (titles?.conference) conferenceTitles++;
   }
-  return { divisionTitles, leagueTitles };
+  return { divisionTitles, conferenceTitles };
 }
 
 export async function career(tx: Db, user: UserRow): Promise<CareerDto> {

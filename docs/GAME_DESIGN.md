@@ -462,16 +462,19 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
   (`league_teams`, rules `generateLeague`). Each is a real small town and a nickname for
   putting things off, starting with the same letter: the *Pontiac Procrastinators,
   Litchfield Last Minutemen, Walla Walla Wafflers*. Every town, nickname and color pair in
-  a league is different; badges show the initials. No real league marks, logos or names.
-- **Dealt again every season** into two leagues (the Early Bird League and the Night Owl
-  League) of three five-team divisions (East, Central, West) (rules `seasonAlignment`).
+  a league is different; names are at most 23 characters (rules `TEAM_NAME_MAX`; a long one wraps to two lines in standings; longer
+  ones were renamed at the v1.3.1 deploy); badges show the initials. No real league marks, logos or names.
+- **The hierarchy is league, conferences, divisions, teams.** Every season your league is
+  dealt again into two conferences (the Early Bird Conference and the Night Owl
+  Conference, EBC and NOC) of three five-team divisions (EBC Central, NOC West and so on)
+  (rules `seasonAlignment`).
 - **Your 12 series** (rules `seasonSchedule`), MLB's balanced schedule scaled down:
 
   | Tier | Who | Series |
   |---|---|---|
   | Division | your 4 rivals, each once | 4 |
-  | Regular | 5 of the 10 others in your league | 5 |
-  | Irregular | 3 of the 15 in the other league | 3 |
+  | Regular | 5 of the 10 others in your conference | 5 |
+  | Irregular | 3 of the 15 in the other conference | 3 |
 
   Teams you've faced longest ago come first, so all 29 come up within about a year.
   Never the same team two weeks running. A Head Start week faces an irregular team that
@@ -481,9 +484,9 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
   strength every team gets for the season (a few run hot). A day's games count once it's
   gone final.
 - **Titles, no playoffs:** the best record in your division when the season ends is the
-  division title; the best record in your league is the league title. Ties: overall
-  record, then record in the division, then in the league, then run differential (never
-  head-to-head). Winning the season is still just a winning record (§5); the titles reward
+  division title; the best record in your conference is the conference title. Ties:
+  overall record, then record in the division, then in the conference, then run
+  differential (never head-to-head). Winning the season is still just a winning record (§5); the titles reward
   finishing ahead of everyone else.
 - Titles show under the team stats and in Team History, and every finished season has its
   standings. At the v1.3 deploy every account got its league and every series it had was

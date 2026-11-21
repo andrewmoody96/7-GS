@@ -31,7 +31,7 @@ import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings, 
 import { WeekCardView } from './WeekCard';
 import { TeamBadge } from '../components/Badges';
 import { ReleaseNoteView } from '../components/WhatsNew';
-import { APP_VERSION, RELEASES, versionLabel } from '../releaseNotes';
+import { APP_VERSION, latestVersionOf, RELEASES, SINCE_LAST_MAJOR, versionLabel } from '../releaseNotes';
 import { useBadgeCount } from './Badges';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
@@ -235,7 +235,7 @@ function badgesStat(count: number | null): StatItem {
 function titleStats(c: CareerDto | undefined): StatItem[] {
   return [
     { label: 'Division titles', value: c ? String(c.divisionTitles) : '–' },
-    { label: 'League titles', value: c ? String(c.leagueTitles) : '–' },
+    { label: 'Conference titles', value: c ? String(c.conferenceTitles) : '–' },
   ];
 }
 
@@ -246,11 +246,11 @@ function StandingsLine({ seasonId }: { seasonId: string }) {
   const standings = useStandingsQuery(seasonId);
   let text = 'Standings';
   if (standings.data) {
-    const league = standings.data.leagues.find((l) => l.yours)!;
-    const division = league.divisions.find((d) => d.yours)!;
+    const conference = standings.data.conferences.find((l) => l.yours)!;
+    const division = conference.divisions.find((d) => d.yours)!;
     const place = division.rows.findIndex((r) => r.you) + 1;
     const me = division.rows[place - 1]!;
-    const where = `${league.name} ${division.name}`;
+    const where = `${conference.abbreviation} ${division.name}`;
     const played = division.rows.some((r) => r.wins + r.losses > 0);
     text = !played
       ? `${where} · Standings`
@@ -298,17 +298,37 @@ export function LineupsScreen() {
   );
 }
 
-/** Settings → What's changed: every release's notes, newest first. */
+/**
+ * Settings → What's changed: the current version (with its fixes), the one before it, and
+ * a summary of everything since the last major release. Opens at the top.
+ */
 export function ChangesScreen() {
+  const [current, previous] = RELEASES;
   return (
     <SubPage title="What’s changed">
       <p className="muted">You’re on {versionLabel(APP_VERSION)}.</p>
-      {RELEASES.map((note) => (
-        <section key={note.id} className="card changes__release">
-          <h2 className="card__title">{note.title}</h2>
-          <ReleaseNoteView note={note} showTitle={false} />
-        </section>
-      ))}
+      {[current, previous].map((note, i) =>
+        note ? (
+          <section key={note.id} className="card changes__release">
+            <header className="changes__head">
+              <h2 className="card__title">{versionLabel(latestVersionOf(note) ?? note.title)}</h2>
+              <span className={`changes__tag${i === 0 ? ' is-current' : ''}`}>{i === 0 ? 'Current version' : 'Previous version'}</span>
+            </header>
+            <ReleaseNoteView note={note} showTitle={false} />
+          </section>
+        ) : null,
+      )}
+      <section className="card changes__release">
+        <header className="changes__head">
+          <h2 className="card__title">{SINCE_LAST_MAJOR.title}</h2>
+          <span className="changes__tag">Since {SINCE_LAST_MAJOR.since}</span>
+        </header>
+        <ul className="whatsnew__list">
+          {SINCE_LAST_MAJOR.items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </section>
     </SubPage>
   );
 }
@@ -443,9 +463,9 @@ function SeasonHistory({ season: s, defaultOpen }: { season: SeasonDto; defaultO
             {STATUS_WORD[s.status]} · {formatRange(s.startDate, s.playEndDate)} · {vocab.terms.seriesRecord} {s.seriesWon}–{s.seriesLost}
             {s.winGoal !== null ? ` · Goal ${s.winGoal}` : ''}
           </span>
-          {s.titles?.division || s.titles?.league ? (
+          {s.titles?.division || s.titles?.conference ? (
             <span className="seasonhist__titles">
-              🏆 {[s.titles.division ? 'Division champions' : null, s.titles.league ? 'League champions' : null].filter(Boolean).join(' · ')}
+              🏆 {[s.titles.division ? 'Division champions' : null, s.titles.conference ? 'Conference champions' : null].filter(Boolean).join(' · ')}
             </span>
           ) : null}
         </summary>

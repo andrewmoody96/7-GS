@@ -3,7 +3,7 @@
 // series' opponent comes from the season's schedule (rules scheduledOpponent): 4 division
 // rivals, 5 from the rest of the league, 3 from the other league.
 
-import { generateLeague, leagueSeedFor, scheduledOpponent } from '@7gs/rules';
+import { generateLeague, hashSeed, leagueSeedFor, replacementTeamName, scheduledOpponent, teamNameNeedsReplacing } from '@7gs/rules';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { leagueTeams, seasons, series, users, type UserRow } from '../db/schema';
@@ -71,4 +71,38 @@ export async function assignLeagues(db: Db): Promise<number> {
     .where(isNull(leagueTeams.userId));
   for (const user of missing) await db.transaction((tx) => ensureLeague(tx, user));
   return missing.length;
+}
+
+/**
+ * Rename league teams whose names are too long (over rules TEAM_NAME_MAX) or use a retired
+ * nickname, keeping their place and colors, and rename them in every series they played.
+ * Run on each deploy and at startup; nothing to do once every name fits.
+ */
+export async function shortenTeamNames(db: Db): Promise<number> {
+  const rows = await db.select().from(leagueTeams).orderBy(asc(leagueTeams.userId), asc(leagueTeams.slot));
+  const byUser = new Map<string, typeof rows>();
+  for (const row of rows) byUser.set(row.userId, [...(byUser.get(row.userId) ?? []), row]);
+  let renamed = 0;
+  for (const [userId, teams] of byUser) {
+    if (!teams.some((t) => teamNameNeedsReplacing(t.name))) continue;
+    await db.transaction(async (tx) => {
+      const names = teams.map((t) => t.name);
+      for (const [i, team] of teams.entries()) {
+        if (!teamNameNeedsReplacing(team.name)) continue;
+        const others = names.filter((_, j) => j !== i);
+        const name = replacementTeamName(others, hashSeed(`${userId}:rename:${team.slot}`));
+        names[i] = name;
+        await tx
+          .update(leagueTeams)
+          .set({ name })
+          .where(and(eq(leagueTeams.userId, userId), eq(leagueTeams.slot, team.slot)));
+        await tx
+          .update(series)
+          .set({ opponentName: name })
+          .where(and(eq(series.userId, userId), eq(series.opponentName, team.name)));
+        renamed++;
+      }
+    });
+  }
+  return renamed;
 }

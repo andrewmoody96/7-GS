@@ -8,7 +8,7 @@ import { createQueryClient } from '../app/queries';
 import { AppProviders } from '../app/routes';
 import { evaluateAchievements, type Theme } from '@7gs/rules';
 import { applyTheme } from '../vocab';
-import { ManagementScreen, RotationScreen, TeamScreen } from './Team';
+import { ChangesScreen, ManagementScreen, RotationScreen, TeamScreen } from './Team';
 
 function renderAt(path: string, theme: Theme) {
   applyTheme(theme);
@@ -20,6 +20,7 @@ function renderAt(path: string, theme: Theme) {
           <Route path="/team" element={<TeamScreen />} />
           <Route path="/team/management" element={<ManagementScreen />} />
           <Route path="/team/rotation" element={<RotationScreen />} />
+          <Route path="/team/settings/changes" element={<ChangesScreen />} />
         </Routes>
       </MemoryRouter>
     </AppProviders>,
@@ -109,5 +110,18 @@ describe('Default Lineups grid', () => {
       expect(after.find((s) => s.weekday === day)).toEqual(before.find((s) => s.weekday === day));
     }
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Save' })).toBeNull());
+  });
+});
+
+describe('What’s changed', () => {
+  it('shows three tiles: this version, the one before, and everything since the last major release', () => {
+    renderAt('/team/settings/changes', 'baseball');
+    const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(titles).toEqual(['v1.3.1-beta', 'v1.2.1-beta', 'Since the last major release']);
+    expect(screen.getByText('Current version')).toBeInTheDocument();
+    expect(screen.getByText('Previous version')).toBeInTheDocument();
+    expect(screen.getByText('Since v0.11.2026_beta')).toBeInTheDocument();
+    // The newest fixes come first in the current tile.
+    expect(screen.getByText('v1.3.1-beta fixes')).toBeInTheDocument();
   });
 });
