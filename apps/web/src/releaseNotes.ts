@@ -7,7 +7,7 @@
 // - `id` only has to be new and stay the same.
 
 /** The version this build is. Bump with every release, fixes included. */
-export const APP_VERSION = '1.2.0-beta';
+export const APP_VERSION = '1.2.1-beta';
 
 /** How a version is shown in the app: "v1.1.0-beta". */
 export const versionLabel = (version: string) => `v${version}`;
@@ -35,6 +35,7 @@ export const RELEASES: readonly ReleaseNote[] = [
     added: [
       'Ironclad, a new MVP badge: 4 Iron Man weeks in a row.',
       'Badges speak your sport: Tip-Off and Flawless in basketball, Puck Drop and Shutout in hockey.',
+      'v1.2.1: your own league of 29 teams from small towns, like the Pontiac Procrastinators. Division rivals every season, some teams every other season, and everyone at least once a year.',
     ],
     improved: [
       'A task is worth up to 4: no play scores more than a grand slam. Bigger tasks were set to 4.',

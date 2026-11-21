@@ -6,12 +6,16 @@
 
 import { databaseOptionsFromEnv, createDatabase } from '../src/db/client';
 import { DEFAULT_DATA_DIR } from '../src/config';
+import { assignLeagues } from '../src/services/league';
 
 const options = databaseOptionsFromEnv(process.env, process.env.PGLITE_DATA_DIR ?? DEFAULT_DATA_DIR, process.env.NODE_ENV === 'production');
 const database = await createDatabase(options);
 try {
   await database.migrate();
   console.log(`Migrations applied (${database.kind}).`);
+  // Each account's league of opponents; renames their opponents the first time.
+  const assigned = await assignLeagues(database.db);
+  console.log(`Leagues assigned: ${assigned}.`);
 } finally {
   await database.close();
 }

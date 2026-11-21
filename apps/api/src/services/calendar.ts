@@ -6,8 +6,6 @@ import {
   addDays,
   calendarPosition,
   compareDates,
-  generateOpponent,
-  hashSeed,
   isGameDay,
   seasonWindow,
   SERIES_LENGTH,
@@ -15,6 +13,7 @@ import {
   type SeasonStatus,
 } from '@7gs/rules';
 import { and, asc, eq, ne } from 'drizzle-orm';
+import { ensureLeague, opponentFor } from './league';
 import type { Db } from '../db/client';
 import { games, seasons, series, type GameRow, type SeasonRow, type SeriesRow, type UserRow } from '../db/schema';
 import { uuidv7 } from '../ids';
@@ -110,7 +109,8 @@ export async function ensureSeries(
 ): Promise<SeriesRow> {
   const existing = await findSeriesByStart(tx, user.id, startDate);
   if (existing) return existing;
-  const opponent = generateOpponent(hashSeed(`${user.id}:${season.number}:${number}`));
+  // From the player's league, on its yearly schedule (services/league).
+  const opponent = opponentFor(await ensureLeague(tx, user), user.id, season.number, number);
   await tx
     .insert(series)
     .values({

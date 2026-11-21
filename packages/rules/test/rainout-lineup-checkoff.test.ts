@@ -4,6 +4,14 @@ import {
   effectiveLockedAt,
   finalizeAfter,
   generateOpponent,
+  generateLeague,
+  LEAGUE_SIZE,
+  leagueSeedFor,
+  leagueYear,
+  OPPONENT_TOWNS,
+  opponentAbbreviation,
+  scheduledOpponent,
+  SERIES_PER_SEASON,
   hashSeed,
   rainoutOptions,
   starterWarnings,
@@ -195,8 +203,86 @@ describe('opponents', () => {
     expect(names.size).toBeGreaterThan(15);
   });
 
-  it('builds a badge abbreviation of up to three letters', () => {
+  it('builds a badge abbreviation of up to three letters, from the name', () => {
     const opp = generateOpponent(hashSeed('x'));
     expect(opp.abbreviation).toMatch(/^[A-ZÑ]{1,3}$/);
+    expect(opponentAbbreviation('Litchfield Last Minutemen')).toBe('LLM');
+    expect(opponentAbbreviation('Pontiac Procrastinators')).toBe('PP');
+    expect(opponentAbbreviation('Lake Placid Johnny-Come-Latelies')).toBe('LPJ');
+    // Older names, from before towns, still work.
+    expect(opponentAbbreviation('Snooze City Alarms')).toBe('SCA');
+  });
+
+  it('pairs a real town with a nickname that starts with the same letter', () => {
+    for (let i = 0; i < 200; i++) {
+      const opp = generateOpponent(hashSeed(`user-2:1:${i}`));
+      expect(opp.name).toBe(`${opp.city} ${opp.mascot}`);
+      expect(opp.mascot[0]).toBe(opp.city[0]);
+    }
+    expect(new Set(OPPONENT_TOWNS).size).toBe(OPPONENT_TOWNS.length);
+  });
+});
+
+describe('leagues', () => {
+  const seeds = [leagueSeedFor('user-a'), leagueSeedFor('user-b'), leagueSeedFor('user-c')];
+
+  it('gives each player 29 teams: different towns, different nicknames, same first letter', () => {
+    for (const seed of seeds) {
+      const league = generateLeague(seed);
+      expect(league).toHaveLength(LEAGUE_SIZE);
+      expect(new Set(league.map((t) => t.city)).size).toBe(LEAGUE_SIZE);
+      expect(new Set(league.map((t) => t.mascot)).size).toBe(LEAGUE_SIZE);
+      expect(new Set(league.map((t) => t.colors.join())).size).toBe(LEAGUE_SIZE);
+      for (const t of league) expect(t.mascot[0]).toBe(t.city[0]);
+      expect(generateLeague(seed)).toEqual(league);
+    }
+    expect(generateLeague(seeds[0]!).map((t) => t.name)).not.toEqual(generateLeague(seeds[1]!).map((t) => t.name));
+  });
+
+  it('plays rivals every season, regulars every other season, everyone else once a year', () => {
+    for (const seed of seeds) {
+      for (const year of [0, 1, 2]) {
+        const tiers = leagueYear(seed, year);
+        const seasons = [1, 2, 3, 4].map((n) =>
+          Array.from({ length: SERIES_PER_SEASON }, (_, i) => scheduledOpponent(seed, year * 4 + n, i + 1).slot),
+        );
+        const all = seasons.flat();
+        expect(all).toHaveLength(48);
+        const times = (slot: number) => all.filter((x) => x === slot).length;
+        expect(new Set(all).size).toBe(LEAGUE_SIZE); // everyone at least once a year
+        for (const slot of tiers.division) for (const season of seasons) expect(season).toContain(slot);
+        for (const slot of tiers.regular) {
+          expect(times(slot)).toBe(2);
+          const inSeasons = seasons.map((s, i) => (s.includes(slot) ? i : -1)).filter((i) => i >= 0);
+          expect(inSeasons[1]! - inSeasons[0]!).toBe(2); // every other season
+        }
+        for (const slot of tiers.rare) expect(times(slot)).toBe(1);
+        for (const season of seasons) expect(new Set(season).size).toBe(SERIES_PER_SEASON);
+      }
+    }
+  });
+
+  it('never plays the same team two weeks running, across seasons and years', () => {
+    for (const seed of seeds) {
+      const run: number[] = [];
+      for (let season = 1; season <= 12; season++) {
+        for (let n = 1; n <= SERIES_PER_SEASON; n++) run.push(scheduledOpponent(seed, season, n).slot);
+      }
+      for (let i = 1; i < run.length; i++) expect(run[i]).not.toBe(run[i - 1]);
+    }
+  });
+
+  it('deals new divisions every year', () => {
+    const seed = seeds[0]!;
+    const divisions = [0, 1, 2, 3].map((y) => [...leagueYear(seed, y).division].sort().join());
+    expect(new Set(divisions).size).toBeGreaterThan(1);
+  });
+
+  it('gives a Head Start a once-a-year team that isn’t Series 1’s', () => {
+    for (const seed of seeds) {
+      const head = scheduledOpponent(seed, 1, 0);
+      expect(head.tier).toBe('rare');
+      expect(head.slot).not.toBe(scheduledOpponent(seed, 1, 1).slot);
+    }
   });
 });

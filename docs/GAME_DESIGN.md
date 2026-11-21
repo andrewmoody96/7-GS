@@ -456,13 +456,24 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 - When a task leaves a lineup, the batting order closes up (1, 2, 3), and substitutions
   stay paired in the box score.
 
-## 8. Opponents (generic teams)
+## 8. Opponents (your league)
 
-- A new opponent each week, generated from city + mascot word lists, e.g.
-  *Snooze City Alarms, Couchville Cushions, Doomscroll Dynasty, Tomorrow Town Tigers,
-  Excuse Bay Pirates, Netflix Valley Nightcaps*.
-- Each opponent has a color pair and a simple generated badge. No real league marks,
-  logos, or team names.
+- **Your own league of 29 teams** (you're the 30th, like MLB), drawn once when you join
+  and kept (`league_teams`). Each is a real small town and a nickname for putting things
+  off, starting with the same letter: the *Pontiac Procrastinators, Litchfield Last
+  Minutemen, Lincoln Lazies, Walla Walla Wafflers*. Every town and nickname in a league is
+  different, and each team has its own colors and a simple generated badge (initials from
+  its name). No real league marks, logos, or team names.
+- **The schedule is dealt out again every year** (4 seasons, 48 series; rules
+  `scheduledOpponent`):
+  - **4 division rivals**, every season (16 series);
+  - **7 regulars**, every other season (14);
+  - **18 once-a-year teams** (18): the Patriots-at-Bears matchups.
+  Every team comes up at least once a year; divisions change each year. Never the same
+  team two weeks running, across seasons and years too. A Head Start week faces a
+  once-a-year team.
+- Accounts from before leagues got theirs at the v1.2.1 deploy, and every series they'd
+  already played was renamed to it.
 
 ## 9. Core screens (PWA)
 

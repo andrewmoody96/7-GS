@@ -40,8 +40,10 @@ import {
   displayMargin,
   finalizeAfter,
   gamesInSeason,
-  generateOpponent,
-  hashSeed,
+  generateLeague,
+  leagueSeedFor,
+  scheduledOpponent,
+  type LeagueTeam,
   HEAD_START_SERIES,
   headStartFrom,
   isGameDay,
@@ -228,10 +230,23 @@ function ensureSeason(world: UserWorld, env: Env, number: number): SeasonRow {
   return season;
 }
 
+const leagues = new Map<string, LeagueTeam[]>();
+
+/** The demo player's league (rules generateLeague): drawn from their id, so it never changes. */
+function leagueOf(userId: string): LeagueTeam[] {
+  let league = leagues.get(userId);
+  if (!league) {
+    league = generateLeague(leagueSeedFor(userId));
+    leagues.set(userId, league);
+  }
+  return league;
+}
+
 function ensureSeries(world: UserWorld, env: Env, seasonNumber: number, number: number, startDate: LocalDate): SeriesRow {
   let series = world.series.find((s) => s.seasonNumber === seasonNumber && s.number === number);
   if (series) return series;
-  const opp = generateOpponent(hashSeed(`${world.user.id}:${seasonNumber}:${number}`));
+  // From the player's league, on its yearly schedule, as the API does (services/league).
+  const opp = leagueOf(world.user.id)[scheduledOpponent(leagueSeedFor(world.user.id), seasonNumber, number).slot]!;
   series = {
     id: env.ids(),
     seasonNumber,

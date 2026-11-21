@@ -1,5 +1,5 @@
 import type { GameSummaryDto, SeriesDto } from '@7gs/contracts';
-import { compareDates, generateOpponent, localDateOf } from '@7gs/rules';
+import { compareDates, localDateOf, opponentAbbreviation } from '@7gs/rules';
 import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useNow, useTimeZone } from '../app/hooks';
@@ -81,7 +81,7 @@ export function SeriesView({ series: s, back }: { series: SeriesDto; back?: Reac
   const status = statusOfSeries(s);
   const tags = situationKeys(status);
   const teamName = me.data?.displayName ?? vocab.terms.you;
-  const abbr = generateOpponent(s.opponent.seed).abbreviation;
+  const abbr = opponentAbbreviation(s.opponent.name);
 
   return (
     <div className="screen screen--series" data-situation={tags[0] ?? 'normal'}>
