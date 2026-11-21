@@ -1,5 +1,5 @@
 import type { OpponentDto } from "@7gs/contracts";
-import { generateOpponent } from "@7gs/rules";
+import { opponentAbbreviation } from "@7gs/rules";
 import { initials } from "../lib/format";
 import { useMeQuery } from "../app/queries";
 import { useId } from "react";
@@ -9,11 +9,10 @@ interface OpponentBadgeProps {
   size?: number;
 }
 
-/** A generic shield badge redrawn from the opponent's seed (no real team marks). */
+/** A generic shield badge in the opponent's colors and initials (no real team marks). */
 export function OpponentBadge({ opponent, size = 40 }: OpponentBadgeProps) {
-  const generated = generateOpponent(opponent.seed);
   const [primary, secondary] = opponent.colors;
-  const abbr = generated.abbreviation;
+  const abbr = opponentAbbreviation(opponent.name);
   return (
     <svg
       className="badge badge--opponent"

@@ -2,7 +2,7 @@
 // that it exists. An admin also needs a password, entered on the device within 12 hours.
 
 import type { AdminAccountDto } from '@7gs/contracts';
-import { count, desc, eq, max, sql } from 'drizzle-orm';
+import { desc, eq, max, sql } from 'drizzle-orm';
 import type { Deps } from '../deps';
 import { sessions, users } from '../db/schema';
 import { ApiException, conflict, notFound, validationFailed } from '../errors';
@@ -62,22 +62,17 @@ export function adminRoutes(deps: Deps): AnyRoute[] {
         .select({
           user: users,
           lastSignInAt: max(sessions.createdAt),
-          // Devices still signed in: sessions that haven't expired.
-          // The time goes in as text with an explicit type: the Postgres driver can't send a
-          // bare Date inside raw SQL (PGlite can, which is why tests alone missed it).
-          devices: count(sql`CASE WHEN ${sessions.expiresAt} > ${now.toISOString()}::timestamptz THEN 1 END`),
         })
         .from(users)
         .leftJoin(sessions, eq(sessions.userId, users.id))
         .groupBy(users.id)
         .orderBy(desc(sql`coalesce(${users.lastSeenAt}, ${users.createdAt})`));
-      const accounts: AdminAccountDto[] = rows.map(({ user, lastSignInAt, devices }) => ({
+      const accounts: AdminAccountDto[] = rows.map(({ user, lastSignInAt }) => ({
         email: user.email,
         displayName: user.displayName,
         createdAt: user.createdAt.toISOString(),
         lastSignInAt: lastSignInAt ? new Date(lastSignInAt).toISOString() : null,
         lastSeenAt: user.lastSeenAt ? user.lastSeenAt.toISOString() : null,
-        devices: Number(devices),
         theme: themeOf(user),
       }));
       return { accounts };

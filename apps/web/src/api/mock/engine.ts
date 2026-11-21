@@ -231,7 +231,11 @@ function ensureSeason(world: UserWorld, env: Env, number: number): SeasonRow {
 function ensureSeries(world: UserWorld, env: Env, seasonNumber: number, number: number, startDate: LocalDate): SeriesRow {
   let series = world.series.find((s) => s.seasonNumber === seasonNumber && s.number === number);
   if (series) return series;
-  const opp = generateOpponent(hashSeed(`${world.user.id}:${seasonNumber}:${number}`));
+  // No town twice until every town has been played (rules generateOpponent).
+  const opp = generateOpponent(
+    hashSeed(`${world.user.id}:${seasonNumber}:${number}`),
+    world.series.map((s) => s.opponent.name),
+  );
   series = {
     id: env.ids(),
     seasonNumber,

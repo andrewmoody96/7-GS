@@ -56,12 +56,12 @@ describe('admin: accounts', () => {
 
     const { accounts } = await t.ok('listAccounts', { token: boss.token });
     expect(accounts.map((a) => a.email)).toEqual(['boss@example.com', 'pat@example.com']);
+    expect(accounts.find((a) => a.email === 'pat@example.com')).not.toHaveProperty('devices');
     expect(accounts.find((a) => a.email === 'pat@example.com')).toMatchObject({
       displayName: 'Pat’s Picks',
       createdAt: '2026-10-03T09:00:00.000Z',
       lastSignInAt: '2026-10-03T09:00:00.000Z',
       lastSeenAt: '2026-10-03T09:00:00.000Z',
-      devices: 1,
       theme: 'baseball',
     });
   });

@@ -250,7 +250,6 @@ export class MockBackend {
             createdAt: user.createdAt,
             lastSignInAt: user.createdAt,
             lastSeenAt: now.toISOString(),
-            devices: 1,
             theme: user.theme ?? 'baseball',
           },
         ],
