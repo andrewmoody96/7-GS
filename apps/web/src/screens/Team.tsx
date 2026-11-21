@@ -30,7 +30,7 @@ import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings }
 import { WeekCardView } from './WeekCard';
 import { TeamBadge } from '../components/Badges';
 import { ReleaseNoteView } from '../components/WhatsNew';
-import { APP_VERSION, RELEASES } from '../releaseNotes';
+import { APP_VERSION, RELEASES, versionLabel } from '../releaseNotes';
 import { useBadgeCount } from './Badges';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
@@ -262,7 +262,7 @@ export function LineupsScreen() {
 export function ChangesScreen() {
   return (
     <SubPage title="What’s changed">
-      <p className="muted">You’re on version {APP_VERSION}.</p>
+      <p className="muted">You’re on {versionLabel(APP_VERSION)}.</p>
       {RELEASES.map((note) => (
         <section key={note.id} className="card changes__release">
           <h2 className="card__title">{note.title}</h2>
