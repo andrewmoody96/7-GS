@@ -1,6 +1,7 @@
 // Assembling Game / Series / Season DTOs. Games whose lineup isn't built yet show the
 // current starter's values (that's what they will snapshot on their game day).
 
+import { seasonTitles } from './leagueStandings';
 import type { GameDto, GameSummaryDto, SeasonDto, SeriesDto, SeriesSummaryDto } from '@7gs/contracts';
 import { addDays, displayMargin, weekday, type Theme } from '@7gs/rules';
 import { eq, inArray } from 'drizzle-orm';
@@ -169,5 +170,6 @@ export async function seasonView(tx: Db, row: SeasonRow, theme: Theme = 'basebal
     displayDifferential,
     currentWinStreak: streaks.current,
     longestWinStreak: streaks.longest,
+    titles: await seasonTitles(tx, row),
   };
 }

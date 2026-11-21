@@ -6,6 +6,7 @@
 
 import { databaseOptionsFromEnv, createDatabase } from '../src/db/client';
 import { DEFAULT_DATA_DIR } from '../src/config';
+import { assignLeagues } from '../src/services/league';
 import { renameOldOpponents } from '../src/services/opponents';
 
 const options = databaseOptionsFromEnv(process.env, process.env.PGLITE_DATA_DIR ?? DEFAULT_DATA_DIR, process.env.NODE_ENV === 'production');
@@ -16,6 +17,9 @@ try {
   // Opponents from before the small-town names get new ones, once.
   const renamed = await renameOldOpponents(database.db);
   console.log(`Opponents renamed: ${renamed}.`);
+  // Each account's league of 29 teams; renames its opponents to them, once.
+  const leagues = await assignLeagues(database.db);
+  console.log(`Leagues assigned: ${leagues}.`);
 } finally {
   await database.close();
 }

@@ -130,6 +130,25 @@ export const userOpenDays = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.day] })],
 );
 
+/**
+ * Each player's league: the 29 teams they play (rules generateLeague), drawn once so they
+ * never change. Which team a series is against comes from rules scheduledOpponent.
+ */
+export const leagueTeams = pgTable(
+  'league_teams',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    slot: integer('slot').notNull(),
+    name: text('name').notNull(),
+    colors: text('colors').array().notNull(),
+    /** uint32, like series.opponent_seed. */
+    seed: bigint('seed', { mode: 'number' }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.slot] }), check('league_teams_slot_ck', sql`${t.slot} BETWEEN 0 AND 28`)],
+);
+
 export const loginTokens = pgTable('login_tokens', {
   tokenHash: text('token_hash').primaryKey(),
   email: text('email').notNull(),

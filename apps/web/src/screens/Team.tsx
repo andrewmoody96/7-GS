@@ -14,6 +14,7 @@ import {
   useSaveWeekPlan,
   useSeasonSeriesQuery,
   useSeasonsQuery,
+  useStandingsQuery,
   useStartersQuery,
   useTasksQuery,
 } from '../app/queries';
@@ -26,7 +27,7 @@ import { AllowanceChips, IlExplainer, TaskGroup, TaskSheet } from '../components
 import { formatRange, formatTimeOfDay, formatWinPct, signed } from '../lib/format';
 import type { CareerDto, SeasonDto, SeriesSummaryDto } from '@7gs/contracts';
 import { vocab } from '../vocab';
-import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings } from './Season';
+import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings, type StatItem } from './Season';
 import { WeekCardView } from './WeekCard';
 import { TeamBadge } from '../components/Badges';
 import { ReleaseNoteView } from '../components/WhatsNew';
@@ -82,6 +83,8 @@ function SubPage({
 export function TeamScreen() {
   const season = useCurrentSeasonQuery();
   const me = useMeQuery();
+  const career = useCareerQuery();
+  const badges = useBadgeCount();
   if (season.isPending) return <Loading label="Loading your team" />;
   if (season.isError) return <ErrorPanel error={season.error} onRetry={() => void season.refetch()} />;
   const s = season.data;
@@ -100,8 +103,14 @@ export function TeamScreen() {
           <AllowanceChips allowances={me.data?.allowances} />
         </div>
       </header>
-      {s && totals ? <Standings season={s} total={totals.total} /> : null}
-      <BadgesLink />
+      {s && totals ? (
+        <Standings
+          season={s}
+          total={totals.total}
+          afterBoard={<StandingsLine seasonId={s.id} />}
+          extra={[...titleStats(career.data), badgesStat(badges)]}
+        />
+      ) : null}
       <nav className="todo teamnav" aria-label={vocab.tabs.team}>
         <TeamLink to="/team/management" title={vocab.flavor.management} sub="This Week, Default Lineups and Injuries." />
         <TeamLink to="/team/history" title={TEAM_SECTIONS.history} sub="Past series and seasons, and your career stats." />
@@ -217,12 +226,43 @@ function FitName({ name }: { name: string }) {
 }
 
 /** Team → Badges, with how many are collected. */
-function BadgesLink() {
-  const count = useBadgeCount();
+/** Badges as a stat tile that opens the collection. */
+function badgesStat(count: number | null): StatItem {
+  return { label: 'Badges', value: count === null ? '–' : String(count), to: '/team/badges' };
+}
+
+/** Championships across every season, for the team stats. */
+function titleStats(c: CareerDto | undefined): StatItem[] {
+  return [
+    { label: 'Division titles', value: c ? String(c.divisionTitles) : '–' },
+    { label: 'League titles', value: c ? String(c.leagueTitles) : '–' },
+  ];
+}
+
+const ORDINAL = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
+
+/** Under the record: where the team stands in its division, opening the full standings. */
+function StandingsLine({ seasonId }: { seasonId: string }) {
+  const standings = useStandingsQuery(seasonId);
+  let text = 'Standings';
+  if (standings.data) {
+    const league = standings.data.leagues.find((l) => l.yours)!;
+    const division = league.divisions.find((d) => d.yours)!;
+    const place = division.rows.findIndex((r) => r.you) + 1;
+    const me = division.rows[place - 1]!;
+    const where = `${league.name} ${division.name}`;
+    const played = division.rows.some((r) => r.wins + r.losses > 0);
+    text = !played
+      ? `${where} · Standings`
+      : me.gamesBack === 0
+        ? `${ORDINAL(place)} in the ${where}`
+        : `${ORDINAL(place)} in the ${where} · ${me.gamesBack} GB`;
+  }
   return (
-    <nav className="todo teamnav teamnav--badges" aria-label="Badges">
-      <TeamLink to="/team/badges" title={count === null ? 'Badges' : `Badges: ${count}`} sub="Your collection, and what’s next to earn." />
-    </nav>
+    <Link to="/team/standings" className="standingsline">
+      <span>{text}</span>
+      <IconChevronRight aria-hidden="true" />
+    </Link>
   );
 }
 
@@ -353,6 +393,7 @@ function CareerCard({ career: c }: { career: CareerDto }) {
     [vocab.terms.longestWinStreak, String(c.longestWinStreak)],
     [vocab.terms.rallyWins, String(c.rallyWins)],
     [vocab.terms.runDifferential, signed(c.displayDifferential)],
+    ...titleStats(c).map((x): [string, string] => [x.label, x.value]),
   ];
   return (
     <section className="card career" aria-labelledby="career-title">
@@ -402,8 +443,18 @@ function SeasonHistory({ season: s, defaultOpen }: { season: SeasonDto; defaultO
             {STATUS_WORD[s.status]} · {formatRange(s.startDate, s.playEndDate)} · {vocab.terms.seriesRecord} {s.seriesWon}–{s.seriesLost}
             {s.winGoal !== null ? ` · Goal ${s.winGoal}` : ''}
           </span>
+          {s.titles?.division || s.titles?.league ? (
+            <span className="seasonhist__titles">
+              🏆 {[s.titles.division ? 'Division champions' : null, s.titles.league ? 'League champions' : null].filter(Boolean).join(' · ')}
+            </span>
+          ) : null}
         </summary>
         {series.isPending && open ? <p className="loading-line">Loading series…</p> : null}
+        {open ? (
+          <p className="seasonhist__standings">
+            <Link to={`/team/standings?season=${s.id}`}>Standings</Link>
+          </p>
+        ) : null}
         {series.data ? (
           <ol className="todo seasonhist__series">
             {series.data.map((x) => (

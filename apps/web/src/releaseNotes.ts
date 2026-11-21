@@ -7,7 +7,7 @@
 // - `id` only has to be new and stay the same.
 
 /** The version this build is. Bump with every release, fixes included. */
-export const APP_VERSION = '1.2.1-beta';
+export const APP_VERSION = '1.3.0-beta';
 
 /** How a version is shown in the app: "v1.1.0-beta". */
 export const versionLabel = (version: string) => `v${version}`;
@@ -28,6 +28,22 @@ export interface ReleaseNote {
 }
 
 export const RELEASES: readonly ReleaseNote[] = [
+  {
+    id: '1.3.0',
+    version: '1.3.0-beta',
+    title: 'v1.3.0-beta',
+    added: [
+      'Your own league: 29 teams from small towns. You’re the 30th.',
+      'Every season the league splits into two leagues of three divisions, dealt fresh each time.',
+      'Each season you play your 4 division rivals, 5 teams from your league and 3 from the other one. Everyone comes up within about a year.',
+      'Standings (Team → Standings): the other teams play each other every week, so there’s a real race.',
+      'Division and league titles go to the best record when the season ends. No playoffs. Winning the season still just takes a winning record.',
+      'Title counts under your team stats and in Team History.',
+    ],
+    improved: [
+      'The Team page is tidier: the scoreboard says Season record, your place in the division sits right under it, and Badges is a tile with the rest of your stats.',
+    ],
+  },
   {
     id: '1.2.0',
     version: '1.2.0-beta',

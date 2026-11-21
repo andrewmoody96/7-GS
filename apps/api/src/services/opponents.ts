@@ -1,19 +1,10 @@
 // Opponent names (rules generateOpponent, GAME_DESIGN §8): a real small town and a nickname
 // for putting things off. No town comes round twice until every town has been played.
 
-import { generateOpponent, hashSeed, opponentTown, type Opponent } from '@7gs/rules';
+import { generateOpponent, hashSeed, opponentTown } from '@7gs/rules';
 import { asc, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { seasons, series, users } from '../db/schema';
-
-/** The opponent for a new series: towns this player has already faced are skipped. */
-export async function nextOpponent(tx: Db, userId: string, seasonNumber: number, seriesNumber: number): Promise<Opponent> {
-  const played = await tx.select({ name: series.opponentName }).from(series).where(eq(series.userId, userId));
-  return generateOpponent(
-    hashSeed(`${userId}:${seasonNumber}:${seriesNumber}`),
-    played.map((p) => p.name),
-  );
-}
 
 /**
  * Rename every opponent still carrying an old name (from before the small towns), oldest

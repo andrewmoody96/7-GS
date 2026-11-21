@@ -27,6 +27,8 @@ import type {
   WeekDto,
   WeekSummaryDto,
   AchievementsDto,
+  StandingsDto,
+  StandingsRowDto,
 } from '@7gs/contracts';
 import {
   addDays,
@@ -40,8 +42,6 @@ import {
   displayMargin,
   finalizeAfter,
   gamesInSeason,
-  generateOpponent,
-  hashSeed,
   HEAD_START_SERIES,
   headStartFrom,
   isGameDay,
@@ -58,7 +58,6 @@ import {
   pinchHitThreshold,
   streakBonusEarned,
   plannableWeeks,
-  scoreline,
   suspensionOptions,
   weekLockedAt,
   weekPosition,
@@ -91,6 +90,20 @@ import {
   type TaskKind,
   type Weekday,
   achievementStatsFromHistory,
+  DIVISION_NAMES,
+  diffDays as diffLocalDays,
+  generateLeague,
+  LEAGUE_NAMES,
+  leagueSeedFor,
+  scheduledOpponent,
+  scoreline,
+  seasonStandings,
+  YOU,
+  type LeagueTeam,
+  type SeasonStandings,
+  type StandingsGame,
+  type StandingsRow,
+  SERIES_PER_SEASON,
 } from '@7gs/rules';
 import { ApiError } from '../client';
 import type { EntryRow, GameRow, IlHoldRow, RallyRollRow, SeasonRow, SeriesRow, StarterRow, TaskRow, UserWorld } from './db';
@@ -228,14 +241,23 @@ function ensureSeason(world: UserWorld, env: Env, number: number): SeasonRow {
   return season;
 }
 
+const leagues = new Map<string, LeagueTeam[]>();
+
+/** The demo player's league (rules generateLeague): drawn from their id, so it never changes. */
+function leagueOf(userId: string): LeagueTeam[] {
+  let league = leagues.get(userId);
+  if (!league) {
+    league = generateLeague(leagueSeedFor(userId));
+    leagues.set(userId, league);
+  }
+  return league;
+}
+
 function ensureSeries(world: UserWorld, env: Env, seasonNumber: number, number: number, startDate: LocalDate): SeriesRow {
   let series = world.series.find((s) => s.seasonNumber === seasonNumber && s.number === number);
   if (series) return series;
-  // No town twice until every town has been played (rules generateOpponent).
-  const opp = generateOpponent(
-    hashSeed(`${world.user.id}:${seasonNumber}:${number}`),
-    world.series.map((s) => s.opponent.name),
-  );
+  // From the player's league, on the season's schedule, as the API does (services/league).
+  const opp = leagueOf(world.user.id)[scheduledOpponent(leagueSeedFor(world.user.id), seasonNumber, number).slot]!;
   series = {
     id: env.ids(),
     seasonNumber,
@@ -952,6 +974,68 @@ export function toSeasonDto(world: UserWorld, season: SeasonRow, now: Date): Sea
     ),
     currentWinStreak: currentWinStreak(results),
     longestWinStreak: longestWinStreak(results),
+    titles: status === 'offseason' || status === 'complete' ? computeStandings(world, season, now).titles : null,
+  };
+}
+
+// ── Standings (rules seasonStandings, as the API's services/leagueStandings) ────
+
+function computeStandings(world: UserWorld, season: SeasonRow, now: Date): SeasonStandings {
+  const games: StandingsGame[] = world.series
+    .filter((s) => s.seasonNumber === season.number && s.number >= 1 && s.number <= SERIES_PER_SEASON)
+    .flatMap((s) =>
+      gamesOfSeries(world, s.id)
+        .filter((g) => g.status === 'final')
+        .map((g) => {
+          const result = g.result === 'W' || g.result === 'L' ? g.result : null;
+          const line = scoreline({ result, runs: g.runs, threshold: rulesOf(world, g).threshold });
+          return { seriesNumber: s.number, gameNumber: g.gameNumber, result, margin: line.us - line.them };
+        }),
+    );
+  // The demo settles a day once it's over.
+  const settled = Math.max(0, Math.min(SERIES_PER_SEASON * 7, diffLocalDays(todayOf(world, now), season.startDate)));
+  return seasonStandings(leagueSeedFor(world.user.id), season.number, games, settled);
+}
+
+export function standings(world: UserWorld, seasonId: string, now: Date): StandingsDto {
+  const season = seasonById(world, seasonId);
+  const s = computeStandings(world, season, now);
+  const league = leagueOf(world.user.id);
+  const row = (r: StandingsRow): StandingsRowDto => {
+    const you = r.team === YOU;
+    const played = r.wins + r.losses;
+    return {
+      you,
+      name: you ? world.user.displayName : (league[r.team]?.name ?? 'Opponent'),
+      colors: you ? null : [league[r.team]!.colors[0], league[r.team]!.colors[1]],
+      wins: r.wins,
+      losses: r.losses,
+      winPct: played === 0 ? 0 : Math.round((r.wins / played) * 1000) / 1000,
+      gamesBack: r.gamesBack,
+      divWins: r.divWins,
+      divLosses: r.divLosses,
+      leagueWins: r.leagueWins,
+      leagueLosses: r.leagueLosses,
+      runDiff: r.runDiff,
+    };
+  };
+  const myLeague = s.alignment.leagueOf(YOU);
+  const myDivision = s.alignment.divisionOf(YOU);
+  return {
+    seasonId: season.id,
+    seasonNumber: season.number,
+    complete: s.complete,
+    titles: s.titles,
+    leagues: [0, 1].map((lg) => ({
+      name: LEAGUE_NAMES[lg]!,
+      yours: lg === myLeague,
+      rows: s.leagues[lg]!.map(row),
+      divisions: [0, 1, 2].map((d) => ({
+        name: DIVISION_NAMES[d]!,
+        yours: lg * 3 + d === myDivision,
+        rows: s.divisions[lg * 3 + d]!.map(row),
+      })),
+    })),
   };
 }
 
@@ -995,6 +1079,8 @@ export function career(world: UserWorld, now: Date): CareerDto {
     displayDifferential: sum((s) => s.displayDifferential),
     currentWinStreak: currentWinStreak(results),
     longestWinStreak: longestWinStreak(results),
+    divisionTitles: rows.filter((r) => r.titles?.division).length,
+    leagueTitles: rows.filter((r) => r.titles?.league).length,
     bestSeason: best ? { number: best.number, wins: best.wins, losses: best.losses, winPct: best.winPct } : null,
   };
 }

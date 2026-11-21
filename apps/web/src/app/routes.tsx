@@ -25,6 +25,7 @@ import { ToastProvider } from './toast';
 import { AccountsScreen } from '../screens/Accounts';
 import { SetupScreen } from '../screens/Setup';
 import { AchievementsLabScreen, BadgesScreen } from '../screens/Badges';
+import { StandingsScreen } from '../screens/LeagueStandings';
 
 export function AppProviders({
   api,
@@ -72,6 +73,7 @@ export function AppRoutes() {
         <Route path="team/settings/changes" element={<ChangesScreen />} />
         <Route path="team/admin/accounts" element={<AccountsScreen />} />
         <Route path="team/badges" element={<BadgesScreen />} />
+        <Route path="team/standings" element={<StandingsScreen />} />
         <Route path="team/badges/lab" element={<AchievementsLabScreen />} />
         {/* Old links from before Team (Film Room and Season). */}
         <Route path="film-room" element={<FilmRoomRedirect />} />

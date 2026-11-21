@@ -64,8 +64,11 @@ describe('Badges', () => {
     // A team mid-season has played and won: more than the first-day badges.
     expect(stats.wins).toBeGreaterThan(0);
     expect(earned).toBeGreaterThan(2);
-    const nav = await screen.findByRole('navigation', { name: 'Badges' });
-    await waitFor(() => expect(nav.querySelector('strong')?.textContent).toBe(`Badges: ${earned}`));
+    // A tile in the team stats, opening the collection.
+    const link = await screen.findByRole('link', { name: 'Badges' });
+    expect(link).toHaveAttribute('href', '/team/badges');
+    await waitFor(() => expect(link.closest('.stat')?.querySelector('dd')?.textContent).toBe(String(earned)));
+    expect(await screen.findByRole('link', { name: /Standings|in the/ })).toHaveAttribute('href', '/team/standings');
   });
 });
 
