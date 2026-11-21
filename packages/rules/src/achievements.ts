@@ -200,7 +200,10 @@ export interface AchievementHistory {
     /** Every lineup task done. */
     allDone: boolean;
   }[];
-  /** Every series that has finished. */
+  /**
+   * Every decided series: won or lost, from the 4th W or L on, even with games still to
+   * play that week. `ironMan` only once the week has finished.
+   */
   series: readonly { id: string; result: 'won' | 'lost' | null; wins: number; ironMan: boolean }[];
   seasons: readonly {
     wins: number;
@@ -230,7 +233,7 @@ function longestRun(dates: Iterable<LocalDate>): number {
 /**
  * Badge stats from an account's history. The same rules as the simulator: a perfect game
  * is a W with every lineup task done (not a Rally W); win streaks and bounce-backs follow
- * decided games in order, skipping no-decisions; a series counts once it has finished.
+ * decided games in order, skipping no-decisions; a series counts once it's decided.
  */
 export function achievementStatsFromHistory(h: AchievementHistory): AchievementStats {
   const games = [...h.games].sort((a, b) => (a.playedDate === b.playedDate ? a.slot - b.slot : a.playedDate < b.playedDate ? -1 : 1));

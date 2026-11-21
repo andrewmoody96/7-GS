@@ -1024,12 +1024,11 @@ export function achievements(world: UserWorld, now: Date): AchievementsDto {
           allDone: lineup.length > 0 && lineup.every((e) => e.completedClientAt !== null),
         };
       }),
-      series: world.series
-        .filter((s) => s.closedAt !== null)
-        .map((s) => {
-          const dto = toSeriesDto(world, s);
-          return { id: s.id, result: dto.result, wins: dto.wins, ironMan: s.ironMan === true };
-        }),
+      // Decided series count at once (the 4th W or L); Iron Man waits for the week to end.
+      series: world.series.flatMap((s) => {
+        const dto = toSeriesDto(world, s);
+        return dto.result === null ? [] : [{ id: s.id, result: dto.result, wins: dto.wins, ironMan: s.closedAt !== null && s.ironMan === true }];
+      }),
       seasons: seasons.map((s) => ({
         wins: s.wins,
         losses: s.losses,

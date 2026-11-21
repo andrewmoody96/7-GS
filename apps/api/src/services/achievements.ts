@@ -48,10 +48,12 @@ export async function achievements(tx: Db, user: UserRow): Promise<AchievementsD
     }
   }
 
-  const closed = await tx
+  // A series counts the moment it's decided (the 4th W or L), as it does in the season's
+  // series record; Iron Man waits for the week to finish (series.iron_man is null until then).
+  const decided = await tx
     .select({ id: series.id, result: series.result, wins: series.wins, ironMan: series.ironMan })
     .from(series)
-    .where(and(eq(series.userId, user.id), isNotNull(series.closedAt)));
+    .where(and(eq(series.userId, user.id), isNotNull(series.result)));
   const seasonRows = await tx.select().from(seasons).where(eq(seasons.userId, user.id));
 
   const opened = await tx.select({ day: userOpenDays.day }).from(userOpenDays).where(eq(userOpenDays.userId, user.id));
@@ -82,7 +84,7 @@ export async function achievements(tx: Db, user: UserRow): Promise<AchievementsD
       tasksDone: g.tasksDone,
       allDone: withLineup.has(g.id) && !open.has(g.id),
     })),
-    series: closed.map((s) => ({ id: s.id, result: s.result, wins: s.wins, ironMan: s.ironMan === true })),
+    series: decided.map((s) => ({ id: s.id, result: s.result, wins: s.wins, ironMan: s.ironMan === true })),
     seasons: seasonRows.map((s) => ({
       wins: s.wins,
       losses: s.losses,
