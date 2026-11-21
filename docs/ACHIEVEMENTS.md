@@ -8,6 +8,8 @@ Shipped in 1.1, for every account: **Team → Badges**. The catalog and rules li
 
 **The demo** shows the demo team's real badges, and the **Achievements lab** (Demo controls → Achievements lab, or the link on the Badges page) simulates a player to watch badges unlock.
 
+**In each sport's words.** The catalog is written for baseball; basketball and hockey rename the badges that don't fit (`vocab.badges` in `apps/web/src/vocab.ts`): First Pitch is Tip-Off / Puck Drop, Perfect Game is Flawless / Shutout, Rally Cap Believer is Challenge Won, and descriptions use buckets/shots to win and Postponements. What earns a badge never changes with the sport.
+
 **Perfect games** count for badges only with **5 or more runs to win and at least 3 tasks** in the lineup (rules `PERFECT_FOR_BADGES`), so a day of one or two big tasks can't rack them up. (The 3rd Rally Cap's "perfect games" is a game rule and isn't affected.)
 
 ## Rookie

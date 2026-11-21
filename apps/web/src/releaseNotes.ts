@@ -32,7 +32,10 @@ export const RELEASES: readonly ReleaseNote[] = [
     id: '1.2.0',
     version: '1.2.0-beta',
     title: 'v1.2.0-beta',
-    added: ['Ironclad, a new MVP badge: 4 Iron Man weeks in a row.'],
+    added: [
+      'Ironclad, a new MVP badge: 4 Iron Man weeks in a row.',
+      'Badges speak your sport: Tip-Off and Flawless in basketball, Puck Drop and Shutout in hockey.',
+    ],
     improved: [
       'A task is worth up to 4: no play scores more than a grand slam. Bigger tasks were set to 4.',
       'Series badges arrive the moment you clinch, not on Sunday.',
