@@ -1,19 +1,62 @@
-// What's new, newest first. The app shows the entries an account hasn't seen yet, once,
-// after an update (components/WhatsNew). Add an entry with each release worth telling
-// people about; `id` only has to be new and stay the same.
+// Release notes, newest first (docs/RELEASES.md has how versions and releases work).
+//
+// - The app shows the entries an account hasn't seen yet, once, after an update
+//   (components/WhatsNew). Settings → What's changed lists them all.
+// - A feature or major release (1.2, 2.0) gets an entry; a fix release (1.2.1) only bumps
+//   APP_VERSION, and goes in the entry as `fixed` if it's worth a line.
+// - `id` only has to be new and stay the same.
+
+/** The version this build is. Bump with every release, fixes included. */
+export const APP_VERSION = '1.1.0';
 
 export interface ReleaseNote {
   id: string;
-  /** Shown as the heading, e.g. "November 2026". */
+  /** The version it shipped in; null for the notes from before version numbers. */
+  version: string | null;
+  /** Shown as the heading, e.g. "Version 1.1". */
   title: string;
+  /** Named groups of bullets, shown in order (a recap's "1.0: …", "1.1: …"). */
+  sections?: { title: string; items: string[] }[];
   added?: string[];
   improved?: string[];
   fixed?: string[];
+  /** Covers everything before it: older notes aren't shown with it in the popup. */
+  recap?: boolean;
 }
 
 export const RELEASES: readonly ReleaseNote[] = [
   {
+    id: '1.1.0',
+    version: '1.1.0',
+    title: 'Version 1.1',
+    recap: true,
+    sections: [
+      {
+        title: '1.0: everything since launch',
+        items: [
+          'Every day is a game and every week a best-of-7. Runs to win comes from your lineup: must-hits plus half the rest.',
+          'Rally Caps flip a close loss into a W the next morning. Up to 3 a month, and saving them up boosts the odds.',
+          'Rainouts move a day to later in the week. The Injured List puts a task on hold without costing you games.',
+          'Checked something off before midnight while offline? It counts if it syncs by noon.',
+          'Plan the whole week on one grid in Management → Default Lineups.',
+          'Make it yours: baseball, basketball or hockey, a day or night look, and a team name and photo.',
+          'Add it to your Home Screen for reminders, sign in with a 6-digit code, and add a password if you like. It updates itself.',
+        ],
+      },
+      {
+        title: '1.1: Badges',
+        items: [
+          '35 badges in 5 tiers, from Rookie to Hall of Fame. Find them in Team → Badges.',
+          'Everything you’ve already played counts, so you may have a few waiting.',
+          'New badges pop up the moment you earn them.',
+          'A quick pass through setup, now with your season win goal.',
+        ],
+      },
+    ],
+  },
+  {
     id: '2026-11-guided-setup',
+    version: null,
     title: 'November 2026: guided setup',
     added: [
       'Guided setup: name your team, add your tasks and plan your week on one grid, then pick when to start.',
@@ -25,6 +68,7 @@ export const RELEASES: readonly ReleaseNote[] = [
   },
   {
     id: '2026-11-sign-in-lock',
+    version: null,
     title: 'November 2026: passwords',
     added: [
       'Optional password: add one in Team → Settings and signing in takes your email code plus the password, so your email alone isn’t enough.',
@@ -33,6 +77,7 @@ export const RELEASES: readonly ReleaseNote[] = [
   },
   {
     id: '2026-11-team-photo',
+    version: null,
     title: 'November 2026: team photo',
     added: [
       'Team photo: add one in Team → Settings and it fills your team badge, initials on top.',
@@ -61,9 +106,12 @@ const MAX_SHOWN = 3;
 /**
  * The entries newer than `seen`, newest first. Nothing seen yet (an account from before the
  * popup existed) or an id no longer listed means the newest few, so nobody misses a release.
+ * A recap ends the list: it already covers what came before it.
  */
 export function unseenReleases(seen: string | null): ReleaseNote[] {
   if (seen === LATEST_RELEASE) return [];
   const index = seen === null ? -1 : RELEASES.findIndex((r) => r.id === seen);
-  return (index === -1 ? RELEASES : RELEASES.slice(0, index)).slice(0, MAX_SHOWN);
+  const newer = (index === -1 ? RELEASES : RELEASES.slice(0, index)).slice(0, MAX_SHOWN);
+  const recap = newer.findIndex((r) => r.recap);
+  return recap === -1 ? newer : newer.slice(0, recap + 1);
 }

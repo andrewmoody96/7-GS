@@ -115,6 +115,21 @@ export const userAvatars = pgTable('user_avatars', {
   updatedAt: instant('updated_at').notNull(),
 });
 
+/**
+ * Local dates the account used the app on (http/session.touchLastSeen), for badges.
+ * Earlier days are taken from check-offs (services/achievements).
+ */
+export const userOpenDays = pgTable(
+  'user_open_days',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    day: localDate('day').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+);
+
 export const loginTokens = pgTable('login_tokens', {
   tokenHash: text('token_hash').primaryKey(),
   email: text('email').notNull(),

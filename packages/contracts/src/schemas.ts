@@ -494,6 +494,33 @@ export const SeriesSummary = Series.omit({ games: true });
 export const SeriesList = z.object({ series: z.array(SeriesSummary) });
 
 /** Lifetime totals across every season (GAME_DESIGN §5). */
+/** Everything badges are judged on (rules AchievementStats); the app evaluates the catalog. */
+export const AchievementStats = z.object({
+  daysOpened: Count,
+  longestOpenStreak: Count,
+  teamPhoto: Count,
+  defaultLineupsSet: Count,
+  tasksDone: Count,
+  longestCheckStreak: Count,
+  gamesPlayed: Count,
+  wins: Count,
+  longestWinStreak: Count,
+  perfectGames: Count,
+  bestPerfectInSeries: Count,
+  bounceBacks: Count,
+  rallyWins: Count,
+  seriesWon: Count,
+  sweeps: Count,
+  reverseSweeps: Count,
+  game7Wins: Count,
+  ironMans: Count,
+  winningSeasons: Count,
+  goalsReached: Count,
+  perfectSeasons: Count,
+});
+
+export const Achievements = z.object({ stats: AchievementStats });
+
 export const Career = z.object({
   /** Seasons with at least one decided game. */
   seasonsPlayed: Count,

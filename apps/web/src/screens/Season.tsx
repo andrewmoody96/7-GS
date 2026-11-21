@@ -2,7 +2,7 @@ import { PASSWORD_MIN, type MeDto, type SeasonDto } from '@7gs/contracts';
 import { gamesInSeason, GAMES_PER_SEASON, HEAD_START_SERIES, seasonPace, THEME_TERMS } from '@7gs/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useApi, useCheckoffQueue } from '../app/context';
 import {
   forgetCachedMe,
@@ -24,6 +24,7 @@ import { AVAILABLE_THEMES, vocab } from '../vocab';
 import { checkForUpdate, useUpdateAvailable } from '../app/update';
 import { squarePhoto } from '../lib/avatar';
 import { TeamBadge } from '../components/Badges';
+import { APP_VERSION } from '../releaseNotes';
 
 // A function, not a constant: the labels follow the account's theme.
 const statusLabel = (): Record<SeasonDto['status'], string> => ({
@@ -535,6 +536,9 @@ function AppUpdateCheck() {
   return (
     <div className="field">
       <span className="field__label">App version</span>
+      <p className="appversion">
+        Version {APP_VERSION} · <Link to="/team/settings/changes">What’s changed</Link>
+      </p>
       {waiting ? (
         <button type="button" className="btn btn--primary" onClick={waiting}>
           Reload to update

@@ -19,6 +19,7 @@ import { useNotify } from './toast';
 import { useNow } from './hooks';
 import { TasksModalProvider, useTasksModal } from './tasksModal';
 import { WhatsNew } from '../components/WhatsNew';
+import { NewBadgeNotices } from '../screens/Badges';
 import { LATEST_RELEASE } from '../releaseNotes';
 import { SETUP_PATH } from '../screens/Setup';
 
@@ -142,6 +143,7 @@ function TopBar() {
       />
       <HowItWorksSheet open={helpOpen} onClose={closeHelp} />
       {me.data ? <WhatsNew seen={me.data.seenRelease} ready={welcomeStep === null && !helpOpen && !onSetup && !setupPending} /> : null}
+      {me.data && !setupPending ? <NewBadgeNotices /> : null}
     </header>
   );
 }
@@ -232,6 +234,17 @@ function DemoBar() {
         >
           <strong>Guided setup</strong>
           <small>The setup new accounts get: team, tasks, your week, and when to start.</small>
+        </button>
+        <button
+          type="button"
+          className="scenario"
+          onClick={() => {
+            setOpen(false);
+            navigate('/team/badges/lab');
+          }}
+        >
+          <strong>Achievements lab</strong>
+          <small>Simulate a player and watch badges unlock. Team → Badges shows the demo team’s own.</small>
         </button>
         <p className="fine">The demo clock follows real time from a pinned moment, so games still lock and go final on schedule.</p>
       </Sheet>

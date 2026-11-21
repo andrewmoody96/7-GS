@@ -29,6 +29,9 @@ import { vocab } from '../vocab';
 import { Clubhouse, GoalCard, Pace, seasonStatusLabel, seasonTotals, Standings } from './Season';
 import { WeekCardView } from './WeekCard';
 import { TeamBadge } from '../components/Badges';
+import { ReleaseNoteView } from '../components/WhatsNew';
+import { APP_VERSION, RELEASES } from '../releaseNotes';
+import { useBadgeCount } from './Badges';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
@@ -98,6 +101,7 @@ export function TeamScreen() {
         </div>
       </header>
       {s && totals ? <Standings season={s} total={totals.total} /> : null}
+      <BadgesLink />
       <nav className="todo teamnav" aria-label={vocab.tabs.team}>
         <TeamLink to="/team/management" title={vocab.flavor.management} sub="This Week, Default Lineups and Injuries." />
         <TeamLink to="/team/history" title={TEAM_SECTIONS.history} sub="Past series and seasons, and your career stats." />
@@ -212,6 +216,16 @@ function FitName({ name }: { name: string }) {
   );
 }
 
+/** Team → Badges, with how many are collected. */
+function BadgesLink() {
+  const count = useBadgeCount();
+  return (
+    <nav className="todo teamnav teamnav--badges" aria-label="Badges">
+      <TeamLink to="/team/badges" title={count === null ? 'Badges' : `Badges: ${count}`} sub="Your collection, and what’s next to earn." />
+    </nav>
+  );
+}
+
 function TeamLink({ to, title, sub }: { to: string; title: string; sub: string }) {
   return (
     <Link to={to} className="todo__item">
@@ -240,6 +254,21 @@ export function LineupsScreen() {
         </div>
       </aside>
       <WeekCardView />
+    </SubPage>
+  );
+}
+
+/** Settings → What's changed: every release's notes, newest first. */
+export function ChangesScreen() {
+  return (
+    <SubPage title="What’s changed">
+      <p className="muted">You’re on version {APP_VERSION}.</p>
+      {RELEASES.map((note) => (
+        <section key={note.id} className="card changes__release">
+          <h2 className="card__title">{note.title}</h2>
+          <ReleaseNoteView note={note} showTitle={false} />
+        </section>
+      ))}
     </SubPage>
   );
 }

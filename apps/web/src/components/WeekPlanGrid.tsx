@@ -23,10 +23,14 @@ export type WeekPlan = Map<string, Plan>;
 type CellState = 'off' | 'on' | 'must';
 
 /**
- * From the saved default lineups. A task in none of them starts on every day when
- * `fillEmpty` (a brand-new plan), otherwise on none.
+ * From the saved default lineups. A task in none of them (lineup or bench) starts on every
+ * day when `fillEmpty` says so for it, otherwise on none.
  */
-export function initialPlan(tasks: TaskDto[], starters: StarterDto[], { fillEmpty }: { fillEmpty: boolean }): WeekPlan {
+export function initialPlan(
+  tasks: TaskDto[],
+  starters: StarterDto[],
+  { fillEmpty }: { fillEmpty: boolean | ((task: TaskDto) => boolean) },
+): WeekPlan {
   const plan: WeekPlan = new Map();
   for (const t of tasks) {
     const days = new Set<number>();
@@ -38,7 +42,9 @@ export function initialPlan(tasks: TaskDto[], starters: StarterDto[], { fillEmpt
         if (slot.required) mustDays.add(s.weekday);
       }
     }
-    plan.set(t.id, { days: days.size === 0 && fillEmpty ? new Set([1, 2, 3, 4, 5, 6, 7]) : days, mustDays });
+    const benched = starters.some((s) => s.bench.some((b) => b.taskId === t.id));
+    const fill = days.size === 0 && !benched && (typeof fillEmpty === 'function' ? fillEmpty(t) : fillEmpty);
+    plan.set(t.id, { days: fill ? new Set([1, 2, 3, 4, 5, 6, 7]) : days, mustDays });
   }
   return plan;
 }

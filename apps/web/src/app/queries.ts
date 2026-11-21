@@ -44,6 +44,7 @@ export const qk = {
   suspension: (id: string) => ['suspension', id] as const,
   weeks: ['weeks'] as const,
   week: (startDate: string) => ['week', startDate] as const,
+  achievements: ['achievements'] as const,
 };
 
 export function createQueryClient(): QueryClient {
@@ -191,6 +192,12 @@ export function useSeasonSeriesQuery(seasonId: string | null) {
   });
 }
 
+/** Badge stats (rules ACHIEVEMENTS judges them). Refreshed with the game day. */
+export function useAchievementsQuery() {
+  const api = useApi();
+  return useQuery({ queryKey: qk.achievements, queryFn: () => api.call('getAchievements') });
+}
+
 export function useCareerQuery() {
   const api = useApi();
   return useQuery({ queryKey: ['career'], queryFn: () => api.call('getCareer') });
@@ -289,7 +296,7 @@ function invalidate(qc: QueryClient, ...keys: QueryKey[]): void {
 
 /** Everything a game-day change can ripple into. */
 export function invalidateGameDay(qc: QueryClient): void {
-  invalidate(qc, qk.today, ['series'], qk.currentSeason, qk.me, ['game'], ['week'], qk.weeks, ['suspension'], ['rally']);
+  invalidate(qc, qk.today, ['series'], qk.currentSeason, qk.me, ['game'], ['week'], qk.weeks, ['suspension'], ['rally'], qk.achievements);
 }
 
 // ── Check-offs (optimistic, offline-capable) ─────────────────────────────────

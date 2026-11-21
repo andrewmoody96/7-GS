@@ -44,8 +44,11 @@ describe('week plan', () => {
     expect([...plan.get('gym')!.days].sort()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect([...plan.get('gym')!.mustDays]).toEqual([1]);
     expect(plan.get('walk')!.days.size).toBe(0);
-    // In setup, a task on no day yet starts on every day.
-    expect(initialPlan(rows, starters, { fillEmpty: true }).get('walk')!.days.size).toBe(7);
+    // In setup, a task on no day yet starts on every day, unless it's on a bench.
+    const fresh = task('fresh');
+    const filled = initialPlan([...rows, fresh], starters, { fillEmpty: (t) => t.id === 'fresh' || t.id === 'walk' });
+    expect(filled.get('fresh')!.days.size).toBe(7);
+    expect(filled.get('walk')!.days.size).toBe(0);
     expect(weekPlanBodies(plan, rows, starters).size).toBe(0);
     expect(samePlan(plan, initialPlan(rows, starters, { fillEmpty: false }))).toBe(true);
   });

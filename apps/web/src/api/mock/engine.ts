@@ -26,6 +26,7 @@ import type {
   TodayDto,
   WeekDto,
   WeekSummaryDto,
+  AchievementsDto,
 } from '@7gs/contracts';
 import {
   addDays,
@@ -89,6 +90,7 @@ import {
   type SuspensionGame,
   type TaskKind,
   type Weekday,
+  achievementStatsFromHistory,
 } from '@7gs/rules';
 import { ApiError } from '../client';
 import type { EntryRow, GameRow, IlHoldRow, RallyRollRow, SeasonRow, SeriesRow, StarterRow, TaskRow, UserWorld } from './db';
@@ -990,6 +992,53 @@ export function career(world: UserWorld, now: Date): CareerDto {
     currentWinStreak: currentWinStreak(results),
     longestWinStreak: longestWinStreak(results),
     bestSeason: best ? { number: best.number, wins: best.wins, losses: best.losses, winPct: best.winPct } : null,
+  };
+}
+
+/**
+ * Badge stats from the demo world, as the API works them out (services/achievements).
+ * The demo doesn't log app opens: today, the sign-up day and every day with a check-off.
+ */
+export function achievements(world: UserWorld, now: Date): AchievementsDto {
+  const finals = world.games.filter((g) => g.status === 'final');
+  const seasons = world.seasons.map((s) => toSeasonDto(world, s, now));
+  return {
+    stats: achievementStatsFromHistory({
+      openDays: [
+        todayOf(world, now),
+        localDateOf(new Date(world.user.createdAt), world.user.timezone),
+        ...finals.filter((g) => g.tasksDone > 0).map((g) => g.playedDate),
+      ],
+      teamPhoto: Boolean(world.user.avatar),
+      defaultLineupsSet: world.starters.filter((s) => s.lineup.length > 0).length,
+      games: finals.map((g) => {
+        const lineup = g.entries.filter((e) => e.role === 'lineup');
+        return {
+          seriesId: g.seriesId,
+          gameNumber: g.gameNumber,
+          playedDate: g.playedDate,
+          slot: g.slot,
+          result: g.result === 'W' || g.result === 'L' ? g.result : null,
+          rally: g.resultDetail === 'rally',
+          tasksDone: g.tasksDone,
+          allDone: lineup.length > 0 && lineup.every((e) => e.completedClientAt !== null),
+        };
+      }),
+      series: world.series
+        .filter((s) => s.closedAt !== null)
+        .map((s) => {
+          const dto = toSeriesDto(world, s);
+          return { id: s.id, result: dto.result, wins: dto.wins, ironMan: s.ironMan === true };
+        }),
+      seasons: seasons.map((s) => ({
+        wins: s.wins,
+        losses: s.losses,
+        winGoal: s.winGoal,
+        finished: s.status === 'offseason' || s.status === 'complete',
+        seriesWon: s.seriesWon,
+        seriesLost: s.seriesLost,
+      })),
+    }),
   };
 }
 

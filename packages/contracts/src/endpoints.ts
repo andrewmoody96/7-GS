@@ -187,6 +187,8 @@ export const endpoints = {
 
   /** Lifetime totals across every season. */
   getCareer: endpoint({ method: 'GET', path: '/v1/career', response: S.Career }),
+  /** Badge stats, worked out from the whole history (the catalog is in rules). */
+  getAchievements: endpoint({ method: 'GET', path: '/v1/achievements', response: S.Achievements }),
 } as const;
 
 export type Endpoints = typeof endpoints;

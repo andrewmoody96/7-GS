@@ -1,3 +1,4 @@
+import { achievements } from '../services/achievements';
 import type { Deps } from '../deps';
 import { route, type AnyRoute } from '../http/router';
 import { currentSeason, currentSeries, loadUserSeason, loadUserSeries, setWinGoal } from '../services/seasons';
@@ -62,5 +63,8 @@ export function seasonRoutes(deps: Deps): AnyRoute[] {
     ),
 
     route('getCareer', ({ auth, now }) => inUserTx(db, auth.user, now, (tx, user) => career(tx, user), { scope: 'account' })),
+    route('getAchievements', ({ auth, now }) =>
+      inUserTx(db, auth.user, now, (tx, user) => achievements(tx, user), { scope: 'account' }),
+    ),
   ];
 }

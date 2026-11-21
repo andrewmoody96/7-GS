@@ -6,18 +6,22 @@ import { createMockApi } from '../api/mock';
 import { CheckoffQueue } from '../api/offlineQueue';
 import { createQueryClient } from '../app/queries';
 import { AppProviders } from '../app/routes';
-import { LATEST_RELEASE, RELEASES, unseenReleases } from '../releaseNotes';
+import { APP_VERSION, LATEST_RELEASE, RELEASES, unseenReleases } from '../releaseNotes';
 import { WhatsNew } from './WhatsNew';
 
 describe('release notes', () => {
-  it('lists what an account hasn’t seen', () => {
+  it('lists what an account hasn’t seen, up to and including a recap', () => {
     expect(unseenReleases(LATEST_RELEASE)).toEqual([]);
-    // Never saw a popup (or an id we no longer list): every recent release, newest first, up to 3.
-    expect(unseenReleases(null).map((r) => r.id)).toEqual(RELEASES.slice(0, 3).map((r) => r.id));
-    expect(unseenReleases(null).map((r) => r.id)).toEqual(['2026-11-guided-setup', '2026-11-sign-in-lock', '2026-11-team-photo']);
+    // 1.1 recaps everything since launch, so it's all anyone who hasn't seen it gets.
+    expect(RELEASES[0]).toMatchObject({ id: '1.1.0', version: '1.1.0', recap: true });
+    expect(unseenReleases(null).map((r) => r.id)).toEqual(['1.1.0']);
     expect(unseenReleases('some-old-id-we-no-longer-list')).toEqual(unseenReleases(null));
-    // Someone who saw the team-photo notes gets just the newer ones.
-    expect(unseenReleases('2026-11-team-photo').map((r) => r.id)).toEqual(['2026-11-guided-setup', '2026-11-sign-in-lock']);
+    expect(unseenReleases('2026-11-guided-setup').map((r) => r.id)).toEqual(['1.1.0']);
+    expect(unseenReleases('2026-11-team-photo').map((r) => r.id)).toEqual(['1.1.0']);
+  });
+
+  it('keeps the version number in step with the newest release', () => {
+    expect(APP_VERSION).toBe(RELEASES.find((r) => r.version !== null)!.version);
   });
 });
 
@@ -34,7 +38,8 @@ describe('What’s new', () => {
       </AppProviders>,
     );
     expect(await screen.findByRole('dialog', { name: /What’s new/ })).toBeInTheDocument();
-    expect(screen.getByText(/Optional password/)).toBeInTheDocument();
+    expect(screen.getByText('1.0: everything since launch')).toBeInTheDocument();
+    expect(screen.getByText('1.1: Badges')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     await waitFor(async () => expect((await api.call('getMe')).seenRelease).toBe(LATEST_RELEASE));
     expect(screen.queryByRole('dialog', { name: /What’s new/ })).toBeNull();

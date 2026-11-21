@@ -4,7 +4,8 @@
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { eq } from 'drizzle-orm';
-import { users, type UserRow } from '../db/schema';
+import { localDateOf } from '@7gs/rules';
+import { userOpenDays, users, type UserRow } from '../db/schema';
 import type { Deps } from '../deps';
 import { unauthorized } from '../errors';
 import { isEmailAllowed, resolveSession, SESSION_TTL_MS } from '../services/auth';
@@ -61,13 +62,17 @@ export async function authenticate(c: Context, deps: Deps, now: Date): Promise<A
 const LAST_SEEN_PRECISION_MS = 60 * 60 * 1000;
 
 /**
- * Record that the account used the app, at most once an hour, so it costs next to
- * nothing. Never fails the request: it's bookkeeping for the admin page.
+ * Record that the account used the app: `users.last_seen_at` at most once an hour, and the
+ * local date in `user_open_days` (for badges) the first time each day, so it costs next to
+ * nothing. Never fails the request: it's bookkeeping.
  */
 async function touchLastSeen(deps: Deps, user: UserRow, now: Date): Promise<void> {
-  if (user.lastSeenAt && now.getTime() - user.lastSeenAt.getTime() < LAST_SEEN_PRECISION_MS) return;
+  const today = localDateOf(now, user.timezone);
+  const newDay = !user.lastSeenAt || localDateOf(user.lastSeenAt, user.timezone) !== today;
+  if (!newDay && user.lastSeenAt && now.getTime() - user.lastSeenAt.getTime() < LAST_SEEN_PRECISION_MS) return;
   try {
     await deps.db.update(users).set({ lastSeenAt: now }).where(eq(users.id, user.id));
+    if (newDay) await deps.db.insert(userOpenDays).values({ userId: user.id, day: today }).onConflictDoNothing();
   } catch (error) {
     deps.log.warn('Could not record last seen', { userId: user.id, error: String(error) });
   }

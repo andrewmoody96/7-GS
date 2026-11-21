@@ -5,13 +5,13 @@
 // The step lives in the address (/setup?step=…), so a reload or a sport switch keeps it.
 
 import type { StarterDto, TaskDto } from '@7gs/contracts';
-import { LIMITS, type LocalDate } from '@7gs/rules';
+import { addDays, LIMITS, localDateOf, type LocalDate } from '@7gs/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApi } from '../app/context';
 import { errorMessage } from '../app/errors';
-import { qk, useMeQuery, useSaveWeekPlan, useSetAvatar, useStartersQuery, useStartHeadStart, useTasksQuery, useUpdateMe } from '../app/queries';
+import { qk, useCurrentSeasonQuery, useMeQuery, useSaveWeekPlan, useUpdateSeasonGoal, useSetAvatar, useStartersQuery, useStartHeadStart, useTasksQuery, useUpdateMe } from '../app/queries';
 import { TeamBadge } from '../components/Badges';
 import { Stepper } from '../components/Controls';
 import { initialPlan, WeekPlanGrid, weekPlanBodies } from '../components/WeekPlanGrid';
@@ -19,8 +19,9 @@ import { EmptyState, Loading } from '../components/States';
 import { squarePhoto } from '../lib/avatar';
 import { formatMonthDay, weekdayLong } from '../lib/format';
 import { vocab } from '../vocab';
+import { seasonTotals } from './Season';
 
-const STEPS = ['team', 'tasks', 'week', 'start'] as const;
+const STEPS = ['team', 'tasks', 'week', 'goal', 'start'] as const;
 type Step = (typeof STEPS)[number];
 
 /** Where a new account goes after the sport and look. */
@@ -64,10 +65,19 @@ export function SetupScreen() {
             Set up · Step {index + 1} of {STEPS.length}
           </p>
           <h1 className="screen__title">
-            {step === 'team' ? 'Your team' : step === 'tasks' ? 'Your tasks' : step === 'week' ? 'Your week' : 'When to start'}
+            {step === 'team'
+              ? 'Your team'
+              : step === 'tasks'
+                ? 'Your tasks'
+                : step === 'week'
+                  ? 'Your week'
+                  : step === 'goal'
+                    ? `Your ${vocab.terms.winGoal.toLowerCase()}`
+                    : 'When to start'}
           </h1>
         </div>
       </header>
+      {step === 'team' ? <ReturningNote /> : null}
       <ol className="setup__dots" aria-hidden="true">
         {STEPS.map((s, i) => (
           <li key={s} className={i < index ? 'is-done' : i === index ? 'is-current' : ''} />
@@ -79,6 +89,8 @@ export function SetupScreen() {
         <TasksStep onNext={next} onBack={back} />
       ) : step === 'week' ? (
         <WeekStep onNext={next} onBack={back} />
+      ) : step === 'goal' ? (
+        <GoalStep onNext={next} onBack={back} />
       ) : (
         <StartStep onDone={finish} onBack={back} />
       )}
@@ -307,7 +319,13 @@ function WeekPlanner({
   onBack: (() => void) | null;
 }) {
   const me = useMeQuery();
-  const [plan, setPlan] = useState(() => initialPlan(tasks, starters, { fillEmpty: true }));
+  // A task just added (here, or in the last day) starts on every day. An older one that's in
+  // no default lineup was likely left off on purpose, so it stays off until it's tapped on.
+  const [plan, setPlan] = useState(() =>
+    initialPlan(tasks, starters, {
+      fillEmpty: (t) => !me.data || localDateOf(new Date(t.createdAt), me.data.timezone) >= addDays(me.data.today, -1),
+    }),
+  );
   const save = useSaveWeekPlan({ quiet: true });
   const submit = () =>
     save.mutate(
@@ -338,7 +356,71 @@ function WeekPlanner({
   );
 }
 
-// ── 4. Start ─────────────────────────────────────────────────────────────────
+// ── 4. Goal ──────────────────────────────────────────────────────────────────
+
+function GoalStep({ onNext, onBack }: { onNext: () => void; onBack: (() => void) | null }) {
+  const me = useMeQuery();
+  const season = useCurrentSeasonQuery();
+  const update = useUpdateSeasonGoal();
+  const s = season.data ?? null;
+  const totals = s ? seasonTotals(me.data, s) : null;
+  // A reasonable default, as on the Team page: a bit better than winning 4 of every 7.
+  const suggested = totals ? Math.round(totals.total * 0.6) : 1;
+  const [goal, setGoal] = useState<number | null>(null);
+  if (season.isPending || !me.data) return <Loading label="Loading your season" />;
+  const phase = me.data.position.phase;
+  // The same rule as the Team page: set before the season starts (or during a Head Start).
+  const open = s !== null && totals !== null && (totals.headStart || (s.status === 'upcoming' && phase !== 'season'));
+  const value = goal ?? s?.winGoal ?? suggested;
+  const save = () => {
+    if (!open || !s || value === s.winGoal) onNext();
+    else update.mutate({ seasonId: s.id, winGoal: value }, { onSuccess: onNext });
+  };
+  return (
+    <>
+      <section className="card">
+        {open && totals ? (
+          <>
+            <p className="lede">
+              How many wins are you going for this {vocab.term.season.toLowerCase()}? There are {totals.total} games. Winning 4 of
+              every 7 is a winning record; {suggested} is a good stretch.
+            </p>
+            <Stepper label={`${vocab.terms.winGoal} (wins)`} value={value} min={1} max={totals.total} onChange={setGoal} />
+            <p className="field__hint">It locks once the season starts.</p>
+          </>
+        ) : (
+          <p className="lede">
+            {s?.winGoal !== null && s?.winGoal !== undefined
+              ? `Your goal this ${vocab.term.season.toLowerCase()} is ${s.winGoal} wins. `
+              : ''}
+            Goals lock once a {vocab.term.season.toLowerCase()} starts, so you’ll set the next one in the {vocab.term.offseason}{' '}
+            before it begins.
+          </p>
+        )}
+        {update.isError ? <p className="notice notice--error">{errorMessage(update.error)}</p> : null}
+      </section>
+      <StepActions onBack={onBack}>
+        <button type="button" className="btn btn--primary" disabled={update.isPending} onClick={save}>
+          {update.isPending ? 'Saving…' : open ? 'Set my goal' : 'Next'}
+        </button>
+      </StepActions>
+    </>
+  );
+}
+
+/** For an account that already has a team: what this run-through is for. */
+function ReturningNote() {
+  const tasks = useTasksQuery();
+  if (!tasks.data || tasks.data.length === 0) return null;
+  return (
+    <p className="notice">
+      A quick check-in: your team, tasks, week and {vocab.terms.winGoal.toLowerCase()}, all filled in with what you have. Change
+      anything, or just tap through.
+    </p>
+  );
+}
+
+// ── 5. Start ─────────────────────────────────────────────────────────────────
 
 function StartStep({ onDone, onBack }: { onDone: () => void; onBack: (() => void) | null }) {
   const me = useMeQuery();
