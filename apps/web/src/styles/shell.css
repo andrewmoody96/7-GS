@@ -1424,3 +1424,89 @@
 .seasonhist__standings {
   margin: 4px 0 8px;
 }
+
+/* ── Team page: tighter spacing, link tiles, the standings line ─────────── */
+
+/* The screen's own gap spaces the nav cards; no extra margin on top of it. */
+.screen--team .teamnav {
+  margin: 0;
+}
+
+.screen--team .board--record {
+  padding: 14px 16px 16px;
+  gap: 6px;
+}
+
+/* A stat tile that opens a page: the whole tile is the link. */
+.stat--link {
+  position: relative;
+  transition: border-color 0.15s;
+}
+
+.stat--link:hover {
+  border-color: var(--accent);
+}
+
+.stat__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.stat__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.stat__link:focus-visible {
+  outline: none;
+}
+
+.stat--link:has(.stat__link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.stat--link dd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat__chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
+.standingsline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: -6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: inherit;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.standingsline svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+
+/* Values line up across a row even when one label wraps. */
+.screen--team .stat {
+  align-content: space-between;
+}

@@ -40,6 +40,9 @@ export const RELEASES: readonly ReleaseNote[] = [
       'Division and league titles go to the best record when the season ends. No playoffs. Winning the season still just takes a winning record.',
       'Title counts under your team stats and in Team History.',
     ],
+    improved: [
+      'The Team page is tidier: the scoreboard says Season record, your place in the division sits right under it, and Badges is a tile with the rest of your stats.',
+    ],
   },
   {
     id: '1.2.0',

@@ -1,7 +1,7 @@
 import { PASSWORD_MIN, type MeDto, type SeasonDto } from '@7gs/contracts';
 import { gamesInSeason, GAMES_PER_SEASON, HEAD_START_SERIES, seasonPace, THEME_TERMS } from '@7gs/rules';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApi, useCheckoffQueue } from '../app/context';
 import {
@@ -17,6 +17,7 @@ import { errorMessage } from '../app/errors';
 import { getThemePref, setThemePref, type ThemePref } from '../app/theme';
 import { useNotify } from '../app/toast';
 import { Stepper } from '../components/Controls';
+import { IconChevronRight } from '../components/icons';
 import { Sheet } from '../components/Sheet';
 import { Tile } from '../components/Tile';
 import { formatTimeOfDay, formatWinPct, signed } from '../lib/format';
@@ -45,7 +46,25 @@ export function seasonTotals(me: MeDto | undefined, season: SeasonDto): { total:
   };
 }
 
-export function Standings({ season: s, total, extra = [] }: { season: SeasonDto; total: number; extra?: [string, string][] }) {
+/** A stat tile; with `to` the whole tile opens that page. */
+export interface StatItem {
+  label: string;
+  value: string;
+  to?: string;
+}
+
+export function Standings({
+  season: s,
+  total,
+  extra = [],
+  afterBoard,
+}: {
+  season: SeasonDto;
+  total: number;
+  extra?: StatItem[];
+  /** Shown right under the record board (Team: the standings line). */
+  afterBoard?: ReactNode;
+}) {
   const played = s.wins + s.losses;
   const winPct = played === 0 ? null : Math.round((s.wins / played) * 1000) / 1000;
   const stats: [string, string][] = [
@@ -58,11 +77,13 @@ export function Standings({ season: s, total, extra = [] }: { season: SeasonDto;
   ];
   // Suspended games that ended with no decision: neither a W nor an L.
   if (s.noDecisions > 0) stats.splice(2, 0, [vocab.terms.noDecisions, String(s.noDecisions)]);
-  stats.push(...extra);
+  const items: StatItem[] = [...stats.map(([label, value]) => ({ label, value })), ...extra];
   return (
     <>
-      <section className="board board--record" aria-label={vocab.terms.record}>
-        <p className="board__eyebrow">{vocab.terms.record}</p>
+      <section className="board board--record" aria-label={`${vocab.term.season} ${vocab.terms.record.toLowerCase()}`}>
+        <p className="board__eyebrow">
+          {vocab.term.season} {vocab.terms.record.toLowerCase()}
+        </p>
         <div className="record">
           <div className="record__side">
             <Tile value={s.wins} size="l" />
@@ -81,11 +102,23 @@ export function Standings({ season: s, total, extra = [] }: { season: SeasonDto;
           </div>
         </div>
       </section>
+      {afterBoard}
       <dl className="statgrid">
-        {stats.map(([label, value]) => (
-          <div key={label} className="stat">
-            <dt>{label}</dt>
-            <dd>{value}</dd>
+        {items.map(({ label, value, to }) => (
+          <div key={label} className={`stat${to ? ' stat--link' : ''}`}>
+            <dt>
+              {to ? (
+                <Link to={to} className="stat__link">
+                  {label}
+                </Link>
+              ) : (
+                label
+              )}
+            </dt>
+            <dd>
+              {value}
+              {to ? <IconChevronRight className="stat__chevron" aria-hidden="true" /> : null}
+            </dd>
           </div>
         ))}
       </dl>
