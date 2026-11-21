@@ -1038,6 +1038,7 @@ export function standings(world: UserWorld, seasonId: string, now: Date): Standi
         rows: s.divisions[lg * 3 + d]!.map(row),
       })),
     })),
+    league: s.league.map(row),
   };
 }
 
@@ -1083,6 +1084,7 @@ export function career(world: UserWorld, now: Date): CareerDto {
     longestWinStreak: longestWinStreak(results),
     divisionTitles: rows.filter((r) => r.titles?.division).length,
     conferenceTitles: rows.filter((r) => r.titles?.conference).length,
+    leagueTitles: rows.filter((r) => r.titles?.league).length,
     bestSeason: best ? { number: best.number, wins: best.wins, losses: best.losses, winPct: best.winPct } : null,
   };
 }

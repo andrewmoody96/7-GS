@@ -108,7 +108,7 @@ export function TeamScreen() {
           season={s}
           total={totals.total}
           afterBoard={<StandingsLine seasonId={s.id} />}
-          extra={[...titleStats(career.data), badgesStat(badges)]}
+          extra={[badgesStat(badges), ...titleStats(career.data)]}
         />
       ) : null}
       <nav className="todo teamnav" aria-label={vocab.tabs.team}>
@@ -236,6 +236,7 @@ function titleStats(c: CareerDto | undefined): StatItem[] {
   return [
     { label: 'Division titles', value: c ? String(c.divisionTitles) : '–' },
     { label: 'Conference titles', value: c ? String(c.conferenceTitles) : '–' },
+    { label: 'League titles', value: c ? String(c.leagueTitles) : '–' },
   ];
 }
 
@@ -463,9 +464,16 @@ function SeasonHistory({ season: s, defaultOpen }: { season: SeasonDto; defaultO
             {STATUS_WORD[s.status]} · {formatRange(s.startDate, s.playEndDate)} · {vocab.terms.seriesRecord} {s.seriesWon}–{s.seriesLost}
             {s.winGoal !== null ? ` · Goal ${s.winGoal}` : ''}
           </span>
-          {s.titles?.division || s.titles?.conference ? (
+          {s.titles?.division || s.titles?.conference || s.titles?.league ? (
             <span className="seasonhist__titles">
-              🏆 {[s.titles.division ? 'Division champions' : null, s.titles.conference ? 'Conference champions' : null].filter(Boolean).join(' · ')}
+              🏆{' '}
+              {[
+                s.titles.division ? 'Division champions' : null,
+                s.titles.conference ? 'Conference champions' : null,
+                s.titles.league ? 'League champions' : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </span>
           ) : null}
         </summary>

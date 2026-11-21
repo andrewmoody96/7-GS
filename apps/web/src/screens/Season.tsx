@@ -50,6 +50,8 @@ export function seasonTotals(me: MeDto | undefined, season: SeasonDto): { total:
 export interface StatItem {
   label: string;
   value: string;
+  /** A small second line under the value: "Best 6". */
+  note?: string;
   to?: string;
 }
 
@@ -67,17 +69,17 @@ export function Standings({
 }) {
   const played = s.wins + s.losses;
   const winPct = played === 0 ? null : Math.round((s.wins / played) * 1000) / 1000;
-  const stats: [string, string][] = [
-    [vocab.terms.runDifferential, signed(s.displayDifferential)],
-    [vocab.terms.rallyWins, String(s.rallyWins)],
-    [vocab.terms.seriesRecord, `${s.seriesWon}–${s.seriesLost}`],
-    [vocab.terms.winStreak, String(s.currentWinStreak)],
-    [vocab.terms.longestWinStreak, String(s.longestWinStreak)],
-    ['Games left', String(seasonPace(s.wins, s.losses, 0, s.noDecisions, total).remaining)],
+  const stats: StatItem[] = [
+    { label: vocab.terms.runDifferential, value: signed(s.displayDifferential) },
+    { label: vocab.terms.rallyWins, value: String(s.rallyWins) },
+    { label: vocab.terms.seriesRecord, value: `${s.seriesWon}–${s.seriesLost}` },
+    // The streak now, and the season's best under it.
+    { label: vocab.terms.winStreak, value: String(s.currentWinStreak), note: `Best ${s.longestWinStreak}` },
+    { label: 'Games left', value: String(seasonPace(s.wins, s.losses, 0, s.noDecisions, total).remaining) },
   ];
   // Suspended games that ended with no decision: neither a W nor an L.
-  if (s.noDecisions > 0) stats.splice(2, 0, [vocab.terms.noDecisions, String(s.noDecisions)]);
-  const items: StatItem[] = [...stats.map(([label, value]) => ({ label, value })), ...extra];
+  if (s.noDecisions > 0) stats.splice(2, 0, { label: vocab.terms.noDecisions, value: String(s.noDecisions) });
+  const items: StatItem[] = [...stats, ...extra];
   return (
     <>
       <section className="board board--record" aria-label={`${vocab.term.season} ${vocab.terms.record.toLowerCase()}`}>
@@ -104,7 +106,7 @@ export function Standings({
       </section>
       {afterBoard}
       <dl className="statgrid">
-        {items.map(({ label, value, to }) => (
+        {items.map(({ label, value, note, to }) => (
           <div key={label} className={`stat${to ? ' stat--link' : ''}`}>
             <dt>
               {to ? (
@@ -117,6 +119,7 @@ export function Standings({
             </dt>
             <dd>
               {value}
+              {note ? <small className="stat__note">{note}</small> : null}
               {to ? <IconChevronRight className="stat__chevron" aria-hidden="true" /> : null}
             </dd>
           </div>

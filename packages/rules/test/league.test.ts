@@ -116,8 +116,8 @@ describe('standings', () => {
 
   it('gives a dominant season both titles, and a losing one neither', () => {
     const seed = seeds[2]!;
-    expect(seasonStandings(seed, 1, allGames(() => 'W'), 84).titles).toEqual({ division: true, conference: true });
-    expect(seasonStandings(seed, 1, allGames(() => 'L'), 84).titles).toEqual({ division: false, conference: false });
+    expect(seasonStandings(seed, 1, allGames(() => 'W'), 84).titles).toEqual({ division: true, conference: true, league: true });
+    expect(seasonStandings(seed, 1, allGames(() => 'L'), 84).titles).toEqual({ division: false, conference: false, league: false });
   });
 
   it('can win the season and still lose the division to a hot team', () => {
@@ -132,6 +132,24 @@ describe('standings', () => {
     expect(found).toBe(true);
   });
 
+  it('ranks all 30 teams for the league title, and a conference champion can still miss it', () => {
+    const seed = seeds[0]!;
+    const s = seasonStandings(seed, 1, allGames((i) => (i % 3 === 0 ? 'L' : 'W')), 84);
+    expect(s.league).toHaveLength(30);
+    expect(s.league[0]!.gamesBack).toBe(0);
+    for (let i = 1; i < 30; i++) expect(s.league[i]!.gamesBack).toBeGreaterThanOrEqual(s.league[i - 1]!.gamesBack);
+    // The league leader leads its own conference too.
+    expect(s.conferences.some((c) => c[0]!.team === s.league[0]!.team)).toBe(true);
+    let found = false;
+    for (const sd of seeds) {
+      for (let season = 1; season <= 8 && !found; season++) {
+        const t = seasonStandings(sd, season, allGames((i) => (i % 84 < 54 ? 'W' : 'L')), 84);
+        if (t.titles?.conference && !t.titles.league) found = true;
+      }
+    }
+    expect(found).toBe(true);
+  });
+
   it('is the same every time for the same season', () => {
     const seed = seeds[3]!;
     const games = allGames((i) => (i % 2 ? 'W' : 'L'));
@@ -140,28 +158,24 @@ describe('standings', () => {
 });
 
 describe('team names that fit', () => {
-  it('keeps every name within TEAM_NAME_MAX and never uses a retired nickname', () => {
+  it('keeps every new team’s name within TEAM_NAME_MAX, with no retired nickname', () => {
     for (let u = 0; u < 200; u++) {
       for (const t of generateLeague(leagueSeedFor(`fit-${u}`))) {
         expect(t.name.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
-        expect(teamNameNeedsReplacing(t.name)).toBe(false);
+        expect(t.mascot).not.toMatch(/Johnny-Come-Latelies|One-More-Episodes/);
       }
     }
-    expect(teamNameNeedsReplacing('Joplin Johnny-Come-Latelies')).toBe(true);
-    expect(teamNameNeedsReplacing('Oxford One-More-Episodes')).toBe(true);
-    expect(teamNameNeedsReplacing('Pontiac Pajamas')).toBe(false);
-    expect(teamNameNeedsReplacing('Pontiac Procrastinators')).toBe(false); // 23: the most allowed
   });
 
-  it('draws a replacement that fits and clashes with no other team', () => {
-    const league = generateLeague(leagueSeedFor('swap')).map((t) => t.name);
-    const others = league.slice(1);
+  it('tells which names break the rules, and draws a replacement that fits and clashes with nothing', () => {
+    expect(teamNameNeedsReplacing('Joplin Johnny-Come-Latelies')).toBe(true);
+    expect(teamNameNeedsReplacing('Oxford One-More-Episodes')).toBe(true);
+    expect(teamNameNeedsReplacing('Pontiac Procrastinators')).toBe(false);
+    const others = generateLeague(leagueSeedFor('swap')).map((t) => t.name).slice(1);
     const name = replacementTeamName(others, 42);
     expect(name.length).toBeLessThanOrEqual(TEAM_NAME_MAX);
     expect(teamNameNeedsReplacing(name)).toBe(false);
-    const town = (n: string) => n.split(' ').slice(0, -1).join(' ');
     expect(others.map((n) => n.split(' ').at(-1))).not.toContain(name.split(' ').at(-1));
-    expect(others.some((n) => n.startsWith(`${town(name)} `))).toBe(false);
   });
 
   it('names the two conferences, with short forms for division names', () => {

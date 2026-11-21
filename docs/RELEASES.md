@@ -55,8 +55,15 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
    finished release), target `main`, and **Publish release**. Tick **Set as a pre-release** for a
    beta. (Claude sessions can't push tags, so this step is yours.)
 
+## Never in a release
+
+- **Renaming teams.** A team's name, and the opponent name on every series already
+  created, never changes (GAME_DESIGN §8). New name lists or rules apply to teams drawn from
+  then on. (v1.3.1 did a final, one-time rename by request; it records that it ran.)
+
 ## History
 
+- **1.3.2-beta** (November 2026): a league title for the best record across both conferences.
 - **1.3.1-beta** (November 2026): conferences instead of leagues, a tidier Standings page,
   and shorter team names.
 - **1.3.0-beta** (November 2026): your own league of 29 teams, divisions dealt every season,

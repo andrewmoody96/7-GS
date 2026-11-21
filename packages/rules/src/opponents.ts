@@ -56,7 +56,10 @@ const NICKNAMES: Record<string, readonly string[]> = {
   Y: ['Yawners', 'Yesterdays', 'Yeah-Laters', 'Yo-Yos'],
 };
 
-/** The longest a team name may be, so it fits a standings row on a phone. */
+/**
+ * The longest a new team's name may be, so it fits a standings row. Existing teams keep
+ * their names, whatever their length: names never change once given.
+ */
 export const TEAM_NAME_MAX = 23;
 
 /** Every town, in a fixed order. */
@@ -409,12 +412,14 @@ export interface SeasonStandings {
   alignment: SeasonAlignment;
   /** Each division's rows, best first. */
   divisions: StandingsRow[][];
-  /** Each league's 15 rows, best first. */
+  /** Each conference's 15 rows, best first. */
   conferences: StandingsRow[][];
   /** Every game of the season is in. */
   complete: boolean;
-  /** Once complete: whether the player finished first in their division / league. */
-  titles: { division: boolean; conference: boolean } | null;
+  /** Once complete: whether the player finished first in their division / conference / league. */
+  /** All 30 teams, best first: the league title race. */
+  league: StandingsRow[];
+  titles: { division: boolean; conference: boolean; league: boolean } | null;
 }
 
 const GAMES_PER_TEAM = 84;
@@ -433,6 +438,7 @@ const pct = (w: number, l: number) => (w + l === 0 ? 0 : w / (w + l));
 /**
  * A season's standings so far. `daysSettled` (0–84) is how many of the season's days have
  * gone final: the other teams' games through then count, and the player's decided games.
+ * Titles: best record in the division, in the conference, and across the whole league.
  * Ties: overall record, then record in the division, then in the conference, then run
  * differential (no head-to-head).
  */
@@ -516,6 +522,7 @@ export function seasonStandings(leagueSeed: number, seasonNumber: number, games:
   };
   const divisions = alignment.divisions.map((teams) => withGamesBack(order(teams.map((t) => rows[t]!))));
   const conferences = [0, 1].map((lg) => withGamesBack(order(rows.filter((r) => alignment.conferenceOf(r.team) === lg))));
+  const league = withGamesBack(order(rows));
 
   const playerDone = games.filter((g) => g.seriesNumber >= 1 && g.seriesNumber <= schedule.length).length >= GAMES_PER_TEAM;
   const complete = days >= GAMES_PER_TEAM && playerDone;
@@ -523,7 +530,8 @@ export function seasonStandings(leagueSeed: number, seasonNumber: number, games:
     ? {
         division: divisions[alignment.divisionOf(YOU)]![0]!.team === YOU,
         conference: conferences[alignment.conferenceOf(YOU)]![0]!.team === YOU,
+        league: league[0]!.team === YOU,
       }
     : null;
-  return { alignment, divisions, conferences, complete, titles };
+  return { alignment, divisions, conferences, league, complete, titles };
 }

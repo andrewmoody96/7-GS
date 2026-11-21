@@ -1,8 +1,7 @@
 // Server entry: database (+ migrations), the Hono app on $PORT (8787 in development;
 // in production it also serves the built web app), and the finalizer every 15 minutes.
 
-import { assignLeagues, shortenTeamNames } from './services/league';
-import { renameOldOpponents } from './services/opponents';
+import { finalTeamRename } from './services/league';
 import { serve } from '@hono/node-server';
 import { createApp } from './app';
 import { systemClock } from './clock';
@@ -27,12 +26,8 @@ try {
 
 const database = await createDatabase(config.database);
 await database.migrate();
-// Opponents from before the small-town names get new ones (a no-op once done).
-await renameOldOpponents(database.db);
-// Every account gets its league of 29 teams, renaming its opponents to them (once).
-await assignLeagues(database.db);
-// League team names that are too long get shorter ones (a no-op once they all fit).
-await shortenTeamNames(database.db);
+// The one and only team rename (v1.3.1); a no-op once it has run (it records that).
+await finalTeamRename(database.db);
 log.info('Database ready', {
   kind: database.kind,
   ...(config.database.kind === 'pglite' ? { dataDir: config.database.dataDir } : {}),

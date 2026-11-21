@@ -483,8 +483,8 @@ export const Season = z.object({
   displayDifferential: z.number().int(),
   currentWinStreak: Count,
   longestWinStreak: Count,
-  /** Once the season's play is over: first in the division / league standings. null before. */
-  titles: z.object({ division: z.boolean(), conference: z.boolean() }).nullable(),
+  /** Once the season's play is over: first in the division / conference / league. null before. */
+  titles: z.object({ division: z.boolean(), conference: z.boolean(), league: z.boolean() }).nullable(),
 });
 
 export const SeasonPatch = z.object({ winGoal: z.number().int().min(1).max(MAX_WIN_GOAL) });
@@ -550,7 +550,7 @@ export const Standings = z.object({
   seasonNumber: z.number().int().min(1),
   /** Every game in: the titles are decided. */
   complete: z.boolean(),
-  titles: z.object({ division: z.boolean(), conference: z.boolean() }).nullable(),
+  titles: z.object({ division: z.boolean(), conference: z.boolean(), league: z.boolean() }).nullable(),
   conferences: z.array(
     z.object({
       name: z.string(),
@@ -563,6 +563,8 @@ export const Standings = z.object({
       divisions: z.array(z.object({ name: z.string(), yours: z.boolean(), rows: z.array(StandingsRow) })),
     }),
   ),
+  /** All 30 teams, best first: the league title race. */
+  league: z.array(StandingsRow),
 });
 
 export const Career = z.object({
@@ -581,9 +583,11 @@ export const Career = z.object({
   /** Win streaks run on across Review Weeks here (they pause, never break). */
   currentWinStreak: Count,
   longestWinStreak: Count,
-  /** Seasons finished first in the division / the league. */
+  /** Seasons finished first in the division / the conference. */
   divisionTitles: Count,
   conferenceTitles: Count,
+  /** Seasons finished with the best record in the whole league. */
+  leagueTitles: Count,
   bestSeason: z
     .object({ number: z.number().int().min(1), wins: Count, losses: Count, winPct: z.number().min(0).max(1) })
     .nullable(),
