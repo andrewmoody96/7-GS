@@ -47,10 +47,6 @@ function AccountCard({ account: a }: { account: AdminAccountDto }) {
         <When label="Last seen" iso={a.lastSeenAt} empty="Not yet recorded" />
         <When label="Last sign-in" iso={a.lastSignInAt} empty="—" />
         <When label="Created" iso={a.createdAt} empty="—" />
-        <div>
-          <dt>Devices signed in</dt>
-          <dd>{a.devices}</dd>
-        </div>
       </dl>
     </li>
   );

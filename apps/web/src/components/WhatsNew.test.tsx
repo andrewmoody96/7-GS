@@ -22,7 +22,9 @@ describe('release notes', () => {
   });
 
   it('keeps the version number in step with the newest release', () => {
-    expect(APP_VERSION).toBe(RELEASES.find((r) => r.version !== null)!.version);
+    // A fix release (1.2.1) only bumps the version; its notes join the 1.2 entry.
+    const minor = (v: string) => v.split('.').slice(0, 2).join('.');
+    expect(minor(APP_VERSION)).toBe(minor(RELEASES.find((r) => r.version !== null)!.version!));
   });
 });
 

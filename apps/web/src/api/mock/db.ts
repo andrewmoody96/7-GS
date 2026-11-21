@@ -214,7 +214,7 @@ export interface MagicLinkRow {
   usedAt: string | null;
 }
 
-export const MOCK_DB_VERSION = 4;
+export const MOCK_DB_VERSION = 5;
 
 export interface MockDb {
   version: typeof MOCK_DB_VERSION;

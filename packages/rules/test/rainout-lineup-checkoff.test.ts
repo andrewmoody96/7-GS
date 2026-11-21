@@ -4,6 +4,9 @@ import {
   effectiveLockedAt,
   finalizeAfter,
   generateOpponent,
+  OPPONENT_TOWNS,
+  opponentAbbreviation,
+  opponentTown,
   hashSeed,
   rainoutOptions,
   starterWarnings,
@@ -195,8 +198,36 @@ describe('opponents', () => {
     expect(names.size).toBeGreaterThan(15);
   });
 
-  it('builds a badge abbreviation of up to three letters', () => {
+  it('builds a badge abbreviation of up to three letters, from the name', () => {
     const opp = generateOpponent(hashSeed('x'));
     expect(opp.abbreviation).toMatch(/^[A-ZÑ]{1,3}$/);
+    expect(opponentAbbreviation('Litchfield Last Minutemen')).toBe('LLM');
+    expect(opponentAbbreviation('Pontiac Procrastinators')).toBe('PP');
+    expect(opponentAbbreviation('Lake Placid Johnny-Come-Latelies')).toBe('LPJ');
+    expect(opponentAbbreviation('Snooze City Alarms')).toBe('SCA');
+  });
+
+  it('pairs a real town with a nickname that starts with the same letter', () => {
+    for (let i = 0; i < 300; i++) {
+      const opp = generateOpponent(hashSeed(`user-2:1:${i}`));
+      expect(opp.name).toBe(`${opp.city} ${opp.mascot}`);
+      expect(opp.mascot[0]).toBe(opp.city[0]);
+      expect(OPPONENT_TOWNS).toContain(opp.city);
+    }
+    expect(new Set(OPPONENT_TOWNS).size).toBe(OPPONENT_TOWNS.length);
+    expect(OPPONENT_TOWNS.length).toBeGreaterThanOrEqual(120);
+  });
+
+  it('never repeats a town until every town has been played', () => {
+    const played: string[] = [];
+    for (let i = 0; i < OPPONENT_TOWNS.length; i++) played.push(generateOpponent(hashSeed(`user-3:${i}`), played).name);
+    expect(new Set(played.map((n) => opponentTown(n))).size).toBe(OPPONENT_TOWNS.length);
+    expect(OPPONENT_TOWNS).toContain(generateOpponent(hashSeed('user-3:again'), played).city);
+  });
+
+  it('finds the town in a team name, including towns of more than one word', () => {
+    expect(opponentTown('Lake Placid Loafers')).toBe('Lake Placid');
+    expect(opponentTown('Walla Walla Wafflers')).toBe('Walla Walla');
+    expect(opponentTown('Snooze City Alarms')).toBeNull();
   });
 });

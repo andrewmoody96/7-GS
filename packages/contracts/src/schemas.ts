@@ -630,8 +630,6 @@ export const AdminAccount = z.object({
   lastSignInAt: Instant.nullable(),
   /** The last time it used the app, to the hour (null: not since this started being recorded). */
   lastSeenAt: Instant.nullable(),
-  /** Devices currently signed in. */
-  devices: z.number().int().min(0),
   theme: z.enum(THEMES),
 });
 export const AdminAccountList = z.object({ accounts: z.array(AdminAccount) });

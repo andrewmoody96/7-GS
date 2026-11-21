@@ -6,12 +6,16 @@
 
 import { databaseOptionsFromEnv, createDatabase } from '../src/db/client';
 import { DEFAULT_DATA_DIR } from '../src/config';
+import { renameOldOpponents } from '../src/services/opponents';
 
 const options = databaseOptionsFromEnv(process.env, process.env.PGLITE_DATA_DIR ?? DEFAULT_DATA_DIR, process.env.NODE_ENV === 'production');
 const database = await createDatabase(options);
 try {
   await database.migrate();
   console.log(`Migrations applied (${database.kind}).`);
+  // Opponents from before the small-town names get new ones, once.
+  const renamed = await renameOldOpponents(database.db);
+  console.log(`Opponents renamed: ${renamed}.`);
 } finally {
   await database.close();
 }

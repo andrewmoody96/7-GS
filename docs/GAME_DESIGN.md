@@ -458,11 +458,13 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
 
 ## 8. Opponents (generic teams)
 
-- A new opponent each week, generated from city + mascot word lists, e.g.
-  *Snooze City Alarms, Couchville Cushions, Doomscroll Dynasty, Tomorrow Town Tigers,
-  Excuse Bay Pirates, Netflix Valley Nightcaps*.
-- Each opponent has a color pair and a simple generated badge. No real league marks,
-  logos, or team names.
+- A new opponent each week: a real small town and a nickname for putting things off,
+  starting with the same letter, e.g. *Pontiac Procrastinators, Litchfield Last
+  Minutemen, Lincoln Lazies, Walla Walla Wafflers* (rules `generateOpponent`).
+- No town comes round twice until every town (about 130) has been played. Opponents from
+  before the small towns were renamed at the v1.2.1 deploy (`services/opponents`).
+- Each opponent has a color pair and a simple generated badge (initials from its name). No
+  real league marks, logos, or team names.
 
 ## 9. Core screens (PWA)
 

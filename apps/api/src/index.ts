@@ -1,6 +1,7 @@
 // Server entry: database (+ migrations), the Hono app on $PORT (8787 in development;
 // in production it also serves the built web app), and the finalizer every 15 minutes.
 
+import { renameOldOpponents } from './services/opponents';
 import { serve } from '@hono/node-server';
 import { createApp } from './app';
 import { systemClock } from './clock';
@@ -25,6 +26,8 @@ try {
 
 const database = await createDatabase(config.database);
 await database.migrate();
+// Opponents from before the small-town names get new ones (a no-op once done).
+await renameOldOpponents(database.db);
 log.info('Database ready', {
   kind: database.kind,
   ...(config.database.kind === 'pglite' ? { dataDir: config.database.dataDir } : {}),
