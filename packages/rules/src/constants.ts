@@ -55,7 +55,13 @@ export const LIMITS = {
   taskNameMax: 80,
   notesMax: 500,
   starterNameMax: 40,
+  /** The most runs a stored task or entry may carry (tasks from before taskPointsMax). */
   pointsMax: 100,
+  /**
+   * The most runs a task can be worth when it's created or edited: in baseball you can't
+   * put more than 4 on the board at once (a grand slam).
+   */
+  taskPointsMax: 4,
   thresholdMax: 1000,
   minTasksMax: 100,
 } as const;

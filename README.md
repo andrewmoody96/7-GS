@@ -47,7 +47,7 @@ but never take things off. Your Default Lineups fill in every new week for you.
   Week to look back and reset. Set a win goal, track your record, streaks and career stats.
 - 🏀🏒 **Pick your sport.** Baseball, basketball or hockey. Same game, different words,
   scoreboard and colors. Switch any time, mid-season included.
-- 🏅 **Badges.** 35 of them in five tiers, from Rookie to Hall of Fame, for streaks, sweeps,
+- 🏅 **Badges.** 36 of them in five tiers, from Rookie to Hall of Fame, for streaks, sweeps,
   perfect games and more. Everything you've played counts.
 - 🖼️ **Make it yours.** Name your team and add a team photo for your badge.
 - 🔔 **Reminders.** A nudge to check in, a last call before midnight, and a heads-up when

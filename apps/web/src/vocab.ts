@@ -194,6 +194,8 @@ export interface Vocab {
   tabs: { today: string; series: string; team: string; addTask: string };
   /** "1 run", "3 runs". */
   runs: (n: number) => string;
+  /** Why a task tops out at LIMITS.taskPointsMax, in the sport's terms. */
+  taskMaxHint: string;
   hits: (n: number) => string;
   gameLabel: (gameNumber: number) => string;
   seriesLabel: (status: SeriesStatus) => string;
@@ -434,6 +436,7 @@ export const baseball: Vocab = {
   },
   tabs: { today: 'Today', series: 'Series', team: 'Team', addTask: 'Add task' },
   runs: (n) => plural(n, 'run', 'runs'),
+  taskMaxHint: 'Up to 4 runs: no play scores more than a grand slam.',
   hits: (n) => plural(n, 'hit', 'hits'),
   gameLabel: (n) => `Game ${n}`,
   seriesLabel: (status) => status.label,
@@ -678,6 +681,7 @@ export const basketball: Vocab = overlay(baseball, {
     },
   },
   runs: (n) => plural(n, 'bucket', 'buckets'),
+  taskMaxHint: 'Up to 4 buckets: no play scores more than a four-point play.',
   hits: (n) => plural(n, 'make', 'makes'),
   resultDetail: {
     rally: 'Challenge W',
@@ -827,6 +831,7 @@ export const hockey: Vocab = overlay(baseball, {
     },
   },
   runs: (n) => plural(n, 'shot', 'shots'),
+  taskMaxHint: 'Up to 4 shots: bigger jobs are better split into two tasks.',
   hits: (n) => plural(n, 'shot', 'shots'),
   resultDetail: {
     rally: 'Challenge W',

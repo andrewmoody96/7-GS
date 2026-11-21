@@ -128,7 +128,7 @@ export function TasksSheet({ open, onClose }: { open: boolean; onClose: () => vo
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <Stepper label="Worth" value={points} min={1} max={LIMITS.pointsMax} suffix={vocab.runs(points).replace(/^\d+ /, '')} onChange={setPoints} />
+          <Stepper label="Worth" value={points} min={1} max={LIMITS.taskPointsMax} suffix={vocab.runs(points).replace(/^\d+ /, '')} onChange={setPoints} hint={vocab.taskMaxHint} />
           <KindPicker value={kind} onChange={setKind} name="addtask-kind" />
 
           {games.length > 0 ? (

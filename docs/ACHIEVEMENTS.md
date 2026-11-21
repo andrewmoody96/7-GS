@@ -8,6 +8,8 @@ Shipped in 1.1, for every account: **Team → Badges**. The catalog and rules li
 
 **The demo** shows the demo team's real badges, and the **Achievements lab** (Demo controls → Achievements lab, or the link on the Badges page) simulates a player to watch badges unlock.
 
+**Perfect games** count for badges only with **5 or more runs to win and at least 3 tasks** in the lineup (rules `PERFECT_FOR_BADGES`), so a day of one or two big tasks can't rack them up. (The 3rd Rally Cap's "perfect games" is a game rule and isn't affected.)
+
 ## Rookie
 
 Your first days: getting set up and on the board.
@@ -18,7 +20,6 @@ Your first days: getting set up and on the board.
 | 🎨 **Team Colors** | Add a team photo. |
 | 📋 **Game Plan** | Set a default lineup for all seven weekdays. |
 | ✅ **On the Board** | Win your first game. |
-| 💯 **Perfect Game** | Finish every task in a day’s lineup. |
 | 🔥 **Warm-Up** | Check off 25 tasks. |
 | ✔️ **On a Roll** | Check off at least one task every day for a week. |
 
@@ -34,7 +35,7 @@ A few weeks in: the habit is forming.
 | 🧢 **Rally Cap Believer** | Turn a loss into a win with a Rally Cap. |
 | 💪 **Shake It Off** | Win the day after a loss, 5 times. |
 | 🐴 **Workhorse** | Check off 100 tasks. |
-| ✨ **Sharp** | Play 5 perfect games. |
+| 💯 **Perfect Game** | Play 5 perfect games: every task done, with 5+ runs to win and 3+ tasks. |
 
 ## All-Star
 
@@ -43,11 +44,12 @@ A strong month or two: streaks, sweeps and big weeks.
 | Badge | What it takes |
 |---|---|
 | 🧹 **Sweep** | Win all 7 games of a series. |
-| 🦾 **Iron Man** | Play a full week as scheduled: no Rainouts, no Suspended games. |
+| 🦾 **Iron Man** | Win a series in a week played as scheduled: no Rainouts, no Suspended games. |
+| ✨ **Sharp** | Play 15 perfect games (5+ runs to win, 3+ tasks). |
 | ☄️ **On Fire** | Win 10 games in a row. |
 | 7️⃣ **Game 7** | Win a Game 7 with the series tied 3–3. |
 | 🗓️ **Every Day Player** | Open the app 30 days in a row. |
-| 🔒 **Locked In** | Play 5 perfect games in one series. |
+| 🔒 **Locked In** | Play 5 perfect games (5+ runs to win, 3+ tasks) in one series. |
 | 🥇 **Contender** | Win 5 series. |
 | ⚙️ **Grinder** | Check off 500 tasks. |
 | 🧠 **Habit Formed** | Check off at least one task every day for 30 days. |
@@ -63,7 +65,8 @@ A season’s work: winning records and goals hit.
 | 🎯 **Goal Getter** | Reach your season win goal. |
 | 🚀 **Unstoppable** | Win 20 games in a row. |
 | 🔢 **Thousand Club** | Check off 1,000 tasks. |
-| 💎 **Precision** | Play 50 perfect games. |
+| 💎 **Precision** | Play 50 perfect games (5+ runs to win, 3+ tasks). |
+| 🛡️ **Ironclad** | Play 4 Iron Man weeks in a row: a month with no Rainouts or Suspended games. |
 | 🏃 **Century** | Check off at least one task every day for 100 days. |
 
 ## Hall of Fame

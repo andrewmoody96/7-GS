@@ -1022,12 +1022,16 @@ export function achievements(world: UserWorld, now: Date): AchievementsDto {
           rally: g.resultDetail === 'rally',
           tasksDone: g.tasksDone,
           allDone: lineup.length > 0 && lineup.every((e) => e.completedClientAt !== null),
+          threshold: rulesOf(world, g).threshold,
+          lineupSize: lineup.length,
         };
       }),
       // Decided series count at once (the 4th W or L); Iron Man waits for the week to end.
       series: world.series.flatMap((s) => {
+        if (s.number === HEAD_START_SERIES) return [];
         const dto = toSeriesDto(world, s);
-        return dto.result === null ? [] : [{ id: s.id, result: dto.result, wins: dto.wins, ironMan: s.closedAt !== null && s.ironMan === true }];
+        const ironMan = s.closedAt !== null ? s.ironMan === true : null;
+        return dto.result === null && ironMan === null ? [] : [{ id: s.id, startDate: s.startDate, result: dto.result, wins: dto.wins, ironMan }];
       }),
       seasons: seasons.map((s) => ({
         wins: s.wins,

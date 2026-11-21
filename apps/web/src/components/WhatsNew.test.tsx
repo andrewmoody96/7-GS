@@ -12,12 +12,13 @@ import { WhatsNew } from './WhatsNew';
 describe('release notes', () => {
   it('lists what an account hasn’t seen, up to and including a recap', () => {
     expect(unseenReleases(LATEST_RELEASE)).toEqual([]);
-    // 1.1 recaps everything since launch, so it's all anyone who hasn't seen it gets.
-    expect(RELEASES[0]).toMatchObject({ id: '1.1.0', version: '1.1.0-beta', recap: true });
-    expect(unseenReleases(null).map((r) => r.id)).toEqual(['1.1.0']);
+    // 1.1 recaps everything since launch, so nobody gets notes older than it.
+    expect(RELEASES.find((r) => r.recap)).toMatchObject({ id: '1.1.0', version: '1.1.0-beta' });
+    expect(unseenReleases(null).map((r) => r.id)).toEqual(['1.2.0', '1.1.0']);
     expect(unseenReleases('some-old-id-we-no-longer-list')).toEqual(unseenReleases(null));
-    expect(unseenReleases('2026-11-guided-setup').map((r) => r.id)).toEqual(['1.1.0']);
-    expect(unseenReleases('2026-11-team-photo').map((r) => r.id)).toEqual(['1.1.0']);
+    expect(unseenReleases('2026-11-guided-setup').map((r) => r.id)).toEqual(['1.2.0', '1.1.0']);
+    // Someone who saw 1.1 gets just 1.2.
+    expect(unseenReleases('1.1.0').map((r) => r.id)).toEqual(['1.2.0']);
   });
 
   it('keeps the version number in step with the newest release', () => {

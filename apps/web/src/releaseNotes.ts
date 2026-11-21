@@ -7,7 +7,7 @@
 // - `id` only has to be new and stay the same.
 
 /** The version this build is. Bump with every release, fixes included. */
-export const APP_VERSION = '1.1.0-beta';
+export const APP_VERSION = '1.2.0-beta';
 
 /** How a version is shown in the app: "v1.1.0-beta". */
 export const versionLabel = (version: string) => `v${version}`;
@@ -28,6 +28,18 @@ export interface ReleaseNote {
 }
 
 export const RELEASES: readonly ReleaseNote[] = [
+  {
+    id: '1.2.0',
+    version: '1.2.0-beta',
+    title: 'v1.2.0-beta',
+    added: ['Ironclad, a new MVP badge: 4 Iron Man weeks in a row.'],
+    improved: [
+      'A task is worth up to 4: no play scores more than a grand slam. Bigger tasks were set to 4.',
+      'Series badges arrive the moment you clinch, not on Sunday.',
+      'Perfect games count for badges with 5+ to win and 3+ tasks. Perfect Game now takes 5 of them, Sharp 15.',
+      'Iron Man now means winning the series in a week played as scheduled.',
+    ],
+  },
   {
     // The id is what accounts remember having seen: never change it.
     id: '1.1.0',

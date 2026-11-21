@@ -120,6 +120,13 @@
       "when": 1795253503486,
       "tag": "0016_setup_again",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795256951914,
+      "tag": "0017_task_points_cap",
+      "breakpoints": true
     }
   ]
 }

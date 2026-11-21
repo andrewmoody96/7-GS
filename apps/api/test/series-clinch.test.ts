@@ -5,11 +5,11 @@ import { CHICAGO, createTasks, TestApp, useTestDb } from './helpers';
 
 const env = useTestDb();
 
-/** Every day: Gym (2) and Read must-hits, Walk and Stretch. Gym, Read and Walk win. */
+/** Every day: Gym (3) and Read must-hits, Walk and Stretch (runs to win 5). Gym, Read and Walk win. */
 async function setup(email: string) {
   const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
   const { token } = await t.signIn(email, CHICAGO);
-  const ids = await createTasks(t, token, [{ name: 'Gym', points: 2 }, { name: 'Read' }, { name: 'Walk' }, { name: 'Stretch' }]);
+  const ids = await createTasks(t, token, [{ name: 'Gym', points: 3 }, { name: 'Read' }, { name: 'Walk' }, { name: 'Stretch' }]);
   for (const weekday of [1, 2, 3, 4, 5, 6, 7]) {
     await t.ok('putStarter', {
       token,
@@ -60,7 +60,7 @@ describe('a series is credited the moment it’s decided', () => {
     expect(await t.ok('getCurrentSeries', { token })).toMatchObject({ wins: 4, losses: 0, result: 'won' });
     expect(await t.ok('getCurrentSeason', { token })).toMatchObject({ seriesWon: 1, seriesLost: 0 });
     const { stats } = await t.ok('getAchievements', { token });
-    expect(stats).toMatchObject({ seriesWon: 1, ironMans: 0 });
+    expect(stats).toMatchObject({ seriesWon: 1, ironManWins: 0, longestIronManRun: 0 });
     expect(earned(stats, 'series-winner')).toBe(true);
     // Iron Man needs the whole week: it waits for Sunday.
     expect(earned(stats, 'iron-man')).toBe(false);
@@ -68,7 +68,8 @@ describe('a series is credited the moment it’s decided', () => {
     for (const date of ['2026-10-09', '2026-10-10', '2026-10-11']) await playDay(t, token, date, WIN);
     t.at('2026-10-12', '09:00', CHICAGO);
     const after = (await t.ok('getAchievements', { token })).stats;
-    expect(after).toMatchObject({ seriesWon: 1, sweeps: 1, ironMans: 1 });
+    expect(after).toMatchObject({ seriesWon: 1, sweeps: 1, ironManWins: 1, longestIronManRun: 1 });
+    expect(earned(after, 'iron-man')).toBe(true);
   });
 
   it('counts the series loss once the 4th L is final', async () => {

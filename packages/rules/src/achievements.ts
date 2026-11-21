@@ -37,9 +37,12 @@ export interface AchievementStats {
   gamesPlayed: number;
   wins: number;
   longestWinStreak: number;
-  /** Wins where every task in the lineup was done. */
+  /**
+   * Perfect games that count for badges: a W with every lineup task done, runs to win of
+   * at least PERFECT_FOR_BADGES.minRunsToWin and at least PERFECT_FOR_BADGES.minTasks tasks.
+   */
   perfectGames: number;
-  /** The most perfect games in a single series. */
+  /** The most of those perfect games in a single series. */
   bestPerfectInSeries: number;
   /** A W the day after an L. */
   bounceBacks: number;
@@ -51,8 +54,10 @@ export interface AchievementStats {
   reverseSweeps: number;
   /** Game 7s won with the series tied 3–3. */
   game7Wins: number;
-  /** Full weeks played as scheduled (the Iron Man bonus). */
-  ironMans: number;
+  /** Series won in a week played as scheduled (an Iron Man week: no Rainouts, no Suspended games). */
+  ironManWins: number;
+  /** The most Iron Man weeks in a row. */
+  longestIronManRun: number;
   /** Finished seasons with more wins than losses. */
   winningSeasons: number;
   /** Seasons whose win goal was reached. */
@@ -62,6 +67,12 @@ export interface AchievementStats {
 }
 
 export type AchievementMetric = keyof AchievementStats;
+
+/**
+ * What a perfect game needs to count for badges, so a day of one or two big tasks can't
+ * rack them up: runs to win of 5 or more, and at least 3 tasks in the lineup.
+ */
+export const PERFECT_FOR_BADGES = { minRunsToWin: 5, minTasks: 3 } as const;
 
 export interface Achievement {
   id: string;
@@ -91,7 +102,6 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   a('team-colors', 'rookie', 'Team Colors', '🎨', 'teamPhoto', 1, 'Add a team photo.'),
   a('game-plan', 'rookie', 'Game Plan', '📋', 'defaultLineupsSet', 7, 'Set a default lineup for all seven weekdays.'),
   a('on-the-board', 'rookie', 'On the Board', '✅', 'wins', 1, 'Win your first game.'),
-  a('perfect-game', 'rookie', 'Perfect Game', '💯', 'perfectGames', 1, 'Finish every task in a day’s lineup.'),
   a('warm-up', 'rookie', 'Warm-Up', '🔥', 'tasksDone', 25, 'Check off 25 tasks.'),
   a('on-a-roll', 'rookie', 'On a Roll', '✔️', 'longestCheckStreak', 7, 'Check off at least one task every day for a week.'),
 
@@ -102,15 +112,16 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   a('rally-believer', 'regular', 'Rally Cap Believer', '🧢', 'rallyWins', 1, 'Turn a loss into a win with a Rally Cap.'),
   a('shake-it-off', 'regular', 'Shake It Off', '💪', 'bounceBacks', 5, 'Win the day after a loss, 5 times.'),
   a('workhorse', 'regular', 'Workhorse', '🐴', 'tasksDone', 100, 'Check off 100 tasks.'),
-  a('sharp', 'regular', 'Sharp', '✨', 'perfectGames', 5, 'Play 5 perfect games.'),
+  a('perfect-game', 'regular', 'Perfect Game', '💯', 'perfectGames', 5, 'Play 5 perfect games: every task done, with 5+ runs to win and 3+ tasks.'),
 
   // All-Star: a strong month or two.
   a('sweep', 'all_star', 'Sweep', '🧹', 'sweeps', 1, 'Win all 7 games of a series.'),
-  a('iron-man', 'all_star', 'Iron Man', '🦾', 'ironMans', 1, 'Play a full week as scheduled: no Rainouts, no Suspended games.'),
+  a('iron-man', 'all_star', 'Iron Man', '🦾', 'ironManWins', 1, 'Win a series in a week played as scheduled: no Rainouts, no Suspended games.'),
+  a('sharp', 'all_star', 'Sharp', '✨', 'perfectGames', 15, 'Play 15 perfect games (5+ runs to win, 3+ tasks).'),
   a('on-fire', 'all_star', 'On Fire', '☄️', 'longestWinStreak', 10, 'Win 10 games in a row.'),
   a('game-seven', 'all_star', 'Game 7', '7️⃣', 'game7Wins', 1, 'Win a Game 7 with the series tied 3–3.'),
   a('every-day-player', 'all_star', 'Every Day Player', '🗓️', 'longestOpenStreak', 30, 'Open the app 30 days in a row.'),
-  a('locked-in', 'all_star', 'Locked In', '🔒', 'bestPerfectInSeries', 5, 'Play 5 perfect games in one series.'),
+  a('locked-in', 'all_star', 'Locked In', '🔒', 'bestPerfectInSeries', 5, 'Play 5 perfect games (5+ runs to win, 3+ tasks) in one series.'),
   a('contender', 'all_star', 'Contender', '🥇', 'seriesWon', 5, 'Win 5 series.'),
   a('grinder', 'all_star', 'Grinder', '⚙️', 'tasksDone', 500, 'Check off 500 tasks.'),
   a('habit-formed', 'all_star', 'Habit Formed', '🧠', 'longestCheckStreak', 30, 'Check off at least one task every day for 30 days.'),
@@ -121,7 +132,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   a('goal-getter', 'mvp', 'Goal Getter', '🎯', 'goalsReached', 1, 'Reach your season win goal.'),
   a('unstoppable', 'mvp', 'Unstoppable', '🚀', 'longestWinStreak', 20, 'Win 20 games in a row.'),
   a('thousand-club', 'mvp', 'Thousand Club', '🔢', 'tasksDone', 1000, 'Check off 1,000 tasks.'),
-  a('precision', 'mvp', 'Precision', '💎', 'perfectGames', 50, 'Play 50 perfect games.'),
+  a('precision', 'mvp', 'Precision', '💎', 'perfectGames', 50, 'Play 50 perfect games (5+ runs to win, 3+ tasks).'),
+  a('ironclad', 'mvp', 'Ironclad', '🛡️', 'longestIronManRun', 4, 'Play 4 Iron Man weeks in a row: a month with no Rainouts or Suspended games.'),
   a('century', 'mvp', 'Century', '🏃', 'longestCheckStreak', 100, 'Check off at least one task every day for 100 days.'),
 
   // Hall of Fame: a year or more.
@@ -172,7 +184,8 @@ export const EMPTY_STATS: AchievementStats = {
   sweeps: 0,
   reverseSweeps: 0,
   game7Wins: 0,
-  ironMans: 0,
+  ironManWins: 0,
+  longestIronManRun: 0,
   winningSeasons: 0,
   goalsReached: 0,
   perfectSeasons: 0,
@@ -199,12 +212,16 @@ export interface AchievementHistory {
     tasksDone: number;
     /** Every lineup task done. */
     allDone: boolean;
+    /** The game's runs to win. */
+    threshold: number;
+    /** Tasks in its lineup. */
+    lineupSize: number;
   }[];
   /**
-   * Every decided series: won or lost, from the 4th W or L on, even with games still to
-   * play that week. `ironMan` only once the week has finished.
+   * Every series that's decided (won or lost, from the 4th W or L on, even with games still
+   * to play that week) or finished. `ironMan` is null until the week has finished.
    */
-  series: readonly { id: string; result: 'won' | 'lost' | null; wins: number; ironMan: boolean }[];
+  series: readonly { id: string; startDate: LocalDate; result: 'won' | 'lost' | null; wins: number; ironMan: boolean | null }[];
   seasons: readonly {
     wins: number;
     losses: number;
@@ -247,7 +264,12 @@ export function achievementStatsFromHistory(h: AchievementHistory): AchievementS
   s.tasksDone = games.reduce((n, g) => n + g.tasksDone, 0);
   s.longestCheckStreak = longestRun(games.filter((g) => g.tasksDone > 0).map((g) => g.playedDate));
 
-  const perfect = (g: (typeof games)[number]) => g.result === 'W' && !g.rally && g.allDone;
+  const perfect = (g: (typeof games)[number]) =>
+    g.result === 'W' &&
+    !g.rally &&
+    g.allDone &&
+    g.threshold >= PERFECT_FOR_BADGES.minRunsToWin &&
+    g.lineupSize >= PERFECT_FOR_BADGES.minTasks;
   let streak = 0;
   let last: 'W' | 'L' | null = null;
   const perfectBySeries = new Map<string, number>();
@@ -272,9 +294,17 @@ export function achievementStatsFromHistory(h: AchievementHistory): AchievementS
     last = g.result;
   }
 
+  // Iron Man weeks in a row: finished weeks in order; one that wasn't Iron Man ends the run.
+  let ironRun = 0;
+  for (const sr of [...h.series].sort((a, b) => (a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0))) {
+    if (sr.ironMan === null) continue;
+    ironRun = sr.ironMan ? ironRun + 1 : 0;
+    s.longestIronManRun = Math.max(s.longestIronManRun, ironRun);
+  }
+
   for (const sr of h.series) {
-    if (sr.ironMan) s.ironMans += 1;
     if (sr.result !== 'won') continue;
+    if (sr.ironMan) s.ironManWins += 1;
     s.seriesWon += 1;
     if (sr.wins === SERIES_LENGTH) s.sweeps += 1;
     const byNumber = new Map(games.filter((g) => g.seriesId === sr.id).map((g) => [g.gameNumber, g.result]));
@@ -303,6 +333,8 @@ export interface AchievementSim {
   /** Consecutive days with at least one check-off, up to today. */
   checkStreak: number;
   winStreak: number;
+  /** Iron Man weeks in a row so far. */
+  ironManRun: number;
   lastResult: 'W' | 'L' | null;
   /** This series so far, in order. */
   series: ('W' | 'L')[];
@@ -319,6 +351,7 @@ export function newSim(stats: AchievementStats = EMPTY_STATS, winGoal = 50): Ach
     openStreak: Math.min(stats.longestOpenStreak, stats.daysOpened),
     checkStreak: 0,
     winStreak: 0,
+    ironManRun: 0,
     lastResult: null,
     series: [],
     perfectInSeries: 0,
@@ -336,7 +369,7 @@ export type SimDay =
 /** One more day. A game day counts as an app open too. Pure: returns a new sim. */
 export function simulateDay(sim: AchievementSim, day: SimDay): AchievementSim {
   const s: AchievementStats = { ...sim.stats };
-  let { openStreak, checkStreak, winStreak, lastResult, perfectInSeries } = sim;
+  let { openStreak, checkStreak, winStreak, ironManRun, lastResult, perfectInSeries } = sim;
   let series = sim.series;
   let season = { ...sim.season };
 
@@ -385,8 +418,10 @@ export function simulateDay(sim: AchievementSim, day: SimDay): AchievementSim {
         const firstSix = series.slice(0, 6).filter((r) => r === 'W').length;
         if (firstSix === 3 && series[6] === 'W') s.game7Wins += 1;
       }
-      // Every simulated week is played as scheduled.
-      s.ironMans += 1;
+      // Every simulated week is played as scheduled: an Iron Man week.
+      if (wonSeries) s.ironManWins += 1;
+      ironManRun += 1;
+      s.longestIronManRun = Math.max(s.longestIronManRun, ironManRun);
       season.seriesPlayed += 1;
       series = [];
       perfectInSeries = 0;
@@ -400,7 +435,7 @@ export function simulateDay(sim: AchievementSim, day: SimDay): AchievementSim {
     }
   }
 
-  return { ...sim, stats: s, openStreak, checkStreak, winStreak, lastResult, series, perfectInSeries, season };
+  return { ...sim, stats: s, openStreak, checkStreak, winStreak, ironManRun, lastResult, series, perfectInSeries, season };
 }
 
 /** A day with the app left closed: the open streak ends. */

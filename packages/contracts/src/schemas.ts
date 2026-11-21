@@ -30,6 +30,7 @@ import {
   MinTasks,
   MonthKey,
   Points,
+  TaskPoints,
   Threshold,
   TimeOfDay,
   TimeZone,
@@ -204,7 +205,7 @@ export const Task = z.object({
 export const TaskCreate = z.object({
   name: z.string().trim().min(1).max(LIMITS.taskNameMax),
   notes: z.string().max(LIMITS.notesMax).nullable().optional(),
-  points: Points.default(1),
+  points: TaskPoints.default(1),
   kind: z.enum(TASK_KINDS).default('recurring'),
 });
 
@@ -212,7 +213,7 @@ export const TaskUpdate = z
   .object({
     name: z.string().trim().min(1).max(LIMITS.taskNameMax),
     notes: z.string().max(LIMITS.notesMax).nullable(),
-    points: Points,
+    points: TaskPoints,
     kind: z.enum(TASK_KINDS),
   })
   .partial();
@@ -513,7 +514,8 @@ export const AchievementStats = z.object({
   sweeps: Count,
   reverseSweeps: Count,
   game7Wins: Count,
-  ironMans: Count,
+  ironManWins: Count,
+  longestIronManRun: Count,
   winningSeasons: Count,
   goalsReached: Count,
   perfectSeasons: Count,

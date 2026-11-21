@@ -11,6 +11,8 @@ export const HexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
 export const Weekday = z.number().int().min(1).max(7);
 export const Points = z.number().int().min(1).max(LIMITS.pointsMax);
+/** A task's runs when it's created or edited: at most LIMITS.taskPointsMax (a grand slam). */
+export const TaskPoints = z.number().int().min(1).max(LIMITS.taskPointsMax);
 /** At least 1, so an empty or untouched lineup can never win. */
 export const Threshold = z.number().int().min(1).max(LIMITS.thresholdMax);
 export const MinTasks = z.number().int().min(1).max(LIMITS.minTasksMax).nullable();

@@ -233,7 +233,7 @@ function TasksStep({ onNext, onBack }: { onNext: () => void; onBack: (() => void
             placeholder="e.g. Call Mom"
             onChange={(e) => setName(e.target.value)}
           />
-          <Stepper label="Worth" value={points} min={1} max={5} suffix={vocab.runs(points).replace(/^\d+ /, '')} onChange={setPoints} />
+          <Stepper label="Worth" value={points} min={1} max={LIMITS.taskPointsMax} suffix={vocab.runs(points).replace(/^\d+ /, '')} onChange={setPoints} hint={vocab.taskMaxHint} />
           <button type="submit" className="btn btn--primary" disabled={!name.trim() || add.isPending}>
             Add task
           </button>

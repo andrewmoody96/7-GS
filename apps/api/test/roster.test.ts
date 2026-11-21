@@ -50,9 +50,16 @@ describe('tasks', () => {
 
   it('validates task input', async () => {
     const { t, token } = await signedUp();
-    for (const body of [{ name: '' }, { name: 'x', points: 0 }, { name: 'x', points: 101 }, { name: 'x'.repeat(81) }]) {
+    for (const body of [{ name: '' }, { name: 'x', points: 0 }, { name: 'x', points: 5 }, { name: 'x'.repeat(81) }]) {
       expect((await t.fails('createTask', { token, body }, 400)).code).toBe('VALIDATION_FAILED');
     }
+  });
+
+  it('caps a task at 4 runs (a grand slam), on create and on edit', async () => {
+    const { t, token } = await signedUp();
+    const slam = await t.ok('createTask', { token, body: { name: 'Big one', points: 4 } });
+    expect(slam.points).toBe(4);
+    expect((await t.fails('updateTask', { token, params: { taskId: slam.id }, body: { points: 5 } }, 400)).code).toBe('VALIDATION_FAILED');
   });
 
   it("hides other users' tasks", async () => {
@@ -91,11 +98,11 @@ describe('tasks', () => {
     expect(entries.find((e) => e.taskId === ids.Read)).toMatchObject({ taskName: 'Read 20 pages', points: 2 });
 
     await t.ok('lockGame', { token, params: { gameId: game!.id } });
-    const edited = await t.ok('updateTask', { token, params: { taskId: ids.Read! }, body: { name: 'Read a chapter', points: 5 } });
+    const edited = await t.ok('updateTask', { token, params: { taskId: ids.Read! }, body: { name: 'Read a chapter', points: 4 } });
     entries = (await t.ok('getGame', { token, params: { gameId: game!.id } })).entries;
     // The name is just a label; the runs stay as planned.
     expect(entries.find((e) => e.taskId === ids.Read)).toMatchObject({ taskName: 'Read a chapter', points: 2 });
-    expect(edited).toMatchObject({ points: 5, lockedThrough: '2026-10-05', lockedPoints: 2 });
+    expect(edited).toMatchObject({ points: 4, lockedThrough: '2026-10-05', lockedPoints: 2 });
   });
 });
 

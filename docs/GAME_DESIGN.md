@@ -121,7 +121,9 @@ stops where it was and every task after widens the lead. Your own score only eve
 - A live game can be tied; only finals can't. Run differential uses these scoreboard
   numbers, so every W adds to it and every L subtracts.
 
-**Points.** Each task is worth 1 run unless the user sets a different whole number.
+**Points.** Each task is worth 1 run unless the user sets a different whole number, up to
+4: no play scores more than a grand slam (rules `LIMITS.taskPointsMax`; basketball and
+hockey show the same cap in buckets and shots). A bigger job is better split into two tasks.
 Thresholds are set in runs, so a user who never touches point values can think of the
 threshold as "tasks completed."
 

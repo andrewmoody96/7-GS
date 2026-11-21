@@ -52,6 +52,8 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 
 ## History
 
+- **1.2.0-beta** (November 2026): a task is worth up to 4; badges count a series once it's
+  decided; tougher perfect-game and Iron Man badges, and Ironclad.
 - **1.1.0-beta** (November 2026, tag `v1.1.0-beta`): the first numbered release. A recap of
   everything since launch, plus badges, a win goal in the guided setup, and one more pass
   through setup for everyone.
