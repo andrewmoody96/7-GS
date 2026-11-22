@@ -60,7 +60,8 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
         <caption className="sr-only">
           {oppName} {line.them}, {teamName} {runs}
         </caption>
-        <thead>
+        {/* The column labels are for screen readers: the score speaks for itself. */}
+        <thead className="sr-only">
           <tr>
             <th scope="col">
               <span className="sr-only">Team</span>
@@ -78,21 +79,21 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
         <tbody>
           <tr className="board__row board__row--opp">
             <th scope="row">
-              {opponent ? <OpponentBadge opponent={opponent} size={34} /> : null}
+              {opponent ? <OpponentBadge opponent={opponent} size={42} /> : null}
               <span className="board__team">{oppName}</span>
             </th>
             <td>
-              <Tile value={line.them} />
+              <Tile value={line.them} size="l" />
             </td>
             {result ? <td /> : null}
           </tr>
           <tr className="board__row board__row--you">
             <th scope="row">
-              <TeamBadge name={teamName} size={34} />
+              <TeamBadge name={teamName} size={42} />
               <span className="board__team">{teamName}</span>
             </th>
             <td>
-              <Tile value={runs} />
+              <Tile value={runs} size="l" />
             </td>
             {result ? (
               <td>
