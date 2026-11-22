@@ -33,7 +33,6 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
     entries: final ? undefined : game.entries,
   });
   const runs = line.us;
-  const hits = final ? game.tasksDone : ev.tasksDone;
   const oppName = opponent?.name ?? vocab.term.opponent;
   const result = final ? game.result : null;
   const lights = Array.from({ length: ev.requiredTotal }, (_, i) => i < ev.requiredTotal - ev.missedRequired);
@@ -69,9 +68,6 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
             <th scope="col" abbr={vocab.term.points}>
               {vocab.terms.runsShort}
             </th>
-            <th scope="col" abbr={vocab.terms.tasksDone}>
-              {vocab.terms.hitsShort}
-            </th>
             {result ? (
               <th scope="col">
                 <span className="sr-only">Result</span>
@@ -88,9 +84,6 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
             <td>
               <Tile value={line.them} />
             </td>
-            <td>
-              <Tile value="–" />
-            </td>
             {result ? <td /> : null}
           </tr>
           <tr className="board__row board__row--you">
@@ -100,9 +93,6 @@ export function Scoreboard({ game, opponent, teamName, status, ev, note }: Score
             </th>
             <td>
               <Tile value={runs} />
-            </td>
-            <td>
-              <Tile value={hits} />
             </td>
             {result ? (
               <td>
