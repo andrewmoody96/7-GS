@@ -556,7 +556,7 @@ sign-in; both stay in Team → Settings.
 | | Baseball | Basketball | Hockey |
 |---|---|---|---|
 | A task is worth | runs | buckets | shots |
-| Scoreboard | R (runs), H (hits) | PTS (points), FG (made shots) | G (goals), SOG (shots on goal) |
+| Scoreboard | R (runs) | PTS (points) | G (goals) |
 | Required task | Must-hit | Must-make | Must-score |
 | Added after the week starts | Pinch hitter | Sixth man | Extra skater |
 | Lock | First pitch | Tip-off | Puck drop |

@@ -107,7 +107,6 @@ export interface Vocab {
     runsShort: string;
     /** Short unit for a task's value in plans ("R"); the scoreboard uses runsShort. */
     valueShort: string;
-    hitsShort: string;
     win: string;
     loss: string;
     partial: string;
@@ -201,7 +200,6 @@ export interface Vocab {
    * by badge id. What earns a badge never changes with the sport; only its words do.
    */
   badges: Record<string, { name?: string; icon?: string; description?: string }>;
-  hits: (n: number) => string;
   gameLabel: (gameNumber: number) => string;
   seriesLabel: (status: SeriesStatus) => string;
   /** "Series 3", or the Head Start's name for series 0. */
@@ -344,7 +342,6 @@ export const baseball: Vocab = {
     tasksDone: 'Hits',
     runsShort: 'R',
     valueShort: 'R',
-    hitsShort: 'H',
     win: 'W',
     loss: 'L',
     partial: 'Warning track',
@@ -443,7 +440,6 @@ export const baseball: Vocab = {
   runs: (n) => plural(n, 'run', 'runs'),
   taskMaxHint: 'Up to 4 runs: no play scores more than a grand slam.',
   badges: {},
-  hits: (n) => plural(n, 'hit', 'hits'),
   gameLabel: (n) => `Game ${n}`,
   seriesLabel: (status) => status.label,
   seriesName: (n) => (n === 0 ? 'Head Start' : `Series ${n}`),
@@ -612,8 +608,8 @@ function overlay<T extends object>(base: T, over: DeepPartial<T>): T {
 }
 
 /**
- * Basketball: a task is a bucket, the scoreboard shows points (rules `displayScore`,
- * near 100 at the target) and made field goals.
+ * Basketball: a task is a bucket, and the scoreboard shows points (rules `displayScore`,
+ * near 100 at the target).
  */
 export const basketball: Vocab = overlay(baseball, {
   flavor: {
@@ -643,7 +639,6 @@ export const basketball: Vocab = overlay(baseball, {
     tasksDone: 'Field goals',
     runsShort: 'PTS',
     valueShort: 'BKT',
-    hitsShort: 'FG',
     partial: 'In and out',
     threshold: 'Buckets to win',
     minTasks: 'Minimum makes',
@@ -700,7 +695,6 @@ export const basketball: Vocab = overlay(baseball, {
     'every-day-player': { name: 'Gym Rat' },
     'iron-horse': { name: 'Never Missed a Practice' },
   },
-  hits: (n) => plural(n, 'make', 'makes'),
   resultDetail: {
     rally: 'Challenge W',
   },
@@ -775,8 +769,8 @@ export const basketball: Vocab = overlay(baseball, {
 });
 
 /**
- * Hockey: a task is a shot, the scoreboard shows goals (rules `displayScore`, about 3–5
- * at the target) and shots on goal.
+ * Hockey: a task is a shot, and the scoreboard shows goals (rules `displayScore`, about
+ * 3–5 at the target).
  */
 export const hockey: Vocab = overlay(baseball, {
   flavor: {
@@ -805,7 +799,6 @@ export const hockey: Vocab = overlay(baseball, {
     rainouts: 'Postponements',
     tasksDone: 'Shots on goal',
     runsShort: 'G',
-    hitsShort: 'SOG',
     valueShort: 'SH',
     partial: 'Off the post',
     threshold: 'Shots to win',
@@ -862,7 +855,6 @@ export const hockey: Vocab = overlay(baseball, {
     'every-day-player': { name: 'Rink Rat' },
     'iron-horse': { name: 'Never Missed a Shift' },
   },
-  hits: (n) => plural(n, 'shot', 'shots'),
   resultDetail: {
     rally: 'Challenge W',
   },

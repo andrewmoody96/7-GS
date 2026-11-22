@@ -9,7 +9,7 @@
 // - `id` only has to be new and stay the same.
 
 /** The version this build is. Bump with every release, fixes included. */
-export const APP_VERSION = '1.3.2-beta';
+export const APP_VERSION = '1.3.3-beta';
 
 /** How a version is shown in the app: "v1.1.0-beta". */
 export const versionLabel = (version: string) => `v${version}`;
@@ -48,6 +48,7 @@ export const RELEASES: readonly ReleaseNote[] = [
     ],
     improved: ['A tidier Team page.'],
     patches: [
+      { version: '1.3.3-beta', fixed: ['Scoreboards show just the score.'] },
       {
         version: '1.3.2-beta',
         fixed: ['A league title for the best record across both conferences.', 'Your league place in Standings.', 'Win streak and best streak share a tile.'],
