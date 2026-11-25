@@ -63,7 +63,7 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 
 ## History
 
-- **1.3.5-beta** (November 2026): tidier standings columns.
+- **1.3.5-beta** (November 2026): tidier standings: even columns, and every team as its town over a bold nickname.
 - **1.3.4-beta** (November 2026): a bigger, roomier scoreboard.
 - **1.3.3-beta** (November 2026): scoreboards show just the score (no hits / FG / SOG).
 - **1.3.2-beta** (November 2026): a league title for the best record across both conferences.

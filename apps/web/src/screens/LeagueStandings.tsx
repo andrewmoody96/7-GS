@@ -4,7 +4,7 @@
 // record when the season ends takes each title (GAME_DESIGN §8).
 
 import type { StandingsDto, StandingsRowDto } from '@7gs/contracts';
-import { opponentAbbreviation } from '@7gs/rules';
+import { OPPONENT_TOWNS, opponentAbbreviation } from '@7gs/rules';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCurrentSeasonQuery, useStandingsQuery } from '../app/queries';
 import { EmptyState, ErrorPanel, Loading } from '../components/States';
@@ -24,6 +24,22 @@ function TeamMark({ row }: { row: StandingsRowDto }) {
   return (
     <span className="standings__mark" aria-hidden="true" style={{ background: row.colors[0], color: row.colors[1] }}>
       {opponentAbbreviation(row.name)}
+    </span>
+  );
+}
+
+/**
+ * A team as standings show it: the town small above, the nickname bold below ("Walla Walla /
+ * Wafflers"). Your own team splits at its first space; a one-word name is just the bold line.
+ */
+function TeamName({ row }: { row: StandingsRowDto }) {
+  const town = row.you ? null : (OPPONENT_TOWNS.find((t) => row.name.startsWith(`${t} `)) ?? null);
+  const cut = town ? town.length : row.name.indexOf(' ');
+  const [top, bottom] = cut > 0 ? [row.name.slice(0, cut), row.name.slice(cut + 1)] : [null, row.name];
+  return (
+    <span className="standings__name">
+      {top ? <span className="standings__town">{top}</span> : null}
+      <span className="standings__nick">{bottom}</span>
     </span>
   );
 }
@@ -60,7 +76,7 @@ function Table({ title, rows, note }: { title: string; rows: StandingsRowDto[]; 
               <th scope="row" className="standings__team">
                 <span className="standings__teamcell">
                   <TeamMark row={r} />
-                  <span className="standings__name">{r.name}</span>
+                  <TeamName row={r} />
                 </span>
               </th>
               <td>{r.wins}</td>

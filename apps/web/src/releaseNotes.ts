@@ -48,7 +48,7 @@ export const RELEASES: readonly ReleaseNote[] = [
     ],
     improved: ['A tidier Team page.'],
     patches: [
-      { version: '1.3.5-beta', fixed: ['Tidier standings columns.'] },
+      { version: '1.3.5-beta', fixed: ['Tidier standings: even columns, town over a bold team name.'] },
       { version: '1.3.4-beta', fixed: ['A bigger, roomier scoreboard.'] },
       { version: '1.3.3-beta', fixed: ['Scoreboards show just the score.'] },
       {

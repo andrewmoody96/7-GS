@@ -1496,11 +1496,23 @@
 }
 
 .standings__name {
+  display: grid;
   min-width: 0;
-  font-size: 0.8125rem;
   line-height: 1.2;
-  /* A long name wraps to a second line rather than losing its end. */
   overflow-wrap: anywhere;
+}
+
+/* Two lines for every team: the town small and grey, the nickname bold. */
+.standings__town {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.standings__nick {
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .standings__mark {
@@ -1524,7 +1536,7 @@
   background: var(--accent-soft);
 }
 
-.standings__table tr.is-you .standings__team {
+.standings__table tr.is-you .standings__nick {
   font-weight: 800;
 }
 

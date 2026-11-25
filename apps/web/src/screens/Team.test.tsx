@@ -9,6 +9,7 @@ import { AppProviders } from '../app/routes';
 import { evaluateAchievements, type Theme } from '@7gs/rules';
 import { applyTheme } from '../vocab';
 import { ChangesScreen, ManagementScreen, RotationScreen, TeamScreen } from './Team';
+import { StandingsScreen } from './LeagueStandings';
 
 function renderAt(path: string, theme: Theme) {
   applyTheme(theme);
@@ -21,6 +22,7 @@ function renderAt(path: string, theme: Theme) {
           <Route path="/team/management" element={<ManagementScreen />} />
           <Route path="/team/rotation" element={<RotationScreen />} />
           <Route path="/team/settings/changes" element={<ChangesScreen />} />
+          <Route path="/team/standings" element={<StandingsScreen />} />
         </Routes>
       </MemoryRouter>
     </AppProviders>,
@@ -127,5 +129,23 @@ describe('What’s changed', () => {
     expect(screen.getByText('v1.3.3-beta fixes')).toBeInTheDocument();
     expect(screen.getByText('v1.3.2-beta fixes')).toBeInTheDocument();
     expect(screen.getByText('v1.3.1-beta fixes')).toBeInTheDocument();
+  });
+});
+
+describe('Standings', () => {
+  it('shows every team on two lines: the town small, the nickname bold', async () => {
+    const { view } = renderAt('/team/standings', 'baseball');
+    await screen.findByText('Division');
+    await waitFor(() => expect(view.container.querySelectorAll('.standings__nick').length).toBeGreaterThan(0));
+    const names = [...view.container.querySelectorAll('.standings__name')];
+    // Every team has its town line, and the nickname line is never the whole name.
+    for (const n of names) {
+      const town = n.querySelector('.standings__town')?.textContent ?? '';
+      const nick = n.querySelector('.standings__nick')?.textContent ?? '';
+      expect(town.length).toBeGreaterThan(0);
+      expect(nick.length).toBeGreaterThan(0);
+    }
+    // GB reads to one decimal.
+    expect([...view.container.querySelectorAll('td:last-child')].some((td) => /^\d+\.\d$/.test(td.textContent ?? ''))).toBe(true);
   });
 });
