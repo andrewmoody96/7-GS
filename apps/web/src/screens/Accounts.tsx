@@ -1,6 +1,7 @@
 // Team → Settings → Accounts (ADMIN_EMAILS only): who has an account, when it was
 // created, when it last signed in, and when it was last seen using the app.
 
+import { TeamBadge } from '../components/Badges';
 import type { AdminAccountDto } from '@7gs/contracts';
 import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
@@ -39,13 +40,17 @@ function When({ label, iso, empty }: { label: string; iso: string | null; empty:
 function AccountCard({ account: a }: { account: AdminAccountDto }) {
   return (
     <li className="card account">
-      <p className="account__name">
-        <strong>{a.displayName}</strong> <span className="muted">· {THEME_TERMS[a.theme].name}</span>
-      </p>
-      <p className="account__email">{a.email}</p>
+      <div className="account__head">
+        <TeamBadge name={a.displayName} photo={a.avatar} size={48} />
+        <div className="account__who">
+          <p className="account__name">
+            <strong>{a.displayName}</strong> <span className="muted">· {THEME_TERMS[a.theme].name}</span>
+          </p>
+          <p className="account__email">{a.email}</p>
+        </div>
+      </div>
       <dl className="facts account__facts">
         <When label="Last seen" iso={a.lastSeenAt} empty="Not yet recorded" />
-        <When label="Last sign-in" iso={a.lastSignInAt} empty="—" />
         <When label="Created" iso={a.createdAt} empty="—" />
       </dl>
     </li>

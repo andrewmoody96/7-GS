@@ -1726,3 +1726,14 @@
   width: 100%;
   accent-color: var(--accent);
 }
+
+.account__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account__who {
+  min-width: 0;
+}

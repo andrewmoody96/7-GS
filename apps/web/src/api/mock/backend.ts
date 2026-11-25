@@ -247,8 +247,8 @@ export class MockBackend {
           {
             email: user.email,
             displayName: user.displayName,
+            avatar: user.avatar ?? null,
             createdAt: user.createdAt,
-            lastSignInAt: user.createdAt,
             lastSeenAt: now.toISOString(),
             theme: user.theme ?? 'baseball',
           },
