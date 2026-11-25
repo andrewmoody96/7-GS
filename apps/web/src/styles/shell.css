@@ -1452,7 +1452,13 @@
 }
 
 .standings__table col.standings__num:last-child {
-  width: 2.8em;
+  width: calc(3.1em + 10px);
+}
+
+/* The rules run past the last column's numbers instead of ending flush with them. */
+.standings__table th:last-child,
+.standings__table td:last-child {
+  padding-right: 10px;
 }
 
 .standings__table col.standings__pct {

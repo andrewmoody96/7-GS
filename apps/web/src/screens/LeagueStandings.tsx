@@ -66,7 +66,8 @@ function Table({ title, rows, note }: { title: string; rows: StandingsRowDto[]; 
               <td>{r.wins}</td>
               <td>{r.losses}</td>
               <td>{formatWinPct(r.wins + r.losses === 0 ? null : r.winPct)}</td>
-              <td>{r.gamesBack === 0 ? '–' : r.gamesBack}</td>
+              {/* Games back to one decimal, as standings print it: 2.0, 11.5. */}
+              <td>{r.gamesBack === 0 ? '–' : r.gamesBack.toFixed(1)}</td>
             </tr>
           ))}
         </tbody>
