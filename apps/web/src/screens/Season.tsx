@@ -18,12 +18,12 @@ import { getThemePref, setThemePref, type ThemePref } from '../app/theme';
 import { useNotify } from '../app/toast';
 import { Stepper } from '../components/Controls';
 import { IconChevronRight } from '../components/icons';
+import { PhotoCropSheet } from '../components/PhotoCropSheet';
 import { Sheet } from '../components/Sheet';
 import { Tile } from '../components/Tile';
 import { formatTimeOfDay, formatWinPct, signed } from '../lib/format';
 import { AVAILABLE_THEMES, vocab } from '../vocab';
 import { checkForUpdate, useUpdateAvailable } from '../app/update';
-import { squarePhoto } from '../lib/avatar';
 import { TeamBadge } from '../components/Badges';
 import { APP_VERSION, versionLabel } from '../releaseNotes';
 
@@ -513,18 +513,11 @@ function TeamPhoto({ me }: { me: MeDto }) {
   const clearAvatar = useClearAvatar();
   const notify = useNotify();
   const inputId = useId();
-  const [preparing, setPreparing] = useState(false);
-  const busy = preparing || setAvatar.isPending || clearAvatar.isPending;
-  const choose = async (file: File | undefined) => {
-    if (!file) return;
-    setPreparing(true);
-    try {
-      setAvatar.mutate(await squarePhoto(file));
-    } catch (error) {
-      notify(error instanceof Error ? error.message : 'That photo couldn’t be used.', 'error');
-    } finally {
-      setPreparing(false);
-    }
+  // The chosen file goes through the crop step before it's uploaded.
+  const [cropping, setCropping] = useState<File | null>(null);
+  const busy = setAvatar.isPending || clearAvatar.isPending;
+  const choose = (file: File | undefined) => {
+    if (file) setCropping(file);
   };
   return (
     <div className="field teamphoto">
@@ -533,7 +526,7 @@ function TeamPhoto({ me }: { me: MeDto }) {
         <TeamBadge name={me.displayName} size={64} />
         <div className="teamphoto__actions">
           <label htmlFor={inputId} className={`btn${busy ? ' is-disabled' : ''}`} aria-disabled={busy}>
-            {preparing || setAvatar.isPending ? 'Saving…' : me.avatar ? 'Change photo' : 'Choose photo'}
+            {setAvatar.isPending ? 'Saving…' : me.avatar ? 'Change photo' : 'Choose photo'}
           </label>
           <input
             id={inputId}
@@ -542,7 +535,7 @@ function TeamPhoto({ me }: { me: MeDto }) {
             className="sr-only"
             disabled={busy}
             onChange={(e) => {
-              void choose(e.target.files?.[0]);
+              choose(e.target.files?.[0]);
               e.target.value = '';
             }}
           />
@@ -553,7 +546,15 @@ function TeamPhoto({ me }: { me: MeDto }) {
           ) : null}
         </div>
       </div>
-      <p className="field__hint">Shows in your team badge on the scoreboard and series, with your initials over it. It’s cropped to a square.</p>
+      <p className="field__hint">Shows in your team badge on the scoreboard and series, with your initials over it. You can crop it after choosing.</p>
+      <PhotoCropSheet
+        file={cropping}
+        onCancel={() => setCropping(null)}
+        onDone={(image) => {
+          setCropping(null);
+          setAvatar.mutate(image, { onError: (error) => notify(errorMessage(error), 'error') });
+        }}
+      />
     </div>
   );
 }
