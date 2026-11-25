@@ -1680,3 +1680,60 @@
   letter-spacing: 0;
   color: var(--text-muted);
 }
+
+/* ── Photo cropper ──────────────────────────────────────────────────────── */
+
+.cropper {
+  position: relative;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface-2);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.cropper:active {
+  cursor: grabbing;
+}
+
+.cropper__img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  pointer-events: none;
+}
+
+/* Darken outside the round badge; the square corners still go into the upload. */
+.cropper__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgb(0 0 0 / 0.45);
+  outline: 2px solid rgb(255 255 255 / 0.85);
+  outline-offset: -2px;
+  pointer-events: none;
+}
+
+.cropper__zoom {
+  display: grid;
+  gap: 4px;
+}
+
+.cropper__zoom input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.account__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account__who {
+  min-width: 0;
+}

@@ -2,9 +2,9 @@
 // that it exists. An admin also needs a password, entered on the device within 12 hours.
 
 import type { AdminAccountDto } from '@7gs/contracts';
-import { desc, eq, max, sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import type { Deps } from '../deps';
-import { sessions, users } from '../db/schema';
+import { sessions, userAvatars, users } from '../db/schema';
 import { ApiException, conflict, notFound, validationFailed } from '../errors';
 import { RateLimiter } from '../http/rateLimit';
 import type { AuthContext } from '../http/session';
@@ -59,19 +59,15 @@ export function adminRoutes(deps: Deps): AnyRoute[] {
     route('listAccounts', async ({ auth, now }) => {
       await assertUnlocked(auth, 'GET /v1/admin/accounts', now);
       const rows = await deps.db
-        .select({
-          user: users,
-          lastSignInAt: max(sessions.createdAt),
-        })
+        .select({ user: users, avatar: userAvatars.image })
         .from(users)
-        .leftJoin(sessions, eq(sessions.userId, users.id))
-        .groupBy(users.id)
+        .leftJoin(userAvatars, eq(userAvatars.userId, users.id))
         .orderBy(desc(sql`coalesce(${users.lastSeenAt}, ${users.createdAt})`));
-      const accounts: AdminAccountDto[] = rows.map(({ user, lastSignInAt }) => ({
+      const accounts: AdminAccountDto[] = rows.map(({ user, avatar }) => ({
         email: user.email,
         displayName: user.displayName,
+        avatar: avatar ?? null,
         createdAt: user.createdAt.toISOString(),
-        lastSignInAt: lastSignInAt ? new Date(lastSignInAt).toISOString() : null,
         lastSeenAt: user.lastSeenAt ? user.lastSeenAt.toISOString() : null,
         theme: themeOf(user),
       }));

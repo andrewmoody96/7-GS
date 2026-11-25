@@ -673,10 +673,10 @@ export const ReminderTestResult = z.object({ devices: Count, email: z.boolean() 
 export const AdminAccount = z.object({
   email: z.email(),
   displayName: z.string(),
+  /** The team photo (a data: URL), shown as a small badge; null without one. */
+  avatar: z.string().nullable(),
   /** When the account was created: its first sign-in. */
   createdAt: Instant,
-  /** The newest sign-in on any device (null if every session has since been removed). */
-  lastSignInAt: Instant.nullable(),
   /** The last time it used the app, to the hour (null: not since this started being recorded). */
   lastSeenAt: Instant.nullable(),
   theme: z.enum(THEMES),

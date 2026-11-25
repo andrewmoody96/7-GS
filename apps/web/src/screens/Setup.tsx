@@ -13,10 +13,10 @@ import { useApi } from '../app/context';
 import { errorMessage } from '../app/errors';
 import { qk, useCurrentSeasonQuery, useMeQuery, useSaveWeekPlan, useUpdateSeasonGoal, useSetAvatar, useStartersQuery, useStartHeadStart, useTasksQuery, useUpdateMe } from '../app/queries';
 import { TeamBadge } from '../components/Badges';
+import { PhotoCropSheet } from '../components/PhotoCropSheet';
 import { Stepper } from '../components/Controls';
 import { initialPlan, WeekPlanGrid, weekPlanBodies } from '../components/WeekPlanGrid';
 import { EmptyState, Loading } from '../components/States';
-import { squarePhoto } from '../lib/avatar';
 import { formatMonthDay, weekdayLong } from '../lib/format';
 import { vocab } from '../vocab';
 import { seasonTotals } from './Season';
@@ -122,7 +122,8 @@ function TeamStep({ onNext }: { onNext: () => void }) {
   const setAvatar = useSetAvatar();
   const [name, setName] = useState('');
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [preparing, setPreparing] = useState(false);
+  // The chosen file goes through the crop step before it's uploaded.
+  const [cropping, setCropping] = useState<File | null>(null);
   const nameId = useId();
   const photoId = useId();
   useEffect(() => {
@@ -154,30 +155,30 @@ function TeamStep({ onNext }: { onNext: () => void }) {
         <span className="field__label">Team photo (optional)</span>
         <div className="teamphoto__row">
           <TeamBadge name={name.trim() || me.data.displayName} size={64} />
-          <label htmlFor={photoId} className={`btn${preparing || setAvatar.isPending ? ' is-disabled' : ''}`}>
-            {preparing || setAvatar.isPending ? 'Saving…' : me.data.avatar ? 'Change photo' : 'Choose photo'}
+          <label htmlFor={photoId} className={`btn${setAvatar.isPending ? ' is-disabled' : ''}`}>
+            {setAvatar.isPending ? 'Saving…' : me.data.avatar ? 'Change photo' : 'Choose photo'}
           </label>
           <input
             id={photoId}
             type="file"
             accept="image/*"
             className="sr-only"
-            onChange={async (e) => {
+            onChange={(e) => {
               const file = e.target.files?.[0];
               e.target.value = '';
-              if (!file) return;
-              setPreparing(true);
               setPhotoError(null);
-              try {
-                setAvatar.mutate(await squarePhoto(file));
-              } catch (error) {
-                setPhotoError(error instanceof Error ? error.message : 'That photo couldn’t be used.');
-              } finally {
-                setPreparing(false);
-              }
+              if (file) setCropping(file);
             }}
           />
         </div>
+        <PhotoCropSheet
+          file={cropping}
+          onCancel={() => setCropping(null)}
+          onDone={(image) => {
+            setCropping(null);
+            setAvatar.mutate(image, { onError: (error) => setPhotoError(errorMessage(error)) });
+          }}
+        />
         {photoError ? <p className="notice notice--error">{photoError}</p> : null}
       </div>
       {updateMe.isError ? <p className="notice notice--error">{errorMessage(updateMe.error)}</p> : null}

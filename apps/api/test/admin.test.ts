@@ -40,6 +40,7 @@ describe('admin: accounts', () => {
     t.clock.set('2026-10-03T09:00:00Z');
     const pat = await t.signIn('pat@example.com', CHICAGO);
     await t.ok('updateMe', { token: pat.token, body: { displayName: 'Pat’s Picks' } });
+    const bossPhoto = `data:image/jpeg;base64,${'A'.repeat(64)}`;
 
     expect((await t.ok('getMe', { token: pat.token })).isAdmin).toBe(false);
     t.clock.set('2026-10-03T11:00:00Z'); // the boss checks in later, so is the most recent
@@ -54,13 +55,17 @@ describe('admin: accounts', () => {
     });
     await t.ok('unlockAdmin', { token: boss.token, body: { password: 'correct horse battery' } });
 
+    await t.ok('putAvatar', { token: boss.token, body: { image: bossPhoto } });
     const { accounts } = await t.ok('listAccounts', { token: boss.token });
+    // Each account with its team photo (for its badge), and no last sign-in.
+    expect(accounts.find((a) => a.email === 'boss@example.com')).toMatchObject({ avatar: bossPhoto });
+    expect(accounts.find((a) => a.email === 'pat@example.com')).not.toHaveProperty('lastSignInAt');
     expect(accounts.map((a) => a.email)).toEqual(['boss@example.com', 'pat@example.com']);
     expect(accounts.find((a) => a.email === 'pat@example.com')).not.toHaveProperty('devices');
     expect(accounts.find((a) => a.email === 'pat@example.com')).toMatchObject({
       displayName: 'Pat’s Picks',
+      avatar: null,
       createdAt: '2026-10-03T09:00:00.000Z',
-      lastSignInAt: '2026-10-03T09:00:00.000Z',
       lastSeenAt: '2026-10-03T09:00:00.000Z',
       theme: 'baseball',
     });

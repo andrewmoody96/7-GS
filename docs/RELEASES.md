@@ -63,6 +63,7 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 
 ## History
 
+- **1.3.6-beta** (November 2026): crop your team photo; photos saved at 512 px instead of 192. Admin Accounts: each account's team badge; Last sign-in dropped.
 - **1.3.5-beta** (November 2026): tidier standings: even columns, and every team as its town over a bold nickname.
 - **1.3.4-beta** (November 2026): a bigger, roomier scoreboard.
 - **1.3.3-beta** (November 2026): scoreboards show just the score (no hits / FG / SOG).
