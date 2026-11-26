@@ -7,7 +7,7 @@ import { SCENARIOS, type ScenarioName } from '../api/mock/scenarios';
 import { hasSeenHowItWorks, HowItWorksSheet, markHowItWorksSeen } from '../components/HowItWorks';
 import { InstallHint } from '../components/InstallHint';
 import { useWelcomeStep, WelcomeSetup } from '../components/WelcomeSetup';
-import { IconBasketball, IconHelp, IconHockey, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
+import { IconBasketball, IconHockey, IconPlus, IconSeason, IconSeries, IconToday } from '../components/icons';
 import { Sheet } from '../components/Sheet';
 import { ErrorPanel } from '../components/States';
 import { formatDate, formatDayTime } from '../lib/format';
@@ -19,6 +19,7 @@ import { useNotify } from './toast';
 import { useNow } from './hooks';
 import { TasksModalProvider, useTasksModal } from './tasksModal';
 import { WhatsNew } from '../components/WhatsNew';
+import { TopMenu } from '../components/TopMenu';
 import { NewBadgeNotices } from '../screens/Badges';
 import { LATEST_RELEASE } from '../releaseNotes';
 import { SETUP_PATH } from '../screens/Setup';
@@ -130,9 +131,7 @@ function TopBar() {
             {meta ? <span className="topbar__phase">{meta}</span> : null}
           </p>
         ) : null}
-        <button type="button" className="icon-btn topbar__help" onClick={() => setHelpOpen(true)} aria-label="How it works">
-          <IconHelp />
-        </button>
+        <TopMenu onHowItWorks={() => setHelpOpen(true)} />
       </div>
       <WelcomeSetup
         onDone={() => {

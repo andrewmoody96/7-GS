@@ -265,3 +265,10 @@ export const IconMoreVertical = (p: IconProps) => (
     <circle cx="12" cy="19" r="2" />
   </Icon>
 );
+
+/** The top bar's menu: three lines. */
+export const IconMenu = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </Icon>
+);

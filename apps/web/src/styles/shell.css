@@ -503,10 +503,6 @@
 
 /* ── How it works ─────────────────────────────────────────────────────────── */
 
-.topbar__help {
-  color: var(--text);
-}
-
 .howto {
   display: grid;
   gap: 14px;
@@ -1736,4 +1732,60 @@
 
 .account__who {
   min-width: 0;
+}
+
+/* ── Top bar menu (≡) ───────────────────────────────────────────────────── */
+
+.topmenu {
+  position: relative;
+}
+
+.topmenu__button {
+  color: var(--text);
+}
+
+.topmenu__list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  display: grid;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+}
+
+.topmenu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.topmenu__item + .topmenu__item {
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.topmenu__item:hover,
+.topmenu__item:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.topmenu__item svg {
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
 }
