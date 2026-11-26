@@ -247,6 +247,9 @@ A year is treated as 52 weeks, split into four quarterly seasons of 13 weeks eac
 - 52 weeks is 364 days, so season start dates drift about one day earlier each
   calendar year. That's acceptable; series always stay Monday-aligned.
 
+**2.0 keeps the 13 weeks but splits them differently:** 9 regular-season series, 3
+playoff weeks, then Review Week (§8a).
+
 Offseason weeks can't be combined or moved. Tasks and starters can be edited at any
 time during a season, so a longer break wouldn't add much. The week exists as a
 built-in prompt to review the season and tweak the setup.
@@ -498,6 +501,79 @@ Baseball's rule for a game stopped partway through: it isn't a loss; it resumes 
   finishing ahead of everyone else.
 - Titles show under the team stats and in Team History, and every finished season has its
   standings.
+- **2.0 adds playoffs** and renames the best-record titles (§8a).
+
+## 8a. Playoffs (planned for 2.0)
+
+Not built yet. Until 2.0 ships, §5 and §8 are the rules.
+
+**Never in the game:** social features (friends, shared leagues, comparing with real
+people). They invite unfairness and cheating; your league stays yours.
+
+### The season: still 13 weeks, four a year
+
+| Weeks | What |
+|---|---|
+| 1–9 | Regular season: 4 division rivals, 3 others from your conference, 2 from the other conference |
+| 10 | Conference Semifinals |
+| 11 | Conference Championship Series |
+| 12 | League Championship |
+| 13 | Review Week |
+
+Every round is one week and one best-of-7 series, so the daily routine never changes;
+only the stakes do. **Everyone plays a series every week**, in the playoffs or not: the
+weekly series is what keeps people playing 4 days out of 7.
+
+### Making the playoffs
+
+- **4 teams per conference:** the 3 division winners, plus one wild card (the best record
+  among the rest). Seeds 1 v 4 and 2 v 3; the best record in the conference is the #1
+  seed.
+- Standings and titles count the **regular season only** (9 series, 63 games). Your season
+  record, win goal and season badges (Winning Season, Goal Getter, Perfect Season) still
+  count all 12 weeks.
+- From week 6 the standings mark the race: **x** clinched a playoff spot, **y** clinched
+  the division, **z** clinched Top Seed, **e** eliminated (mathematically out).
+- Seeding is bragging rights, not a rule perk: your series is decided by your own runs
+  against your own runs to win, whoever the opponent is.
+
+### Titles
+
+| Counter | How you win it |
+|---|---|
+| **Division Titles** | Best record in your division |
+| **Top Seeds** | Best record in your conference |
+| **Best Records** | Best record in the league (all 30 teams) |
+| **Conference Champs** | Win the Conference Championship Series |
+| **League Champs** | Win the League Championship |
+
+- **Existing titles carry over** under their real meaning: today's conference titles
+  become Top Seeds and league titles become Best Records. No one becomes a champion
+  retroactively.
+- **No trophy names.** Titles stay plain (no invented or real trophy names), which keeps
+  branding questions out of the way.
+- Ties as today: overall record, then division, then conference, then run differential.
+
+### Out of the playoffs: Exhibition
+
+Missed the playoffs, or knocked out: you play an **Exhibition** series each remaining
+week against another team that's out. It counts toward your record, badges, Iron Man
+weeks and streaks, not toward any title. No prize and no bracket: losing earns nothing.
+
+### Finishing Strong 🏁
+
+New badge: *Win more games than you lose after you're out of the playoff race (at least 7
+games).* The count starts when you're eliminated (the **e** mark) or knocked out, and runs
+to the end of week 12; games with no result don't count. Losing the League Championship
+leaves no games, so it can't be earned that season.
+
+### Still to decide
+
+- The Team page grid for five title counters.
+- Sport-specific words (pennant, Finals, Cup) where they fit.
+- A playoff picture screen.
+- Tuning the simulated teams so a strong season usually makes the playoffs.
+- Whether 9 series a season still reaches all 29 teams within about a year.
 
 ## 9. Core screens (PWA)
 

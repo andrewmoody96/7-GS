@@ -16,8 +16,21 @@ keeping. Move things as plans change; [RELEASES.md](RELEASES.md) has how release
   earned. A reason to come back each week.
 - **Badge polish.** A badge's date earned, and a short celebration when a big one lands.
 
+## 2.0: Playoffs
+
+The next major release, starting at a season boundary. A 9-series regular season, three
+playoff weeks (Conference Semifinals, Conference Championship Series, League
+Championship), then Review Week, so seasons stay quarterly. Titles: Division Titles, Top
+Seeds, Best Records, Conference Champs, League Champs. Teams that are out play Exhibition
+series, and the Finishing Strong badge rewards ending well. Full plan:
+[GAME_DESIGN §8a](GAME_DESIGN.md#8a-playoffs-planned-for-20).
+
 ## Later (ideas)
 
-- **Friends or a league:** compare records and series wins with people you invite.
 - **Passkey sign-in**, so no code is needed on a device you've used before.
 - **More sports** for themes.
+
+## Not planned
+
+- **Social features** (friends, shared leagues, comparing with real people): they invite
+  unfairness and cheating.

@@ -82,3 +82,12 @@ A year or more of real dedication.
 | 🐎 **Iron Horse** | Open the app on 365 different days. |
 | 🌟 **Untouchable** | Win 30 games in a row. |
 | 🏅 **Legend** | Check off 5,000 tasks. |
+
+## Planned for 2.0
+
+| Badge | What it takes |
+|---|---|
+| 🏁 **Finishing Strong** | Win more games than you lose after you're out of the playoff race (at least 7 games). |
+
+Comes with the playoffs ([GAME_DESIGN §8a](GAME_DESIGN.md#8a-playoffs-planned-for-20)).
+Tier to be decided.
