@@ -251,6 +251,9 @@ player who starts each season right after Review Week):
     after it. For a regular player that's the old schedule exactly.
   - **If Review Week ends untapped**, the offseason simply continues: no games, no
     losses, streaks frozen, for as long as it takes. Today keeps offering the start.
+  - **One nudge, once:** the last evening of Review Week (Sunday, 6–10 p.m.), if the next
+    season isn't started, a reminder says it's ready when they are (part of the "Plan next
+    week" reminders). Nothing after that.
   - **Back later**, it works like Season 1: start on the coming Monday, or take a **Head
     Start** from today (not during Review Week). On a Monday the season starts that day.
     A season set for Monday can still take a Head Start before then.

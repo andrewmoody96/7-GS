@@ -189,6 +189,38 @@ describe('sending reminders', () => {
     expect(pusher.sent.map((s) => s.message.title)).toEqual(['Tomorrow starts a new series']);
   });
 
+  it('nudges once, on the last evening of Review Week, to start the next season', async () => {
+    const { t, token, pusher } = await setup();
+    await t.ok('subscribePush', { token, body: SUB });
+    await t.ok('updateReminders', { token, body: { evening: false, lastCall: false, rally: false } });
+    // Season 1 ended Sunday 2026-12-27; Review Week ends Sunday 2027-01-03.
+    t.at('2026-12-30', '18:30', CHICAGO);
+    await t.reminders();
+    expect(pusher.sent).toHaveLength(0);
+    t.at('2027-01-03', '18:30', CHICAGO);
+    await t.reminders();
+    expect(pusher.sent.map((s) => s.message.title)).toEqual(['Season 2 is ready when you are']);
+    expect(pusher.sent[0]!.message.body).toContain('it won’t start without you');
+    // Only once, and never again on later Sundays of the break.
+    t.at('2027-01-03', '20:00', CHICAGO);
+    await t.reminders();
+    t.at('2027-01-10', '18:30', CHICAGO);
+    await t.reminders();
+    expect(pusher.sent).toHaveLength(1);
+  });
+
+  it('skips the nudge when the next season is already started', async () => {
+    const { t, pusher } = await setup();
+    t.at('2027-01-02', '12:00', CHICAGO);
+    const { token } = await t.signIn('remind@example.com', CHICAGO);
+    await t.ok('subscribePush', { token, body: SUB });
+    await t.ok('updateReminders', { token, body: { evening: false, lastCall: false, rally: false } });
+    await t.ok('startNextSeason', { token, body: { headStart: false } });
+    t.at('2027-01-03', '18:30', CHICAGO);
+    await t.reminders();
+    expect(pusher.sent.map((s) => s.message.title)).not.toContain('Season 2 is ready when you are');
+  });
+
   it('forgets a device the browser dropped', async () => {
     const { t, token, pusher } = await setup();
     await t.ok('subscribePush', { token, body: SUB });
