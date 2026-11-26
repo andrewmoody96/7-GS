@@ -569,15 +569,43 @@ leaves no games, so it can't be earned that season.
 
 ### Badges
 
-2.0 adds 14 postseason badges across every tier, Finishing Strong among them, and 5
-secret badges that stay hidden until earned. The existing badges don't change. List and
-rules: [ACHIEVEMENTS.md](ACHIEVEMENTS.md#planned-for-20).
+2.0 adds 12 postseason badges across every tier, Finishing Strong among them. The
+existing badges don't change. 2.1 adds two more postseason badges and the first 5 secret
+badges. List and rules: [ACHIEVEMENTS.md](ACHIEVEMENTS.md#planned-for-20).
+
+### Rolling out 2.0
+
+**Target: deploy Sunday evening, December 20, 2026.** It goes live for everyone on the
+same day, whenever their season started: no one waits on their sign-up date, and there's
+no shared calendar (every league keeps its own).
+
+- **A heads-up first:** a notice a week or two ahead saying when it lands and that playoffs
+  start this season for anyone in week 6 or earlier.
+- **Seasons convert where they stand**, between series (Sunday evening deploy):
+  - **weeks 1–6:** the season becomes a 2.0 season. Series already played stay exactly as
+    they were (names included); the remaining regular weeks up to 9 are drawn under the
+    new schedule; playoffs follow.
+  - **weeks 7–12:** the season finishes under the 1.x rules, so no title race is cut
+    short; the next season is 2.0.
+  - **Review Week or Spring Training:** the next season is 2.0.
+- **Day one for everyone:** the new badges, the Top Seeds and Best Records counters
+  (renamed from conference and league titles) and the standings marks.
+- The daily game doesn't change: runs, wins and Rally Caps work as before.
+- **Test the conversion at every point:** weeks 1–12, Review Week and Spring Training.
+  It's the riskiest part of 2.0, because it changes live seasons.
+- **If it slips past December 20:** nothing breaks. The furthest-along player (in
+  series 3 of Season 1 at planning time, so week 6 is Dec 14–20) finishes that season
+  under 1.x and starts the next on 2.0; anyone still in week 6 or earlier converts.
+
+### Saved for 2.1
+
+- A playoff picture screen.
+- Two more badges (Scoreboard Watching, Back-to-Back) and the secret badges.
 
 ### Still to decide
 
 - The Team page grid for five title counters.
 - Sport-specific words (pennant, Finals, Cup) where they fit.
-- A playoff picture screen.
 - Tuning the simulated teams so a strong season usually makes the playoffs.
 - Whether 9 series a season still reaches all 29 teams within about a year.
 

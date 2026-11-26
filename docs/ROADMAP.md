@@ -16,14 +16,20 @@ keeping. Move things as plans change; [RELEASES.md](RELEASES.md) has how release
   earned. A reason to come back each week.
 - **Badge polish.** A badge's date earned, and a short celebration when a big one lands.
 
-## 2.0: Playoffs
+## 2.0: Playoffs (target: Sunday, December 20, 2026)
 
-The next major release, starting at a season boundary. A 9-series regular season, three
+The next major release, live for everyone the same day: seasons in week 6 or earlier
+convert, later ones switch at their next season. A 9-series regular season, three
 playoff weeks (Conference Semifinals, Conference Championship Series, League
 Championship), then Review Week, so seasons stay quarterly. Titles: Division Titles, Top
 Seeds, Best Records, Conference Champs, League Champs. Teams that are out play Exhibition
-series. A new wave of postseason badges in every tier (Finishing Strong among them), and
-the first secret badges. Full plan:
+series. Twelve postseason badges in every tier, Finishing Strong among them.
+
+## 2.1
+
+- **Playoff picture screen.**
+- **Scoreboard Watching and Back-to-Back badges.**
+- **Secret badges:** Rematch, Seesaw, Buzzer Beater, Leap Day, Perfectly Average. Full plan:
 [GAME_DESIGN §8a](GAME_DESIGN.md#8a-playoffs-planned-for-20).
 
 ## Later (ideas)

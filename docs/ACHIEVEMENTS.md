@@ -88,11 +88,10 @@ A year or more of real dedication.
 Comes with the playoffs ([GAME_DESIGN §8a](GAME_DESIGN.md#8a-playoffs-planned-for-20)). The
 badges above don't change: season badges still count all 12 weeks.
 
-### Postseason
+### Postseason (12)
 
 | Tier | Badge | What it takes |
 |---|---|---|
-| Rookie | 📊 **Scoreboard Watching** | Check the standings during the playoff race (weeks 6–9). |
 | Rookie | ✋ **In the Hunt** | Still be in the playoff race going into the last week of the regular season. |
 | Regular | 🎟️ **Punched Your Ticket** | Make the playoffs. |
 | Regular | ✌️ **Postseason W** | Win a playoff game. |
@@ -103,13 +102,24 @@ badges above don't change: season badges still count all 12 weeks.
 | MVP | 🥈 **Conference Champs** | Win a Conference Championship Series. |
 | MVP | 🏆 **League Champs** | Win the League Championship. |
 | MVP | 🧗 **Back from the Brink** | Win a playoff series after trailing 1–3. |
-| Hall of Fame | 🔁 **Back-to-Back** | Win the League Championship two seasons in a row. |
 | Hall of Fame | 💫 **Perfect Postseason** | Win all 21 playoff games in a season. |
 | Hall of Fame | 👑 **Complete Season** | Best Record and League Champs in the same season. |
 
 League Champs is MVP, not Hall of Fame: it's three series wins in a row, about as hard as
 Unstoppable. Hall of Fame is for what takes more than one great month. Names get the usual
 per-sport wording.
+
+No badge for just playing in weeks 10–12: in the playoffs that's Postseason W, and out of
+them it would reward Exhibition games, i.e. losing.
+
+## Planned for 2.1
+
+### Held back from 2.0
+
+| Tier | Badge | What it takes | Why it waits |
+|---|---|---|---|
+| Rookie | 📊 **Scoreboard Watching** | Check the standings during the playoff race (weeks 6–9). | Needs tracking of standings visits; pairs with the playoff picture screen (may become "check the playoff picture"). |
+| Hall of Fame | 🔁 **Back-to-Back** | Win the League Championship two seasons in a row. | Needs two finished seasons; can't be earned before about May 2027 anyway. |
 
 ### Secret
 
@@ -121,12 +131,13 @@ A few odd things that happen on their own. A badge is secret-worthy only if it:
 4. is never needed for anything: secret badges don't count in the "X of Y earned" total.
 
 Locked, they show only as "🔒 5 secret badges", no details. Earned, they show in full.
-Keep the list small (about five).
+Keep the list small (about five). They wait for 2.1 because the hidden display is new
+work and none of them is urgent (Leap Day can't happen before February 29, 2028).
 
 | Badge | What happened |
 |---|---|
 | 🔄 **Rematch** | Faced your last regular-season opponent again in the first round of the playoffs (the regular season never repeats a team two weeks running). |
 | 🎢 **Seesaw** | A series that went W L W L W L W, or L W L W L W L. |
-| ⏱️ **Buzzer Beater** | Won a game with your last check-off in the final minute before the game's check-offs close. |
+| ⏱️ **Buzzer Beater** | Won a game with your last check-off in the final minute before the game's check-offs close (define "close" with late check-offs until noon in mind). |
 | 🐸 **Leap Day** | Won a game on February 29. |
 | ⚖️ **Perfectly Average** | Finished a season exactly .500 (42–42). |
