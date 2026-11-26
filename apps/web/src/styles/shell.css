@@ -1744,6 +1744,51 @@
   color: var(--text);
 }
 
+/* ≡ folds into an X while open: the outer lines meet in the middle and turn, the middle fades. */
+.burger path {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 160ms ease;
+}
+
+.topmenu__button[aria-expanded='true'] .burger__top {
+  transform: translateY(5px) rotate(45deg);
+}
+
+.topmenu__button[aria-expanded='true'] .burger__middle {
+  opacity: 0;
+  transform: scaleX(0.2);
+}
+
+.topmenu__button[aria-expanded='true'] .burger__bottom {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+/* The menu drops in. */
+.topmenu__list {
+  transform-origin: top right;
+  animation: topmenu-in 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes topmenu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .burger path {
+    transition: none;
+  }
+
+  .topmenu__list {
+    animation: none;
+  }
+}
+
 .topmenu__list {
   position: absolute;
   right: 0;

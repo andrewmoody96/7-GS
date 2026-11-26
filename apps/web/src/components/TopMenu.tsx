@@ -3,7 +3,18 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IconHelp, IconMenu, IconSettings, IconStar } from './icons';
+import { IconHelp, IconSettings, IconStar } from './icons';
+
+/** Three lines that fold into an X while the menu is open (styles in shell.css). */
+function Burger() {
+  return (
+    <svg className="burger" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path className="burger__top" d="M4 7h16" />
+      <path className="burger__middle" d="M4 12h16" />
+      <path className="burger__bottom" d="M4 17h16" />
+    </svg>
+  );
+}
 
 export function TopMenu({ onHowItWorks }: { onHowItWorks: () => void }) {
   const [open, setOpen] = useState(false);
@@ -58,7 +69,7 @@ export function TopMenu({ onHowItWorks }: { onHowItWorks: () => void }) {
         aria-controls={menuId}
         onClick={() => setOpen((o) => !o)}
       >
-        <IconMenu />
+        <Burger />
       </button>
       {open ? (
         <div id={menuId} className="topmenu__list" role="menu" aria-label="Menu" onKeyDown={onMenuKey}>
