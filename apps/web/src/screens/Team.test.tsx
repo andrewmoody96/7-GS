@@ -119,12 +119,12 @@ describe('What’s changed', () => {
   it('shows three tiles: this version, the one before, and everything since the last major release', () => {
     renderAt('/team/settings/changes', 'baseball');
     const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(titles).toEqual(['v1.3.6-beta', 'v1.2.1-beta', 'Since the last major release']);
+    expect(titles).toEqual(['v1.3.7-beta', 'v1.2.1-beta', 'Since the last major release']);
     expect(screen.getByText('Current version')).toBeInTheDocument();
     expect(screen.getByText('Previous version')).toBeInTheDocument();
     expect(screen.getByText('Since v0.11.2026_beta')).toBeInTheDocument();
     // The newest fixes come first in the current tile.
-    expect(screen.getByText('v1.3.6-beta fixes')).toBeInTheDocument();
+    expect(screen.getByText('v1.3.7-beta fixes')).toBeInTheDocument();
     expect(screen.getByText('v1.3.5-beta fixes')).toBeInTheDocument();
     expect(screen.getByText('v1.3.4-beta fixes')).toBeInTheDocument();
     expect(screen.getByText('v1.3.3-beta fixes')).toBeInTheDocument();

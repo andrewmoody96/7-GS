@@ -153,7 +153,7 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
         On a computer, many browsers show an install button in the address bar. The Home Screen app keeps its own sign-in, so
         sign in there once with the 6-digit code from your email.
       </p>
-      <p className="fine">Open this any time with the ? button at the top of the screen.</p>
+      <p className="fine">Open this any time from the ≡ menu at the top of the screen, along with Settings and What’s changed.</p>
     </Sheet>
   );
 }
