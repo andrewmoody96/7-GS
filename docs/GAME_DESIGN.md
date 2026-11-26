@@ -567,6 +567,12 @@ games).* The count starts when you're eliminated (the **e** mark) or knocked out
 to the end of week 12; games with no result don't count. Losing the League Championship
 leaves no games, so it can't be earned that season.
 
+### Badges
+
+2.0 adds 14 postseason badges across every tier, Finishing Strong among them, and 5
+secret badges that stay hidden until earned. The existing badges don't change. List and
+rules: [ACHIEVEMENTS.md](ACHIEVEMENTS.md#planned-for-20).
+
 ### Still to decide
 
 - The Team page grid for five title counters.

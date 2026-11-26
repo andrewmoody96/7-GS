@@ -85,9 +85,48 @@ A year or more of real dedication.
 
 ## Planned for 2.0
 
-| Badge | What it takes |
-|---|---|
-| 🏁 **Finishing Strong** | Win more games than you lose after you're out of the playoff race (at least 7 games). |
+Comes with the playoffs ([GAME_DESIGN §8a](GAME_DESIGN.md#8a-playoffs-planned-for-20)). The
+badges above don't change: season badges still count all 12 weeks.
 
-Comes with the playoffs ([GAME_DESIGN §8a](GAME_DESIGN.md#8a-playoffs-planned-for-20)).
-Tier to be decided.
+### Postseason
+
+| Tier | Badge | What it takes |
+|---|---|---|
+| Rookie | 📊 **Scoreboard Watching** | Check the standings during the playoff race (weeks 6–9). |
+| Rookie | ✋ **In the Hunt** | Still be in the playoff race going into the last week of the regular season. |
+| Regular | 🎟️ **Punched Your Ticket** | Make the playoffs. |
+| Regular | ✌️ **Postseason W** | Win a playoff game. |
+| Regular | 🏁 **Finishing Strong** | Win more games than you lose after you're out of the playoff race (at least 7 games). |
+| All-Star | 🚩 **Division Champs** | Win a division title. |
+| All-Star | 🔝 **Top Seed** | Finish with the best record in your conference. |
+| All-Star | ⏭️ **Advancing** | Win a playoff series. |
+| MVP | 🥈 **Conference Champs** | Win a Conference Championship Series. |
+| MVP | 🏆 **League Champs** | Win the League Championship. |
+| MVP | 🧗 **Back from the Brink** | Win a playoff series after trailing 1–3. |
+| Hall of Fame | 🔁 **Back-to-Back** | Win the League Championship two seasons in a row. |
+| Hall of Fame | 💫 **Perfect Postseason** | Win all 21 playoff games in a season. |
+| Hall of Fame | 👑 **Complete Season** | Best Record and League Champs in the same season. |
+
+League Champs is MVP, not Hall of Fame: it's three series wins in a row, about as hard as
+Unstoppable. Hall of Fame is for what takes more than one great month. Names get the usual
+per-sport wording.
+
+### Secret
+
+A few odd things that happen on their own. A badge is secret-worthy only if it:
+
+1. happens naturally (you stumble into it, you don't chase it);
+2. is odd, not just hard (hard goals belong in the tiers, where people can aim for them);
+3. can't be forced or farmed, or forcing it is too silly to matter;
+4. is never needed for anything: secret badges don't count in the "X of Y earned" total.
+
+Locked, they show only as "🔒 5 secret badges", no details. Earned, they show in full.
+Keep the list small (about five).
+
+| Badge | What happened |
+|---|---|
+| 🔄 **Rematch** | Faced your last regular-season opponent again in the first round of the playoffs (the regular season never repeats a team two weeks running). |
+| 🎢 **Seesaw** | A series that went W L W L W L W, or L W L W L W L. |
+| ⏱️ **Buzzer Beater** | Won a game with your last check-off in the final minute before the game's check-offs close. |
+| 🐸 **Leap Day** | Won a game on February 29. |
+| ⚖️ **Perfectly Average** | Finished a season exactly .500 (42–42). |

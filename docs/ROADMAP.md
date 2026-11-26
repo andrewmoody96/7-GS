@@ -22,7 +22,8 @@ The next major release, starting at a season boundary. A 9-series regular season
 playoff weeks (Conference Semifinals, Conference Championship Series, League
 Championship), then Review Week, so seasons stay quarterly. Titles: Division Titles, Top
 Seeds, Best Records, Conference Champs, League Champs. Teams that are out play Exhibition
-series, and the Finishing Strong badge rewards ending well. Full plan:
+series. A new wave of postseason badges in every tier (Finishing Strong among them), and
+the first secret badges. Full plan:
 [GAME_DESIGN §8a](GAME_DESIGN.md#8a-playoffs-planned-for-20).
 
 ## Later (ideas)
