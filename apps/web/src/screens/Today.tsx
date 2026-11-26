@@ -25,6 +25,7 @@ import { Jumbotron } from '../components/Jumbotron';
 import { Lineup } from '../components/Lineup';
 import { LineupEditor, type EditorState } from '../components/LineupEditor';
 import { PinchHitSheet } from '../components/PinchHitSheet';
+import { PlayoffsBanner } from '../components/PlayoffsBanner';
 import { RainoutSheet } from '../components/RainoutSheet';
 import { RallySheet } from '../components/RallySheet';
 import { Scoreboard, type BoardStatus } from '../components/Scoreboard';
@@ -69,6 +70,7 @@ export function TodayScreen() {
   return (
     <div className="screen screen--today">
       <h1 className="sr-only">{vocab.tabs.today}</h1>
+      <PlayoffsBanner />
       <TodayChyron data={data} />
       <LastNight series={data.series} date={data.date} timeZone={timeZone} />
       {games.length > 1 ? (
@@ -475,6 +477,7 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
   return (
     <div className="screen screen--offday">
       <h1 className="sr-only">{vocab.tabs.today}</h1>
+      <PlayoffsBanner />
       <section className="board board--offday" aria-label={vocab.emptyStates.preseasonTitle}>
         <p className="board__eyebrow">{vocab.emptyStates.preseasonTitle}</p>
         <p className="board__big">Opening Day</p>
@@ -519,6 +522,7 @@ function ReviewWeek({ position }: { position: Extract<CalendarPosition, { phase:
   return (
     <div className="screen screen--offday">
       <h1 className="sr-only">{vocab.tabs.today}</h1>
+      <PlayoffsBanner />
       <section className="board board--offday" aria-label={vocab.emptyStates.offseasonTitle}>
         <p className="board__eyebrow">{vocab.emptyStates.offseasonTitle}</p>
         <p className="board__big">

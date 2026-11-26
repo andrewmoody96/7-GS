@@ -1834,3 +1834,43 @@
   height: 20px;
   color: var(--text-muted);
 }
+
+/* ── Playoffs heads-up (until 2.0) ──────────────────────────────────────── */
+
+.playoffs-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1px solid var(--gold-500);
+  border-radius: 12px;
+  background: var(--gold-300);
+  color: var(--ink-900);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.playoffs-banner svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.playoffs-banner__title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.playoffs-banner__go {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
