@@ -15,6 +15,8 @@ import {
 
 const TZ = 'America/Chicago';
 const SIGNUP = '2026-10-02'; // Friday; Opening Day Monday 2026-10-05
+/** The same player, who started Season 2 on its earliest Opening Day. */
+const ON_TIME = { startDate: SIGNUP, seasonStarts: [{ openingDay: '2027-01-04', headStartFrom: null }] };
 
 describe('weekly lineup card', () => {
   it('opens Opening Week during Spring Training', () => {
@@ -33,8 +35,10 @@ describe('weekly lineup card', () => {
     expect(plannableWeeks(SIGNUP, lastFriday)).toEqual(['2026-12-21']); // next week is Review Week
     const reviewFriday = '2027-01-01';
     expect(s1.offseasonStart <= reviewFriday && reviewFriday <= s1.offseasonEnd).toBe(true);
-    expect(plannableWeeks(SIGNUP, reviewFriday)).toEqual([seasonWindow(SIGNUP, 2).start]);
-    expect(plannableWeeks(SIGNUP, '2026-12-29')).toEqual([]); // Review Week Tuesday
+    expect(plannableWeeks(ON_TIME, reviewFriday)).toEqual([seasonWindow(ON_TIME, 2).start]);
+    expect(plannableWeeks(ON_TIME, '2026-12-29')).toEqual([]); // Review Week Tuesday
+    // Not started yet: nothing to plan.
+    expect(plannableWeeks(SIGNUP, reviewFriday)).toEqual([]);
   });
 
   it('locks the week at its first first pitch', () => {
@@ -96,7 +100,7 @@ describe('weekly lineup card', () => {
   it('carries one-offs to the next game day, skipping Review Week', () => {
     expect(nextGameDate(SIGNUP, '2026-10-05')).toBe('2026-10-06');
     const s1 = seasonWindow(SIGNUP, 1);
-    expect(nextGameDate(SIGNUP, s1.playEnd)).toBe(seasonWindow(SIGNUP, 2).start);
+    expect(nextGameDate(ON_TIME, s1.playEnd)).toBe(seasonWindow(ON_TIME, 2).start);
   });
 });
 

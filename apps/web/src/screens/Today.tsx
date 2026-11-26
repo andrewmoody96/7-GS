@@ -1,5 +1,5 @@
 import type { GameDto, GameSummaryDto, SeriesDto, TodayDto } from '@7gs/contracts';
-import { addDays, type CalendarPosition, type GameEvaluation } from '@7gs/rules';
+import { addDays, diffDays, startOfWeek, weekday, type CalendarPosition, type GameEvaluation, type LocalDate } from '@7gs/rules';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../app/context';
@@ -12,6 +12,7 @@ import {
   useLockGame,
   useMeQuery,
   useStartHeadStart,
+  useStartNextSeason,
   usePatchLineup,
   useRallyQuoteQuery,
   useSuspensionQuoteQuery,
@@ -62,7 +63,7 @@ export function TodayScreen() {
   const teamName = me.data?.displayName ?? vocab.terms.you;
 
   if (data.position.phase === 'preseason') return <SpringTraining position={data.position} />;
-  if (data.position.phase === 'offseason') return <ReviewWeek position={data.position} />;
+  if (data.position.phase === 'offseason') return <ReviewWeek position={data.position} today={data.date} />;
 
   const games = data.games;
   const game = games.find((g) => g.id === selectedId) ?? games[0];
@@ -516,15 +517,113 @@ function SpringTraining({ position }: { position: Extract<CalendarPosition, { ph
   );
 }
 
-function ReviewWeek({ position }: { position: Extract<CalendarPosition, { phase: 'offseason' }> }) {
+type Offseason = Extract<CalendarPosition, { phase: 'offseason' }>;
+
+/**
+ * Starting the next season (GAME_DESIGN §5): it never starts on its own. In Review Week,
+ * one tap sets Opening Day for the Monday after it. Once Review Week is over: start today
+ * (a Head Start, or the season itself on a Monday) or the coming Monday. A season set for
+ * Monday can still take a Head Start before then.
+ */
+function NextSeason({ position, today }: { position: Offseason; today: LocalDate }) {
+  const start = useStartNextSeason();
+  const [confirming, setConfirming] = useState(false);
+  const name = `${vocab.term.season} ${position.seasonNumber + 1}`;
+  const monday = weekday(today) === 1 && !position.reviewWeek ? today : addDays(startOfWeek(today), 7);
+  const openingDay = position.nextSeasonStart ?? monday;
+  const days = diffDays(openingDay, today);
+  const canHeadStart = !position.reviewWeek && days > 0;
+  if (position.nextSeasonStart && !canHeadStart) return null;
+
+  const headStartSheet = (
+    <Sheet
+      open={confirming}
+      onClose={() => setConfirming(false)}
+      kicker={vocab.headStart.name}
+      title={`Start ${name} today?`}
+      footer={
+        <div className="actions">
+          <button type="button" className="btn btn--quiet" onClick={() => setConfirming(false)}>
+            Not yet
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={start.isPending}
+            onClick={() => start.mutate(true, { onSuccess: () => setConfirming(false) })}
+          >
+            {start.isPending ? 'Starting…' : vocab.headStart.action}
+          </button>
+        </div>
+      }
+    >
+      <p className="lede">{vocab.headStart.confirmBody(days, formatDateLong(openingDay))}</p>
+    </Sheet>
+  );
+
+  if (position.nextSeasonStart) {
+    // Set for Monday: play from today instead, if they like.
+    return (
+      <section className="card startchoice" aria-labelledby="nextseason-title">
+        <h2 id="nextseason-title" className="card__title">
+          {vocab.headStart.offerTitle}
+        </h2>
+        <p>{vocab.headStart.offerBody(days, formatDateLong(openingDay))}</p>
+        <div className="startchoice__actions">
+          <button type="button" className="btn btn--primary" onClick={() => setConfirming(true)}>
+            {vocab.headStart.action}
+          </button>
+        </div>
+        <p className="fine">Or wait: {name} starts {formatDateLong(openingDay)}. Until then, nothing counts.</p>
+        {headStartSheet}
+      </section>
+    );
+  }
+
+  return (
+    <section className="card startchoice" aria-labelledby="nextseason-title">
+      <h2 id="nextseason-title" className="card__title">
+        Ready for {name}?
+      </h2>
+      <p>
+        {position.reviewWeek
+          ? `It starts ${formatDateLong(openingDay)}, once you say so.`
+          : days === 0
+            ? 'Start today and Series 1 begins now.'
+            : `Start today with a ${vocab.headStart.name}, or on ${formatDateLong(openingDay)}.`}{' '}
+        Seasons don’t start on their own, so a break never costs you games.
+      </p>
+      <div className="startchoice__actions">
+        {canHeadStart ? (
+          <>
+            <button type="button" className="btn btn--primary" onClick={() => setConfirming(true)}>
+              {vocab.headStart.action}
+            </button>
+            <button type="button" className="btn btn--quiet" disabled={start.isPending} onClick={() => start.mutate(false)}>
+              Start Monday
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn btn--primary" disabled={start.isPending} onClick={() => start.mutate(false)}>
+            {start.isPending ? 'Starting…' : days === 0 ? `Start ${name} today` : `Start ${name}`}
+          </button>
+        )}
+      </div>
+      {canHeadStart ? headStartSheet : null}
+    </section>
+  );
+}
+
+function ReviewWeek({ position, today }: { position: Offseason; today: LocalDate }) {
   const season = useCurrentSeasonQuery();
   const s = season.data;
+  const next = position.nextSeasonStart ? formatDateLong(position.nextSeasonStart) : null;
   return (
     <div className="screen screen--offday">
       <h1 className="sr-only">{vocab.tabs.today}</h1>
       <PlayoffsBanner />
-      <section className="board board--offday" aria-label={vocab.emptyStates.offseasonTitle}>
-        <p className="board__eyebrow">{vocab.emptyStates.offseasonTitle}</p>
+      <section className="board board--offday" aria-label={position.reviewWeek ? vocab.emptyStates.offseasonTitle : 'Offseason'}>
+        <p className="board__eyebrow">{position.reviewWeek ? vocab.emptyStates.offseasonTitle : 'Offseason'}</p>
         <p className="board__big">
           {vocab.term.season} {position.seasonNumber} {vocab.term.final.toLowerCase()}
         </p>
@@ -535,9 +634,18 @@ function ReviewWeek({ position }: { position: Extract<CalendarPosition, { phase:
             <Tile value={s.losses} size="l" />
           </div>
         ) : null}
-        <p className="board__date">Opening Day {formatDateLong(position.nextSeasonStart)}</p>
+        <p className="board__date">
+          {next ? `${vocab.term.season} ${position.seasonNumber + 1} starts ${next}` : `${vocab.term.season} ${position.seasonNumber + 1}: when you’re ready`}
+        </p>
       </section>
-      <p className="lede">{vocab.emptyStates.offseasonBody(formatDateLong(position.nextSeasonStart))}</p>
+      <p className="lede">
+        {position.reviewWeek
+          ? vocab.emptyStates.offseasonBody(next)
+          : next
+            ? `Nothing counts until ${vocab.term.season} ${position.seasonNumber + 1} starts ${next}.`
+            : 'Take as long as you need: no games, no losses, and your streaks wait for you.'}
+      </p>
+      <NextSeason position={position} today={today} />
       <nav className="todo" aria-label="Review Week">
         <Link to="/team" className="todo__item">
           <span>

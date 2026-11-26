@@ -266,6 +266,7 @@ export class MockBackend {
       return engine.toMeDto(w, now);
     },
     startHeadStart: ({ world, now }) => engine.startHeadStart(world(), this.env, now),
+    startNextSeason: ({ world, body, now }) => engine.startNextSeason(world(), this.env, (body as { headStart: boolean }).headStart, now),
     deleteMe: ({ world, body }) => {
       const w = world();
       const { confirmEmail } = body as { confirmEmail: string };

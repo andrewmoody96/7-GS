@@ -286,7 +286,8 @@ export interface Vocab {
     preseasonTitle: string;
     preseasonBody: (openingDay: string, days: number) => string;
     offseasonTitle: string;
-    offseasonBody: (nextSeason: string) => string;
+    /** Review Week; `nextSeason` is null until the player starts it. */
+    offseasonBody: (nextSeason: string | null) => string;
     noGamesToday: string;
   };
 }
@@ -586,7 +587,9 @@ export const baseball: Vocab = {
       `Opening Day is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your default lineups under Team. Nothing counts yet, and you can add or change tasks any time after Opening Day too. A season is 12 weeks, then a Review Week.`,
     offseasonTitle: 'Review Week',
     offseasonBody: (nextSeason) =>
-      `No games this week. Review the season, make front-office moves, and get ready for Opening Day ${nextSeason}.`,
+      nextSeason
+        ? `No games this week. Review the season, make front-office moves, and get ready for Opening Day ${nextSeason}.`
+        : 'No games this week. Review the season and make front-office moves. The next season starts when you start it.',
     noGamesToday: 'No game today.',
   },
 };
@@ -764,7 +767,9 @@ export const basketball: Vocab = overlay(baseball, {
     preseasonBody: (openingDay, days) =>
       `Opening Night is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your default lineups under Team. Nothing counts yet, and you can add or change tasks any time after Opening Night too. A season is 12 weeks, then a Review Week.`,
     offseasonBody: (nextSeason) =>
-      `No games this week. Review the season, make front-office moves, and get ready for Opening Night ${nextSeason}.`,
+      nextSeason
+        ? `No games this week. Review the season, make front-office moves, and get ready for Opening Night ${nextSeason}.`
+        : 'No games this week. Review the season and make front-office moves. The next season starts when you start it.',
   },
 });
 
@@ -924,7 +929,9 @@ export const hockey: Vocab = overlay(baseball, {
     preseasonBody: (openingDay, days) =>
       `Opening Night is ${openingDay}${days > 0 ? ` (${plural(days, 'day', 'days')})` : ''}. Add your tasks with + Add task and set up your default lineups under Team. Nothing counts yet, and you can add or change tasks any time after Opening Night too. A season is 12 weeks, then a Review Week.`,
     offseasonBody: (nextSeason) =>
-      `No games this week. Review the season, make front-office moves, and get ready for Opening Night ${nextSeason}.`,
+      nextSeason
+        ? `No games this week. Review the season, make front-office moves, and get ready for Opening Night ${nextSeason}.`
+        : 'No games this week. Review the season and make front-office moves. The next season starts when you start it.',
   },
 });
 

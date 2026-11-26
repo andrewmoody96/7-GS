@@ -1,6 +1,6 @@
 import type { GameDto } from '@7gs/contracts';
 import { addDays } from '@7gs/rules';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, gt } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { games, rainoutAllowances, rallyTokens, seasons } from '../src/db/schema';
 import { runFinalizer } from '../src/services/finalizer';
@@ -352,6 +352,32 @@ describe('finalizer', () => {
 });
 
 describe('seasons and Review Week', () => {
+  it('waits as long as the player likes after Review Week: no games, no losses, then a Head Start', async () => {
+    const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
+    const first = await t.signIn('late@example.com', CHICAGO);
+    // Gone all season and three weeks past Review Week; back on Thursday 2027-01-21.
+    t.at('2027-01-21', '12:00', CHICAGO);
+    const token = (await t.signIn('late@example.com', CHICAGO)).token;
+    const back = await t.ok('getToday', { token });
+    expect(back).toMatchObject({ position: { phase: 'offseason', seasonNumber: 1, reviewWeek: false, nextSeasonStart: null }, games: [] });
+    // Only Season 1's 84 games count; nothing was played since.
+    const s1 = await t.ok('getCurrentSeason', { token });
+    expect(s1).toMatchObject({ number: 1, wins: 0, losses: 84 });
+    const after = await env.db.select().from(games).where(and(eq(games.userId, first.userId), gt(games.playedDate, '2026-12-27')));
+    expect(after).toEqual([]);
+
+    // Start today: a Head Start through Sunday, Opening Day Monday 2027-01-25.
+    const me = await t.ok('startNextSeason', { token, body: { headStart: true } });
+    expect(me.seasonStarts).toEqual([{ openingDay: '2027-01-25', headStartFrom: '2027-01-21' }]);
+    const today = await t.ok('getToday', { token });
+    expect(today.position).toMatchObject({ phase: 'season', seasonNumber: 2, seriesNumber: 0, gameNumber: 4 });
+    expect(today.games).toHaveLength(1);
+    expect(await t.ok('getCurrentSeason', { token })).toMatchObject({ number: 2, status: 'active', startDate: '2027-01-21', wins: 0, losses: 0 });
+
+    t.at('2027-01-25', '08:00', CHICAGO);
+    expect((await t.ok('getToday', { token })).position).toMatchObject({ phase: 'season', seasonNumber: 2, seriesNumber: 1, gameNumber: 1 });
+  });
+
   it('sets the win goal only in Spring Training or Review Week, and rolls the season', async () => {
     const t = new TestApp(env.db, '2026-10-02T15:00:00Z');
     const first = await t.signIn('season@example.com', CHICAGO);
@@ -383,7 +409,8 @@ describe('seasons and Review Week', () => {
     t.log.info(`settled season 1 in ${Math.round(performance.now() - started)} ms`);
     expect(await t.ok('getToday', { token })).toEqual({
       date: '2026-12-28',
-      position: { phase: 'offseason', seasonNumber: 1, nextSeasonStart: '2027-01-04' },
+      // Season 2 doesn't start on its own.
+      position: { phase: 'offseason', seasonNumber: 1, reviewWeek: true, nextSeasonStart: null },
       games: [],
       series: null,
     });
@@ -403,6 +430,13 @@ describe('seasons and Review Week', () => {
       reason: 'SEASON_STARTED',
     });
     expect((await t.ok('updateSeason', { token, params: { seasonId: season2!.id }, body: { winGoal: 55 } })).winGoal).toBe(55);
+
+    // Starting it from Review Week: Opening Day is the Monday after. No Head Start mid-review.
+    expect(await t.fails('startNextSeason', { token, body: { headStart: true } }, 409)).toMatchObject({ code: 'NOT_ELIGIBLE', reason: 'REVIEW_WEEK' });
+    const me = await t.ok('startNextSeason', { token, body: { headStart: false } });
+    expect(me.seasonStarts).toEqual([{ openingDay: '2027-01-04', headStartFrom: null }]);
+    expect(me.position).toEqual({ phase: 'offseason', seasonNumber: 1, reviewWeek: true, nextSeasonStart: '2027-01-04' });
+    expect(await t.fails('startNextSeason', { token, body: { headStart: false } }, 409)).toMatchObject({ reason: 'ALREADY_SCHEDULED' });
 
     // Opening day of season 2: a fresh 0–0 record.
     t.at('2027-01-04', '08:00', CHICAGO);

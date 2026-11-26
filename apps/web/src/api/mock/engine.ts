@@ -44,6 +44,8 @@ import {
   gamesInSeason,
   HEAD_START_SERIES,
   headStartFrom,
+  nextSeasonStartFor,
+  seasonScheduled,
   isGameDay,
   IL_MIN_DAYS,
   ilMinUntil,
@@ -946,8 +948,9 @@ export function toSeasonDto(world: UserWorld, season: SeasonRow, now: Date): Sea
     if (result === 'won') seriesWon++;
     if (result === 'lost') seriesLost++;
   }
+  // A season the player hasn't started stays upcoming, wherever its dates fall.
   const status =
-    compareDates(today, season.startDate) < 0
+    !seasonScheduled(world.user, season.number) || compareDates(today, season.startDate) < 0
       ? 'upcoming'
       : compareDates(today, season.playEndDate) <= 0
         ? 'active'
@@ -1167,6 +1170,7 @@ export function toMeDto(world: UserWorld, now: Date): MeDto {
     timezone: user.timezone,
     startDate: user.startDate,
     headStartFrom: headStartFrom(user),
+    seasonStarts: user.seasonStarts ?? [],
     defaultLockTime: user.defaultLockTime,
     theme: user.theme ?? 'baseball',
     today,
@@ -1896,6 +1900,31 @@ export function startHeadStart(world: UserWorld, env: Env, now: Date): MeDto {
   const season = ensureSeason(world, env, 1);
   season.startDate = seasonWindow(world.user, 1).start;
   // Today is now a game day: build its game.
+  runDay(world, env, today);
+  return toMeDto(world, now);
+}
+
+/**
+ * POST /me/next-season: seasons never start on their own (GAME_DESIGN §5). Opening Day is
+ * the first Monday after Review Week (or the coming Monday if that's passed); after Review
+ * Week, `headStart` plays from today.
+ */
+export function startNextSeason(world: UserWorld, env: Env, headStart: boolean, now: Date): MeDto {
+  const today = todayOf(world, now);
+  const pos = calendarPosition(world.user, today);
+  const next = nextSeasonStartFor(world.user, today, headStart);
+  if (!next) {
+    if (pos.phase !== 'offseason') fail(409, 'NOT_ELIGIBLE', 'You can start the next season once this one is over.', 'SEASON_IN_PROGRESS');
+    if (headStart) fail(409, 'NOT_ELIGIBLE', 'A Head Start can begin once Review Week is over, before Opening Day.', 'REVIEW_WEEK');
+    fail(409, 'NOT_ELIGIBLE', 'The next season is already set to start.', 'ALREADY_SCHEDULED');
+  }
+  world.user.seasonStarts = [...(world.user.seasonStarts ?? []).slice(0, next.seasonNumber - 2), next.start];
+  const season = ensureSeason(world, env, next.seasonNumber);
+  const w = seasonWindow(world.user, next.seasonNumber);
+  season.startDate = w.start;
+  season.playEndDate = w.playEnd;
+  season.offseasonEndDate = w.offseasonEnd;
+  // Today may now be a game day (a Head Start, or a Monday): build its game.
   runDay(world, env, today);
   return toMeDto(world, now);
 }

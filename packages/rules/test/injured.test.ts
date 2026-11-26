@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { ilMinUntil, ilReturnDate, ilStartDate, restorePosition, seasonPace, seasonWindow } from '../src';
 
 const SIGNUP = '2026-10-02';
+/** Started Season 2 on its earliest Opening Day. */
+const ON_TIME = { startDate: SIGNUP, seasonStarts: [{ openingDay: '2027-01-04', headStartFrom: null }] };
 
 describe('Injured List', () => {
   it('starts today, or tomorrow when the task is in a game that already had first pitch', () => {
@@ -13,7 +15,7 @@ describe('Injured List', () => {
     expect(ilMinUntil(SIGNUP, '2026-10-07')).toBe('2026-10-10');
     const s1 = seasonWindow(SIGNUP, 1);
     // Starts on the last Saturday of the season: Sat, Sun, then Review Week, then Monday.
-    expect(ilMinUntil(SIGNUP, '2026-12-26')).toBe('2027-01-05');
+    expect(ilMinUntil(ON_TIME, '2026-12-26')).toBe('2027-01-05');
     expect(s1.playEnd).toBe('2026-12-27');
   });
 

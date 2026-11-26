@@ -7,7 +7,9 @@ import { IconTrophy } from './icons';
 import { Sheet } from './Sheet';
 import { ReleaseNoteView } from './WhatsNew';
 
-const HEADS_UP = RELEASES.find((r) => r.id === '1.4.0');
+// Just the playoffs section of the 1.4 notes, not the rest of that release.
+const release = RELEASES.find((r) => r.id === '1.4.0');
+const HEADS_UP = release ? { ...release, added: undefined, improved: undefined, fixed: undefined } : undefined;
 
 export function PlayoffsBanner() {
   const [open, setOpen] = useState(false);

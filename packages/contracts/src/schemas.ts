@@ -60,8 +60,12 @@ export const CalendarPosition = z.discriminatedUnion('phase', [
   }),
   z.object({
     phase: z.literal('offseason'),
+    /** The season just played. */
     seasonNumber: z.number().int().min(1),
-    nextSeasonStart: LocalDate,
+    /** During the Review Week after it; false once that week is over. */
+    reviewWeek: z.boolean(),
+    /** Opening Day of the next season, or null until the player starts it (seasons never start on their own). */
+    nextSeasonStart: LocalDate.nullable(),
   }),
 ]);
 
@@ -71,7 +75,18 @@ export const SeasonWindow = z.object({
   playEnd: LocalDate,
   offseasonStart: LocalDate,
   offseasonEnd: LocalDate,
+  /** False for a season not started yet: its dates are only the earliest it could run. */
+  scheduled: z.boolean(),
 });
+
+/** When a later season starts, as the player chose (Season 2 on). */
+export const SeasonStart = z.object({
+  openingDay: LocalDate,
+  headStartFrom: LocalDate.nullable(),
+});
+
+/** Start the next season: Opening Day the coming Monday, or (after Review Week) a Head Start from today. */
+export const NextSeasonStart = z.object({ headStart: z.boolean() });
 
 export const Calendar = z.object({
   signupDate: LocalDate,
@@ -99,6 +114,8 @@ export const Me = z.object({
   startDate: LocalDate,
   /** First day of the Head Start, when the user chose to play before Opening Day. */
   headStartFrom: LocalDate.nullable(),
+  /** The starts chosen for Season 2 on, in order. */
+  seasonStarts: z.array(SeasonStart),
   defaultLockTime: TimeOfDay.nullable(),
   /** Sport theme: words and look only, never the rules. */
   theme: z.enum(THEMES),

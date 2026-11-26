@@ -134,6 +134,13 @@
       "when": 1795296857273,
       "tag": "0018_league_teams",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795676661230,
+      "tag": "0019_season_starts",
+      "breakpoints": true
     }
   ]
 }

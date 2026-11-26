@@ -45,7 +45,7 @@ export const RELEASES: readonly ReleaseNote[] = [
       {
         title: 'Playoffs arrive Sunday, December 20 (v2.0)',
         items: [
-          'Seasons become 9 series, then 3 playoff weeks, then Review Week. Still four a year.',
+          'Seasons become 9 series, then 3 playoff weeks, then Review Week: still a quarter of a year.',
           'Division winners and a wild card from each conference make it. Each round is one series.',
           'Win your conference, then the league. Missed the playoffs or knocked out? You keep playing Exhibition series.',
           'Finished series 6 or fewer by December 20? Your playoffs start this season. Further along? Next season.',
@@ -53,6 +53,7 @@ export const RELEASES: readonly ReleaseNote[] = [
         ],
       },
     ],
+    added: ['Start your next season when you’re ready. Seasons no longer start on their own.'],
   },
   {
     id: '1.3.0',
