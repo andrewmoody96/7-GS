@@ -1339,10 +1339,42 @@
 .placement__chip {
   display: grid;
   gap: 2px;
+  justify-items: start;
   padding: 10px 12px;
   border-radius: var(--radius-m);
   background: var(--surface);
   border: 1px solid var(--border);
+  color: var(--text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* The table on show: a thicker accent edge, like a selected tab. */
+.placement__chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.placement__chip:focus-visible,
+.standings__switch .segmented__item:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.standings__switch .segmented__item {
+  cursor: pointer;
+}
+
+.standings__switch .segmented__item[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+}
+
+.standings__others {
+  display: grid;
+  gap: 10px;
 }
 
 .placement__chip.is-champion {

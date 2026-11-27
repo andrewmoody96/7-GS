@@ -54,6 +54,7 @@ export const RELEASES: readonly ReleaseNote[] = [
       },
     ],
     added: ['Start your next season when you’re ready. Seasons no longer start on their own.'],
+    improved: ['Standings show one table at a time, starting with your division. Tap your place up top to switch.'],
   },
   {
     id: '1.3.0',

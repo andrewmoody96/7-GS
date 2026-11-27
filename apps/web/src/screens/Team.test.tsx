@@ -137,7 +137,7 @@ describe('What’s changed', () => {
 describe('Standings', () => {
   it('shows every team on two lines: the town small, the nickname bold', async () => {
     const { view } = renderAt('/team/standings', 'baseball');
-    await screen.findByText('Division');
+    await screen.findByRole('group', { name: 'Your place' });
     await waitFor(() => expect(view.container.querySelectorAll('.standings__nick').length).toBeGreaterThan(0));
     const names = [...view.container.querySelectorAll('.standings__name')];
     // Every team has its town line, and the nickname line is never the whole name.
@@ -149,5 +149,29 @@ describe('Standings', () => {
     }
     // GB reads to one decimal.
     expect([...view.container.querySelectorAll('td:last-child')].some((td) => /^\d+\.\d$/.test(td.textContent ?? ''))).toBe(true);
+  });
+
+  it('opens on your division and switches tables from your place or the row under the table', async () => {
+    const user = userEvent.setup();
+    const { view } = renderAt('/team/standings', 'baseball');
+    const place = await screen.findByRole('group', { name: 'Your place' });
+    const chip = (name: RegExp) => within(place).getByRole('button', { name });
+    const rows = () => view.container.querySelectorAll('.screen > section.standings tbody tr').length;
+    await waitFor(() => expect(rows()).toBe(5));
+    expect(chip(/^Division/)).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Your division')).toBeInTheDocument();
+    // One table on show: your division's five teams. The others are folded away.
+    expect(screen.getByText('Other divisions')).toBeInTheDocument();
+
+    await user.click(chip(/^League/));
+    expect(chip(/^League/)).toHaveAttribute('aria-pressed', 'true');
+    expect(rows()).toBe(30);
+    expect(screen.queryByText('Other divisions')).toBeNull();
+
+    const below = screen.getByRole('group', { name: 'Show standings for' });
+    await user.click(within(below).getByRole('button', { name: 'Conference' }));
+    expect(chip(/^Conference/)).toHaveAttribute('aria-pressed', 'true');
+    expect(rows()).toBe(15);
+    expect(screen.getByText(/: all 15 teams$/)).toBeInTheDocument();
   });
 });
