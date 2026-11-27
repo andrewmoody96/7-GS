@@ -135,7 +135,7 @@ function Placement({ s, view, onView }: { s: StandingsDto; view: View; onView: (
   );
 }
 
-/** The same three choices, under the table, so a long table never needs a scroll back up. */
+/** The same three choices at the bottom, so a long table never needs a scroll back up. */
 function ViewSwitch({ view, onView }: { view: View; onView: (v: View) => void }) {
   return (
     <div className="segmented segmented--small standings__switch" role="group" aria-label="Show standings for">
@@ -222,8 +222,8 @@ export function StandingsScreen() {
       <>
         <Placement s={s} view={view} onView={showView} />
         <StandingsView s={s} view={view} />
-        <ViewSwitch view={view} onView={showView} />
         <Others s={s} view={view} />
+        <ViewSwitch view={view} onView={showView} />
         <p className="fine">
           Your league is split into two conferences of three divisions, dealt again every {vocab.term.season.toLowerCase()}. The best
           record when it ends takes each title: division, conference and league. Ties go to the better record in the division, then in the conference, then run
