@@ -9,7 +9,7 @@
 // - `id` only has to be new and stay the same.
 
 /** The version this build is. Bump with every release, fixes included. */
-export const APP_VERSION = '1.3.7-beta';
+export const APP_VERSION = '1.4.0-beta';
 
 /** How a version is shown in the app: "v1.1.0-beta". */
 export const versionLabel = (version: string) => `v${version}`;
@@ -37,6 +37,25 @@ export function latestVersionOf(note: ReleaseNote): string | null {
 }
 
 export const RELEASES: readonly ReleaseNote[] = [
+  {
+    id: '1.4.0',
+    version: '1.4.0-beta',
+    title: 'v1.4.0-beta',
+    sections: [
+      {
+        title: 'Playoffs arrive Sunday, December 20 (v2.0)',
+        items: [
+          'Seasons become 9 series, then 3 playoff weeks, then Review Week: still a quarter of a year.',
+          'Division winners and a wild card from each conference make it. Each round is one series.',
+          'Win your conference, then the league. Missed the playoffs or knocked out? You keep playing Exhibition series.',
+          'Finished series 6 or fewer by December 20? Your playoffs start this season. Further along? Next season.',
+          '12 postseason badges. Conference and league titles become Top Seeds and Best Records.',
+        ],
+      },
+    ],
+    added: ['Start your next season when you’re ready. Seasons no longer start on their own.'],
+    improved: ['Standings show one table at a time, starting with your division. Tap your place up top to switch.'],
+  },
   {
     id: '1.3.0',
     version: '1.3.0-beta',

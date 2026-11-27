@@ -26,7 +26,7 @@ import { overlayQueue, type NewQueuedOp } from '../api/offlineQueue';
 import { useApi, useCheckoffQueue, useQueuedOps } from './context';
 import { errorMessage } from './errors';
 import { useNotify } from './toast';
-import { formatMonthDay, weekdayLong, weekdayShort } from '../lib/format';
+import { formatDateLong, formatMonthDay, weekdayLong, weekdayShort } from '../lib/format';
 import { vocab } from '../vocab';
 
 export const qk = {
@@ -801,6 +801,30 @@ export function useStartHeadStart() {
       invalidateGameDay(qc);
       invalidate(qc, qk.calendar);
       notify(vocab.headStart.started(headStartGames(me)), 'success');
+    },
+    onError: (error) => notify(errorMessage(error), 'error'),
+  });
+}
+
+/**
+ * Start the next season (offseason only; seasons never start on their own). Opening Day is
+ * the coming Monday; `headStart`, after Review Week, plays from today.
+ */
+export function useStartNextSeason() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const notify = useNotify();
+  return useMutation({
+    mutationFn: (headStart: boolean) => api.call('startNextSeason', { body: { headStart } }),
+    onSuccess: (me, headStart) => {
+      qc.setQueryData(qk.me, me);
+      invalidateGameDay(qc);
+      invalidate(qc, qk.calendar);
+      invalidate(qc, qk.currentSeason);
+      const season = me.seasonStarts.length + 1;
+      if (headStart) notify(vocab.headStart.started(headStartGames(me, season)), 'success');
+      else if (me.position.phase === 'season') notify(`${vocab.term.season} ${season} starts today.`, 'success');
+      else notify(`${vocab.term.season} ${season} starts ${formatDateLong(me.position.phase === 'offseason' ? (me.position.nextSeasonStart ?? me.today) : me.today)}.`, 'success');
     },
     onError: (error) => notify(errorMessage(error), 'error'),
   });

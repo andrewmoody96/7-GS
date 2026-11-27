@@ -6,7 +6,7 @@ import { clearSessionCookie } from '../http/session';
 import { deleteAccount, normalizeEmail } from '../services/auth';
 import { inUserTx } from '../services/today';
 import { prepareDay } from '../services/finalizer';
-import { calendarView, clearAvatar, meView, removePassword, setAvatar, setPassword, startHeadStart, updateMe } from '../services/users';
+import { calendarView, clearAvatar, meView, removePassword, setAvatar, setPassword, startHeadStart, startNextSeason, updateMe } from '../services/users';
 
 export function profileRoutes(deps: Deps): AnyRoute[] {
   return [
@@ -66,6 +66,21 @@ export function profileRoutes(deps: Deps): AnyRoute[] {
         async (tx, user) => {
           const started = await startHeadStart(tx, user, now);
           // Today is now a game day: build its game so it's there on the next screen.
+          await prepareDay(tx, started, localDateOf(now, started.timezone), now);
+          return meView(tx, started, now);
+        },
+        { scope: 'account' },
+      ),
+    ),
+
+    route('startNextSeason', ({ auth, body, now }) =>
+      inUserTx(
+        deps.db,
+        auth.user,
+        now,
+        async (tx, user) => {
+          const started = await startNextSeason(tx, user, body.headStart, now);
+          // Today may now be a game day (a Head Start, or a Monday): build its game.
           await prepareDay(tx, started, localDateOf(now, started.timezone), now);
           return meView(tx, started, now);
         },

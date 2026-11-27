@@ -20,6 +20,7 @@ import {
   SERIES_RESULTS,
   TASK_KINDS,
   TASK_STATUSES,
+  type LaterSeasonStart,
 } from '@7gs/rules';
 import { sql } from 'drizzle-orm';
 import {
@@ -82,6 +83,11 @@ export const users = pgTable('users', {
   startDate: localDate('start_date').notNull(),
   /** First day of the Head Start (playing before Opening Day); null = wait for Opening Day. */
   headStartFrom: localDate('head_start_from'),
+  /**
+   * Starts the player chose for Season 2 on, in order (rules LaterSeasonStart). Seasons
+   * never start on their own: one is added when the player starts the next season.
+   */
+  seasonStarts: jsonb('season_starts').$type<LaterSeasonStart[]>().notNull().default([]),
   defaultLockTime: timeOfDay('default_lock_time'),
   /** Sport theme (rules THEMES): cosmetic only. */
   theme: text('theme').notNull().default('baseball'),

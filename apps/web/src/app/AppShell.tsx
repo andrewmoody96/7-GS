@@ -107,7 +107,9 @@ function TopBar() {
       : pos?.phase === 'preseason'
         ? vocab.term.preseason
         : pos?.phase === 'offseason'
-          ? vocab.term.offseason
+          ? pos.reviewWeek
+            ? vocab.term.offseason
+            : 'Offseason'
           : '';
   return (
     <header className="topbar">

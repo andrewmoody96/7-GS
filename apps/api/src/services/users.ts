@@ -1,12 +1,12 @@
 import type { CalendarDto, MeDto, MePatchDto } from '@7gs/contracts';
-import { addDays, calendarPosition, isTheme, localDateOf, seasonWindow, type Theme } from '@7gs/rules';
+import { addDays, calendarPosition, isTheme, localDateOf, nextSeasonStartFor, seasonWindow, type Theme } from '@7gs/rules';
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { seasons, userAvatars, users, type UserRow } from '../db/schema';
 import { conflict, validationFailed } from '../errors';
 import { uuidv7 } from '../ids';
 import { allowancesView } from './allowances';
-import { syncSeasons } from './calendar';
+import { ensureSeason, seasonStatusOn, syncSeasons } from './calendar';
 import { ensureStarters } from './starters';
 import { hashPassword, verifyPassword } from './passwords';
 
@@ -78,6 +78,7 @@ export async function meView(tx: Db, user: UserRow, now: Date): Promise<MeDto> {
     timezone: user.timezone,
     startDate: user.startDate,
     headStartFrom: user.headStartFrom,
+    seasonStarts: user.seasonStarts,
     defaultLockTime: user.defaultLockTime,
     theme: themeOf(user),
     avatar: (await tx.select({ image: userAvatars.image }).from(userAvatars).where(eq(userAvatars.userId, user.id)))[0]?.image ?? null,
@@ -141,6 +142,38 @@ export async function startHeadStart(tx: Db, user: UserRow, now: Date): Promise<
     .update(seasons)
     .set({ startDate: window.start, status: 'active' })
     .where(and(eq(seasons.userId, user.id), eq(seasons.number, 1)));
+  return started;
+}
+
+/**
+ * Start the next season (GAME_DESIGN §5). Seasons never start on their own: during or after
+ * Review Week the player picks Opening Day (the first Monday after Review Week, or the
+ * coming Monday if that's passed), or once Review Week is over, a Head Start from today. A
+ * season already scheduled can still add a Head Start before its Opening Day.
+ */
+export async function startNextSeason(tx: Db, user: UserRow, headStart: boolean, now: Date): Promise<UserRow> {
+  const today = localDateOf(now, user.timezone);
+  const pos = calendarPosition(user, today);
+  const next = nextSeasonStartFor(user, today, headStart);
+  if (!next) {
+    if (pos.phase !== 'offseason') {
+      throw conflict('NOT_ELIGIBLE', 'You can start the next season once this one is over.', 'SEASON_IN_PROGRESS');
+    }
+    if (headStart) {
+      throw conflict('NOT_ELIGIBLE', 'A Head Start can begin once Review Week is over, before Opening Day.', 'REVIEW_WEEK');
+    }
+    throw conflict('NOT_ELIGIBLE', 'The next season is already set to start.', 'ALREADY_SCHEDULED');
+  }
+  const seasonStarts = [...user.seasonStarts.slice(0, next.seasonNumber - 2), next.start];
+  const [row] = await tx.update(users).set({ seasonStarts }).where(eq(users.id, user.id)).returning();
+  const started = row ?? { ...user, seasonStarts };
+  // The upcoming season's row (made during Review Week for its goal) moves to the chosen dates.
+  const season = await ensureSeason(tx, started, next.seasonNumber, today, now);
+  const window = seasonWindow(started, next.seasonNumber);
+  await tx
+    .update(seasons)
+    .set({ startDate: window.start, playEndDate: window.playEnd, offseasonEndDate: window.offseasonEnd, status: seasonStatusOn(window, today) })
+    .where(eq(seasons.id, season.id));
   return started;
 }
 

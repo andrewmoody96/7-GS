@@ -19,7 +19,7 @@ const KINDS: { key: Exclude<keyof ReminderPrefsDto, 'eveningAt' | 'email'>; labe
   { key: 'evening', label: 'Evening check-in', hint: 'Only if today’s game isn’t won yet.' },
   { key: 'lastCall', label: 'Last call', hint: () => `Around 10:30 p.m., only if a ${vocab.term.required.toLowerCase()} is still open.` },
   { key: 'rally', label: () => `${vocab.term.comebackToken} available`, hint: 'The morning after a loss you can still appeal.' },
-  { key: 'plan', label: 'Plan next week', hint: 'Friday when next week opens, and Sunday evening if you haven’t planned it.' },
+  { key: 'plan', label: 'Plan next week', hint: 'Friday when next week opens, and Sunday evening if you haven’t planned it. Once at the end of Review Week if the next season isn’t started.' },
 ];
 
 export function RemindersCard() {

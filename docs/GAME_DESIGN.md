@@ -225,7 +225,8 @@ but days already under way keep what they were planned with.
 
 ### Calendar math
 
-A year is treated as 52 weeks, split into four quarterly seasons of 13 weeks each:
+A year is treated as 52 weeks, split into four quarterly seasons of 13 weeks each (for a
+player who starts each season right after Review Week):
 
 ```
 | S1: 12 series | Off: 1 wk | S2: 12 series | Off: 1 wk | S3: 12 series | Off: 1 wk | S4: 12 series | Off: 1 wk | → repeat
@@ -243,15 +244,29 @@ A year is treated as 52 weeks, split into four quarterly seasons of 13 weeks eac
     scored as a series**: no clinch, no series W/L, no Iron Man or series bonus. Series 1
     still starts on Monday. The choice is offered on the Today screen all through Spring
     Training and can't be undone. The win goal stays open until Opening Day.
-- Each later season begins the Monday after the previous season's offseason week.
+- **Later seasons never start on their own (since 1.4).** The player starts each one
+  (rules `nextSeasonStartFor`, `users.season_starts`), so someone who drifts away doesn't
+  come back to 0–21:
+  - **During Review Week**, a Start next season button sets Opening Day for the Monday
+    after it. For a regular player that's the old schedule exactly.
+  - **If Review Week ends untapped**, the offseason simply continues: no games, no
+    losses, streaks frozen, for as long as it takes. Today keeps offering the start.
+  - **One nudge, once:** the last evening of Review Week (Sunday, 6–10 p.m.), if the next
+    season isn't started, a reminder says it's ready when they are (part of the "Plan next
+    week" reminders). Nothing after that.
+  - **Back later**, it works like Season 1: start on the coming Monday, or take a **Head
+    Start** from today (not during Review Week). On a Monday the season starts that day.
+    A season set for Monday can still take a Head Start before then.
+  - Opening Day is never in the past, so no game is ever created for a day already gone.
 - 52 weeks is 364 days, so season start dates drift about one day earlier each
-  calendar year. That's acceptable; series always stay Monday-aligned.
+  calendar year. That's acceptable; series always stay Monday-aligned. A break moves a
+  player's later seasons off the calendar quarters; every league is its own anyway.
 
-Offseason weeks can't be combined or moved. Tasks and starters can be edited at any
-time during a season, so a longer break wouldn't add much. The week exists as a
-built-in prompt to review the season and tweak the setup.
+Review Week can't be skipped or shortened. Tasks and starters can be edited at any time
+during a season; the week exists as a built-in prompt to review the season and tweak the
+setup.
 
-### During the offseason (Review Week)
+### During the offseason (Review Week, and any break after it)
 
 - No games, no check-offs, no results.
 - Streaks (task streaks and win streaks) are **frozen**: not broken and not extended.

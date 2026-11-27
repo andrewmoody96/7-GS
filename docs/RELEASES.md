@@ -63,6 +63,7 @@ Pull requests can merge into `main` whenever they're ready (the GitHub Pages dem
 
 ## History
 
+- **1.4.0-beta** (December 2026): a heads-up (popup and a Today banner) that playoffs arrive in 2.0 on Sunday, December 20; the next season starts only when you start it.
 - **1.3.7-beta** (November 2026): a ≡ menu in the top bar (Settings, How it works, What's changed) in place of the ? button.
 - **1.3.6-beta** (November 2026): crop your team photo; photos saved at 512 px instead of 192. Admin Accounts: each account's team badge; Last sign-in dropped.
 - **1.3.5-beta** (November 2026): tidier standings: even columns, and every team as its town over a bold nickname.

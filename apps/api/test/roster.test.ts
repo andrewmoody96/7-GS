@@ -297,10 +297,18 @@ describe('injured list', () => {
   });
 
   it('pauses the minimum stint through Review Week', () => {
-    // Season 2 (sign-up 2026-10-02) ends Sunday 2027-03-28; Review Week runs to 2027-04-04.
-    expect(ilMinUntil('2026-10-02', '2026-10-06')).toBe('2026-10-09');
-    expect(ilMinUntil('2026-10-02', '2027-03-27')).toBe('2027-04-06');
-    expect(ilMinUntil('2026-10-02', '2027-03-30')).toBe('2027-04-08');
+    // Season 2 (sign-up 2026-10-02, Seasons 2 and 3 started on time) ends Sunday 2027-03-28;
+    // Review Week runs to 2027-04-04.
+    const onTime = {
+      startDate: '2026-10-02',
+      seasonStarts: [
+        { openingDay: '2027-01-04', headStartFrom: null },
+        { openingDay: '2027-04-05', headStartFrom: null },
+      ],
+    };
+    expect(ilMinUntil(onTime, '2026-10-06')).toBe('2026-10-09');
+    expect(ilMinUntil(onTime, '2027-03-27')).toBe('2027-04-06');
+    expect(ilMinUntil(onTime, '2027-03-30')).toBe('2027-04-08');
   });
 });
 
@@ -334,8 +342,9 @@ describe('profile and calendar', () => {
       today: '2026-10-02',
       position: { phase: 'preseason', seasonNumber: 1, openingDay: '2026-10-05', daysUntilOpeningDay: 3 },
       seasons: [
-        { number: 1, start: '2026-10-05', playEnd: '2026-12-27', offseasonStart: '2026-12-28', offseasonEnd: '2027-01-03' },
-        { number: 2, start: '2027-01-04', playEnd: '2027-03-28', offseasonStart: '2027-03-29', offseasonEnd: '2027-04-04' },
+        { number: 1, start: '2026-10-05', playEnd: '2026-12-27', offseasonStart: '2026-12-28', offseasonEnd: '2027-01-03', scheduled: true },
+        // Not started yet: the earliest it could run.
+        { number: 2, start: '2027-01-04', playEnd: '2027-03-28', offseasonStart: '2027-03-29', offseasonEnd: '2027-04-04', scheduled: false },
       ],
     });
   });

@@ -7,6 +7,8 @@
 // - last_call: from 10:30 p.m., only while a must-hit is still open
 // - rally: the morning after an appealable loss, while a Rally Cap is held
 // - plan_fri / plan_sun: Friday when next week's card opens; Sunday evening if it's unopened
+// - next_season: once, the last evening of Review Week, if the next season isn't started
+//   (seasons never start on their own; after this there's no more nudging)
 
 import type { ReminderPrefsDto, ReminderSettingsDto } from '@7gs/contracts';
 import { addDays, calendarPosition, isTheme, localDateOf, localTimeOf, THEME_TERMS, weekday, type LocalDate } from '@7gs/rules';
@@ -22,7 +24,7 @@ import { gamesOn } from './calendar';
 import { evaluateRows, loadEntries } from './lineups';
 
 export interface DueReminder {
-  kind: 'evening' | 'last_call' | 'rally' | 'plan_fri' | 'plan_sun';
+  kind: 'evening' | 'last_call' | 'rally' | 'plan_fri' | 'plan_sun' | 'next_season';
   /** With `kind`, identifies one send (a date or a game). */
   key: string;
   message: PushMessage;
@@ -211,6 +213,21 @@ export async function dueReminders(tx: Db, user: UserRow, now: Date): Promise<Du
           },
         });
       }
+    }
+    const pos = calendarPosition(user, today);
+    // The last evening of Review Week, the next season not started: one nudge, never again.
+    if (day === 7 && between(time, SUNDAY_WINDOW[0], SUNDAY_WINDOW[1]) && pos.phase === 'offseason' && pos.reviewWeek && pos.nextSeasonStart === null) {
+      const next = pos.seasonNumber + 1;
+      due.push({
+        kind: 'next_season',
+        key: `season-${next}`,
+        message: {
+          title: `Season ${next} is ready when you are`,
+          body: `Review Week ends tonight. Start Season ${next} now to play from tomorrow, or take a break: it won’t start without you.`,
+          url: '/',
+          tag: `next-season-${next}`,
+        },
+      });
     }
     if (day === 7 && between(time, SUNDAY_WINDOW[0], SUNDAY_WINDOW[1])) {
       const nextMonday = addDays(today, 1);

@@ -1,4 +1,4 @@
-import { evaluateGame, lineupThreshold, scoreline, seriesStatus, type LineupRole } from '@7gs/rules';
+import { addDays, evaluateGame, startOfWeek, lineupThreshold, scoreline, seriesStatus, type LineupRole } from '@7gs/rules';
 import { describe, expect, it } from 'vitest';
 import { ApiError, withResponseValidation, type ApiClient } from '../client';
 import { createMockApi } from './index';
@@ -394,6 +394,35 @@ describe('mock backend rainouts, Rally Cap and IL', () => {
 });
 
 const HOUR = 60 * 60 * 1000;
+
+describe('mock backend: the next season starts when the player starts it', () => {
+  it('starts from Review Week on the Monday after it, never on its own', async () => {
+    const { api, tick } = setup('offseason');
+    const review = await api.call('getToday');
+    expect(review.position).toMatchObject({ phase: 'offseason', seasonNumber: 1, reviewWeek: true, nextSeasonStart: null });
+    await expectApiError(api.call('startNextSeason', { body: { headStart: true } }), 'NOT_ELIGIBLE', 'REVIEW_WEEK');
+    const me = await api.call('startNextSeason', { body: { headStart: false } });
+    const monday = addDays(startOfWeek(review.date), 7);
+    expect(me.seasonStarts).toEqual([{ openingDay: monday, headStartFrom: null }]);
+    expect(me.position).toMatchObject({ phase: 'offseason', reviewWeek: true, nextSeasonStart: monday });
+    tick(5 * DAY);
+    const opening = await api.call('getToday');
+    expect(opening.position).toMatchObject({ phase: 'season', seasonNumber: 2, seriesNumber: 1, gameNumber: 1 });
+    expect(await api.call('getCurrentSeason')).toMatchObject({ number: 2, status: 'active', wins: 0, losses: 0 });
+  });
+
+  it('waits after Review Week with no games, then takes a Head Start', async () => {
+    const { api, tick } = setup('offseason');
+    tick(15 * DAY); // Two weeks on: Review Week is long over.
+    const later = await api.call('getToday');
+    expect(later).toMatchObject({ games: [], position: { phase: 'offseason', seasonNumber: 1, reviewWeek: false, nextSeasonStart: null } });
+    expect(await api.call('getCurrentSeason')).toMatchObject({ number: 1, losses: expect.any(Number) });
+    const me = await api.call('startNextSeason', { body: { headStart: true } });
+    expect(me.position).toMatchObject({ phase: 'season', seasonNumber: 2, seriesNumber: 0 });
+    expect((await api.call('getToday')).games).toHaveLength(1);
+    expect(await api.call('getCurrentSeason')).toMatchObject({ number: 2, status: 'active', wins: 0, losses: 0 });
+  });
+});
 
 describe('mock backend history and career', () => {
   it('lists every season, a season’s series, and lifetime totals', async () => {

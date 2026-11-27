@@ -7,6 +7,7 @@ import {
   calendarPosition,
   compareDates,
   isGameDay,
+  seasonScheduled,
   seasonWindow,
   SERIES_LENGTH,
   type LocalDate,
@@ -57,7 +58,8 @@ export async function ensureSeason(
       startDate: w.start,
       playEndDate: w.playEnd,
       offseasonEndDate: w.offseasonEnd,
-      status: seasonStatusOn(w, asOf),
+      // A season the player hasn't started stays upcoming, wherever its dates fall.
+      status: w.scheduled ? seasonStatusOn(w, asOf) : 'upcoming',
       createdAt: now,
     })
     .onConflictDoNothing();
@@ -67,8 +69,9 @@ export async function ensureSeason(
 }
 
 /**
- * Make sure the season rows `date` needs exist (the upcoming one during Review Week, so
+ * Make sure the season rows `date` needs exist (the upcoming one during the offseason, so
  * its goal can be set) and roll statuses forward: upcoming → active → offseason → complete.
+ * A season moves past upcoming only once the player has started it.
  */
 export async function syncSeasons(tx: Db, user: UserRow, date: LocalDate, now: Date): Promise<void> {
   const pos = calendarPosition(user, date);
@@ -80,6 +83,8 @@ export async function syncSeasons(tx: Db, user: UserRow, date: LocalDate, now: D
     .from(seasons)
     .where(and(eq(seasons.userId, user.id), ne(seasons.status, 'complete')));
   for (const row of rows) {
+    // Not started yet: its dates are only where it could go, so it stays upcoming.
+    if (!seasonScheduled(user, row.number)) continue;
     const status = seasonStatusOn(
       { start: row.startDate, playEnd: row.playEndDate, offseasonEnd: row.offseasonEndDate },
       date,

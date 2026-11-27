@@ -68,6 +68,12 @@ export const endpoints = {
    * days left this week become the Head Start: games that count toward the season record.
    */
   startHeadStart: endpoint({ method: 'POST', path: '/v1/me/head-start', response: S.Me }),
+  /**
+   * Start the next season (offseason only; seasons never start on their own). Opening Day
+   * is the first Monday after Review Week, or the coming Monday if that's passed. With
+   * `headStart`, after Review Week only, the days left this week are a Head Start.
+   */
+  startNextSeason: endpoint({ method: 'POST', path: '/v1/me/next-season', body: S.NextSeasonStart, response: S.Me }),
   /** Permanently deletes the account and everything in it, and ends every session. */
   deleteMe: endpoint({ method: 'DELETE', path: '/v1/me', body: S.DeleteAccount, response: S.Ok }),
   getCalendar: endpoint({ method: 'GET', path: '/v1/calendar', response: S.Calendar }),

@@ -116,7 +116,7 @@ export function HowItWorksSheet({ open, onClose }: { open: boolean; onClose: () 
           <h3>Win the season</h3>
           <p>
             A season is a quarter of the year: 12 weeks, then a <strong>{vocab.term.offseason}</strong> to look back and reset.
-            That’s four seasons a year. Set a <strong>{vocab.terms.winGoal.toLowerCase()}</strong> you can really hit, and
+            The next season starts when you start it, so a break never costs you games. Set a <strong>{vocab.terms.winGoal.toLowerCase()}</strong> you can really hit, and
             every win counts toward it.
           </p>
           <p>
